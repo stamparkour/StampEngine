@@ -21,7 +21,6 @@ namespace game_render {
 		friend Material;
 		void Bind() const;
 	public:
-		//no texture
 		Texture();
 		Texture(size_t width, size_t height, int elementSize, GLenum type, const void* pixels);
 		Texture(const Texture& v);
