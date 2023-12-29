@@ -51,11 +51,11 @@
     <ClCompile Include="gamecore.cpp">
       <Filter>Source Files\manager</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp">
-      <Filter>Source Files\Project</Filter>
-    </ClCompile>
     <ClCompile Include="Render.cpp">
       <Filter>Source Files\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="Source.cpp">
+      <Filter>Source Files\Project</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

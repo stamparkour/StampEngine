@@ -7,6 +7,8 @@
 
 #define AngleToRad 0.0174532925199
 
+
+
 struct TestComponent final : game_core::Component {
 	Component_Requirements(TestComponent)
 public:

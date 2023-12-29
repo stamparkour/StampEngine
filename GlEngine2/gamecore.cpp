@@ -62,6 +62,18 @@ void game_core::TimeManager::NextFixedTimestep(double time) {
 	fixedDeltaTime = time - this->fixedTime;
 	this->fixedTime = time;
 }
+double game_core::TimeManager::Time() {
+	return game_core::GameManager::Current()->time.time;
+}
+double game_core::TimeManager::DeltaTime() { 
+	return game_core::GameManager::Current()->time.deltaTime;
+}
+double game_core::TimeManager::FixedTime() {
+	return game_core::GameManager::Current()->time.fixedTime;
+}
+double game_core::TimeManager::FixedDeltaTime() { 
+	return game_core::GameManager::Current()->time.fixedDeltaTime;
+}
 void game_core::Scene::AddObject(const game_core::GameObject& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
 	gameobjects.push_back(o);

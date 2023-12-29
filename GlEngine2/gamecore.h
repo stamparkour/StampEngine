@@ -100,6 +100,15 @@ namespace game_core {
 		virtual size_t Size() = 0;
 	}; 
 	
+	struct Scene final {
+		friend struct GameManager;
+	private:
+		std::vector<GameObject*> gameobjects;
+	public:
+		void AddObject(const GameObject& object);
+		void AddObject(GameObject&& object);
+	};
+
 	struct TimeManager final {
 		friend struct GameManager;
 	private:
@@ -111,19 +120,10 @@ namespace game_core {
 		void NextTimestep(double time);
 		void NextFixedTimestep(double time);
 	public:
-		static inline double Time() { return game_core::GameManager::Current()->time.time; }
-		static inline double DeltaTime() { return game_core::GameManager::Current()->time.deltaTime; }
-		static inline double FixedTime() { return game_core::GameManager::Current()->time.fixedTime; }
-		static inline double FixedDeltaTime() { return game_core::GameManager::Current()->time.fixedDeltaTime; }
-	};
-
-	struct Scene final {
-		friend struct GameManager;
-	private:
-		std::vector<GameObject*> gameobjects;
-	public:
-		void AddObject(const GameObject& object);
-		void AddObject(GameObject&& object);
+		static double Time(); 
+		static double DeltaTime(); 
+		static double FixedTime(); 
+		static double FixedDeltaTime(); 
 	};
 
 	struct GameManager final {
