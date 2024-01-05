@@ -63,6 +63,9 @@ namespace game_core {
 		friend void swap(GameObject& a, GameObject& b);
 		void Destroy();
 
+		bool exsists();
+		GameObject Parent() noexcept;
+		std::vector<GameObject*> getChildren();
 		gl_math::Mat4 getTransform();
 		template <typename T>
 		void AddComponent(T& component);
@@ -107,6 +110,8 @@ namespace game_core {
 	public:
 		void AddObject(const GameObject& object);
 		void AddObject(GameObject&& object);
+
+		GameObject getGameObjectByName(std::string name);
 	};
 
 	struct TimeManager final {
@@ -124,6 +129,17 @@ namespace game_core {
 		static double DeltaTime(); 
 		static double FixedTime(); 
 		static double FixedDeltaTime(); 
+	};
+
+	struct ControlsManager final {
+		friend struct GameManager;
+	private:
+		char keyBits[256 / 8];
+		void KeyDown(char virtualKey);
+		void KeyUp(char virtualKey);
+	public:
+		bool isKeyDown(char virtualKey);
+		bool isKeyUp(char virtualKey);
 	};
 
 	struct GameManager final {

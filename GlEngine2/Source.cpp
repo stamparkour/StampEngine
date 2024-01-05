@@ -5,6 +5,9 @@
 #include "gamecore.h"
 #include "glrender.h"
 
+//mouse pos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
+//hide mouse https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
+//change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
 #define AngleToRad 0.0174532925199
 
 
@@ -34,7 +37,7 @@ void win_event::Start(double time) {
 	scene.AddObject(cube);
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
-	sun.AddComponent(game_component::SunLight{ {0.003f, 0.008f, 0.1f,0}, {1,1,0.9,0},{1,0,0,0} });
+	sun.AddComponent(game_component::SunLight{ {0.05f, 0.05f, 0.05f,0}, {0.95f,0.95f,0.95f,0},{0,0,0,0} });
 	scene.AddObject(sun);
 
 	manager.scene = &scene;
@@ -71,7 +74,7 @@ void win_event::Render(double time) {
 	manager.Render();
 }
 
-void win_input::KeyDown(int keyCode, bool isRepeat) {
+void win_input::KeyDown(int keyCode, bool isRepeat) {//https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 
 }
 

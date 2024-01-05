@@ -82,7 +82,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 	case WM_SYSKEYDOWN:
 		win_input::KeyDown((int)wParam, (lParam & (1 << 30)));
 		break;
-	case WM_KEYUP:
+	case WM_KEYUP://https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 	case WM_SYSKEYUP:
 		win_input::KeyUp((int)wParam);
 		break;
