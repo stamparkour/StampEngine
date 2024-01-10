@@ -4,16 +4,16 @@ game_core::GameManager* game_core::GameManager::current = NULL;
 
 void game_core::GameManager::Initialize() {
 	game_core::GameManager::current = this;
-	for (int i = 0; i < scene->gameobjects.size(); i++) {
-		scene->gameobjects[i]->Awake();
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->Awake();
 	}
 }
 game_core::GameManager* game_core::GameManager::Current() noexcept {
 	return current;
 }
 void game_core::GameManager::Render() {
-	for (int i = 0; i < scene->gameobjects.size(); i++) {
-		scene->gameobjects[i]->OnRender();
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->OnRender();
 	}
 }
 void game_core::GameManager::Resize(int x, int y) {
@@ -23,32 +23,32 @@ void game_core::GameManager::Resize(int x, int y) {
 }
 void game_core::GameManager::Update(double time) {
 	this->time.NextTimestep(time);
-	for (int i = 0; i < scene->gameobjects.size(); i++) {
-		scene->gameobjects[i]->Update();
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->Update();
 	}
 	if (resized) {
-		for (int i = 0; i < scene->gameobjects.size(); i++) {
-			scene->gameobjects[i]->OnResize();
+		for (int i = 0; i < scene->gameObjects.size(); i++) {
+			scene->gameObjects[i]->OnResize();
 		}
 	}
 }
 void game_core::GameManager::SyncUpdate() {
-	for (int i = 0; i < scene->gameobjects.size(); i++) {
-		if (scene->gameobjects[i]->state == GameObjectState::Destroying) {
-			for (int j = 0; j < scene->gameobjects[i]->components.size(); j++) {
-				scene->gameobjects[i]->components[j]->OnDestroy(*scene->gameobjects[i]);
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		if (scene->gameObjects[i]->state == GameObjectState::Destroying) {
+			for (int j = 0; j < scene->gameObjects[i]->components.size(); j++) {
+				scene->gameObjects[i]->components[j]->OnDestroy(*scene->gameObjects[i]);
 			}
-			delete scene->gameobjects[i];
-			scene->gameobjects.erase(scene->gameobjects.begin() + i);
+			delete scene->gameObjects[i];
+			scene->gameObjects.erase(scene->gameObjects.begin() + i);
 			i--;
 		}
 	}
-	for (int i = 0; i < scene->gameobjects.size(); i++) {
-		for (int j = 0; j < scene->gameobjects[i]->components.size(); j++) {
-			if (scene->gameobjects[i]->components[j]->state == ComponentState::Destroying) {
-				scene->gameobjects[i]->components[j]->OnDestroy(*scene->gameobjects[i]);
-				delete scene->gameobjects[i]->components[j];
-				scene->gameobjects[i]->components.erase(scene->gameobjects[i]->components.begin() + j);
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		for (int j = 0; j < scene->gameObjects[i]->components.size(); j++) {
+			if (scene->gameObjects[i]->components[j]->state == ComponentState::Destroying) {
+				scene->gameObjects[i]->components[j]->OnDestroy(*scene->gameObjects[i]);
+				delete scene->gameObjects[i]->components[j];
+				scene->gameObjects[i]->components.erase(scene->gameObjects[i]->components.begin() + j);
 				j--;
 			}
 		}
@@ -76,11 +76,11 @@ double game_core::TimeManager::FixedDeltaTime() {
 }
 void game_core::Scene::AddObject(const game_core::GameObject& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
-	gameobjects.push_back(o);
+	gameObjects.push_back(o);
 }
 void game_core::Scene::AddObject(game_core::GameObject&& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
-	gameobjects.push_back(o);
+	gameObjects.push_back(o);
 }
 game_core::GameObject::GameObject() {
 	components = {};
@@ -88,6 +88,7 @@ game_core::GameObject::GameObject() {
 	state = game_core::GameObjectState::Created;
 	name = "";
 	groupMask = 1;
+	parent = NULL;
 }
 game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	components = {v.components.size(), 0};
@@ -99,6 +100,7 @@ game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	state = v.state;
 	name = v.name;
 	groupMask = v.groupMask;
+	parent = v.parent;
 }
 game_core::GameObject::GameObject(GameObject&& v) noexcept {
 	using std::swap;
@@ -107,6 +109,7 @@ game_core::GameObject::GameObject(GameObject&& v) noexcept {
 	state = game_core::GameObjectState::Created;
 	name = "";
 	groupMask = 1;
+	parent = NULL;
 	swap(*this, v);
 }
 game_core::GameObject& game_core::GameObject::operator=(const GameObject& v) {
@@ -119,6 +122,7 @@ game_core::GameObject& game_core::GameObject::operator=(const GameObject& v) {
 	state = v.state;
 	name = v.name;
 	groupMask = v.groupMask;
+	parent = v.parent;
 	return *this;
 }
 game_core::GameObject& game_core::GameObject::operator=(GameObject&& v) noexcept {
@@ -133,6 +137,7 @@ inline void game_core::swap(game_core::GameObject& a, game_core::GameObject& b) 
 	swap(a.state, b.state);
 	swap(a.name, b.name);
 	swap(a.groupMask, b.groupMask);
+	swap(a.parent, b.parent);
 }
 game_core::GameObject::~GameObject() {
 	for (int i = 0; i < components.size(); i++) {
@@ -140,6 +145,17 @@ game_core::GameObject::~GameObject() {
 		components[i] = 0;
 	}
 	state = GameObjectState::Destroying;
+}
+bool game_core::GameObject::exsists() {
+	if (this == 0) return false;
+	for (int i = 0; i < GameManager::Current()->scene->gameObjects.size(); i++) {
+		if (GameManager::Current()->scene->gameObjects[i] == this) return true;
+	}
+	return false;
+}
+gl_math::Mat4 game_core::GameObject::getTransform(){
+	if (parent == NULL) return transform.ToMatrix();
+	return transform.ToMatrix(); * parent->getTransform();
 }
 void game_core::GameObject::Awake() {
 	for (int i = 0; i < components.size(); i++) {

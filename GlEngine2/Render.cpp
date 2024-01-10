@@ -4,26 +4,54 @@
 int currentLightIndex = 0;
 
 game_render::Texture::Texture()  {
+	this->width = 0;
+	this->height = 0;
 }
 game_render::Texture::Texture(size_t width, size_t height, int elementSize, GLenum type, const void* pixels) : xptr_base<GLuint>() {
-	GLenum v[] = { GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
 	glGenTextures(1, &ptr);
 	Bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, v[elementSize - 1], type, pixels);
+	setPixels(elementSize, type, pixels);
+	this->width = width;
+	this->height = height;
 }
 game_render::Texture::Texture(const Texture& v) : xptr_base<GLuint>((const xptr_base<GLuint>&)v) {
+	width = v.width;
+	height = v.height;
+	xptr_base<GLuint>::operator=(v);
 }
-game_render::Texture::Texture(Texture&& v) noexcept : xptr_base<GLuint>((xptr_base<GLuint>&&)v) {
+game_render::Texture::Texture(Texture&& v) noexcept : xptr_base<GLuint>() {
+	this->width = 0;
+	this->height = 0;
+	swap(*this, v);
+}
+inline void game_render::swap(Texture& a, Texture& b) {
+	using std::swap;
+	swap(a.width, b.width);
+	swap(a.height, b.height);
+	swap((xptr_base<GLuint>&)a, (xptr_base<GLuint>&)b);
+}
+size_t game_render::Texture::Width() {
+	return width;
+}
+size_t game_render::Texture::Height() {
+	return height;
 }
 game_render::Texture& game_render::Texture::operator=(const Texture& v) {
+	width = v.width;
+	height = v.height;
 	xptr_base<GLuint>::operator=(v);
 	return *this;
 }
 game_render::Texture& game_render::Texture::operator=(Texture&& v) noexcept {
-	xptr_base<GLuint>::operator=(v);
+	swap(*this, v);
 	return *this;
+}
+void game_render::Texture::setPixels(int elementSize, GLenum type, const void* pixels) {
+	GLenum v[] = { GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
+	Bind();
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, v[elementSize - 1], type, pixels);
 }
 game_render::Texture::~Texture() {
 	if ((xptr_base<GLuint>::count) == NULL) return;
@@ -140,7 +168,7 @@ game_render::Mesh game_render::Mesh::cubePrimative = { cube_positions,cube_norma
 game_render::Material game_render::Material::defaultMaterial = { false, false, {0.7,0.85,0.85,1},{0.85,0.85,0.85,1}, {0.9,0.9,0.9,1}, 4, {0,0,0,1}, {} };
 void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject) {
 	material->Bind();
-	mesh->Render(gameObject.transform.ToMatrix());
+	mesh->Render(gameObject.getTransform());
 }
 game_component::Camera::Camera() noexcept {
 	fovy = 40;

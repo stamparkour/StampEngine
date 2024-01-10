@@ -46,11 +46,11 @@ namespace game_core {
 	private:
 		std::vector<Component*> components;
 		GameObjectState state;
-		GameObject* parent;
 	public:
 		game_core::Transform transform;
 		std::string name;
 		int groupMask;
+		GameObject* parent;
 
 		GameObject();
 		GameObject(std::string name);
@@ -64,7 +64,6 @@ namespace game_core {
 		void Destroy();
 
 		bool exsists();
-		GameObject Parent() noexcept;
 		std::vector<GameObject*> getChildren();
 		gl_math::Mat4 getTransform();
 		template <typename T>
@@ -105,8 +104,9 @@ namespace game_core {
 	
 	struct Scene final {
 		friend struct GameManager;
+		friend struct GameObject;
 	private:
-		std::vector<GameObject*> gameobjects;
+		std::vector<GameObject*> gameObjects;
 	public:
 		void AddObject(const GameObject& object);
 		void AddObject(GameObject&& object);

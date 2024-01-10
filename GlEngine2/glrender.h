@@ -17,7 +17,9 @@ namespace game_render {
 
 	struct Material;
 
-	struct Texture final: private xptr_base<GLuint> {
+	class Texture final: private xptr_base<GLuint> {
+		size_t width;
+		size_t height;
 		friend Material;
 		void Bind() const;
 	public:
@@ -27,6 +29,10 @@ namespace game_render {
 		Texture(Texture&& v) noexcept;
 		Texture& operator =(const Texture& v);
 		Texture& operator =(Texture&& v) noexcept;
+		friend void swap(Texture& a, Texture& b);
+		size_t Width();
+		size_t Height();
+		void setPixels(int elementSize, GLenum type, const void* pixels);
 		~Texture();
 	};
 
