@@ -32,10 +32,10 @@ inline void game_render::swap(Texture& a, Texture& b) {
 	swap(a.height, b.height);
 	swap((xptr_base<GLuint>&)a, (xptr_base<GLuint>&)b);
 }
-size_t game_render::Texture::Width() {
+size_t game_render::Texture::Width() const {
 	return width;
 }
-size_t game_render::Texture::Height() {
+size_t game_render::Texture::Height() const {
 	return height;
 }
 game_render::Texture& game_render::Texture::operator=(const Texture& v) {
@@ -165,7 +165,7 @@ gl_math::Vec2 cube_uv[] = {
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 };
 game_render::Mesh game_render::Mesh::cubePrimative = { cube_positions,cube_normals,cube_color,cube_uv,cube_vertices };
-game_render::Material game_render::Material::defaultMaterial = { false, false, {0.7,0.85,0.85,1},{0.85,0.85,0.85,1}, {0.9,0.9,0.9,1}, 4, {0,0,0,1}, {} };
+game_render::Material game_render::Material::defaultMaterial = { false, false, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 4, {0,0,0,1}, {} };
 void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject) {
 	material->Bind();
 	mesh->Render(gameObject.getTransform());

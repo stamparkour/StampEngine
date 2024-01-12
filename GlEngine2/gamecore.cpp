@@ -82,6 +82,12 @@ void game_core::Scene::AddObject(game_core::GameObject&& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
 	gameObjects.push_back(o);
 }
+game_core::GameObject* game_core::Scene::getGameObjectByName(std::string name) {
+	for (int i = 0; i < gameObjects.size(); i++) {
+		if (!gameObjects[i]->name.compare(name)) return gameObjects[i];
+	}
+	return NULL;
+}
 game_core::GameObject::GameObject() {
 	components = {};
 	transform = {};
@@ -101,6 +107,22 @@ game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	name = v.name;
 	groupMask = v.groupMask;
 	parent = v.parent;
+}
+game_core::GameObject::GameObject(std::string name) {
+	components = {};
+	transform = {};
+	state = game_core::GameObjectState::Created;
+	this->name = name;
+	groupMask = 1;
+	parent = NULL;
+}
+game_core::GameObject::GameObject(std::string name, int groupMask) {
+	components = {};
+	transform = {};
+	state = game_core::GameObjectState::Created;
+	this->name = name;
+	this->groupMask = groupMask;
+	parent = NULL;
 }
 game_core::GameObject::GameObject(GameObject&& v) noexcept {
 	using std::swap;
@@ -215,4 +237,25 @@ void game_core::GameObject::Enable() {
 void game_core::GameObject::Disable() {
 	if (state == game_core::GameObjectState::Disabled) return;
 	state = game_core::GameObjectState::Disabling;
+}
+void game_core::ControlsManager::KeyDown(char virtualKey) {
+	int index = virtualKey >> 3;// divide by 8
+	int shift = virtualKey % 8;
+	char mask = 0b1 << shift;
+	keyBits[index] |= mask;
+}
+void game_core::ControlsManager::KeyUp(char virtualKey) {
+	int index = virtualKey >> 3;// divide by 8
+	int shift = virtualKey % 8;
+	char mask = 0xFF ^ (0b1 << shift);
+	keyBits[index] &= mask;
+}
+bool game_core::ControlsManager::isKeyDown(char virtualKey) {
+	int index = virtualKey >> 3;// divide by 8
+	int shift = virtualKey % 8;
+	char mask = 0b1 << shift;
+	return GameManager::Current()->controls.keyBits[index] & mask;
+}
+bool game_core::ControlsManager::isKeyUp(char virtualKey) {
+	return !isKeyDown(virtualKey);
 }

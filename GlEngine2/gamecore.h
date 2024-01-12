@@ -111,7 +111,7 @@ namespace game_core {
 		void AddObject(const GameObject& object);
 		void AddObject(GameObject&& object);
 
-		GameObject getGameObjectByName(std::string name);
+		GameObject* getGameObjectByName(std::string name);
 	};
 
 	struct TimeManager final {
@@ -138,8 +138,8 @@ namespace game_core {
 		void KeyDown(char virtualKey);
 		void KeyUp(char virtualKey);
 	public:
-		bool isKeyDown(char virtualKey);
-		bool isKeyUp(char virtualKey);
+		static bool isKeyDown(char virtualKey);
+		static bool isKeyUp(char virtualKey);
 	};
 
 	struct GameManager final {
@@ -150,6 +150,7 @@ namespace game_core {
 		static GameManager* current;
 	public:
 		TimeManager time;
+		ControlsManager controls;
 		Scene* scene;
 
 		inline int ScreenX() const noexcept { return screenX; }

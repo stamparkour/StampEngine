@@ -30,8 +30,8 @@ namespace game_render {
 		Texture& operator =(const Texture& v);
 		Texture& operator =(Texture&& v) noexcept;
 		friend void swap(Texture& a, Texture& b);
-		size_t Width();
-		size_t Height();
+		size_t Width() const;
+		size_t Height() const;
 		void setPixels(int elementSize, GLenum type, const void* pixels);
 		~Texture();
 	};
