@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <fstream>
 #include <gl/gl.h>
 #include <gl/glu.h>
 #include "wincore.h"
@@ -23,6 +24,11 @@ public:
 game_core::GameManager manager{};
 game_core::Scene scene{};
 void win_event::Start(double time) {
+
+	std::fstream stream{""};
+
+	game_render::Texture tex = game_render::Texture::BmpTexture("");
+
 	game_core::GameObject cam{};
 	cam.AddComponent(game_component::Camera{});
 	scene.AddObject(cam);

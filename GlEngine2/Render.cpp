@@ -1,5 +1,7 @@
+#include <windows.h>
 #include "glrender.h"
 #include "xptr.h"
+#include <bit>
 
 int currentLightIndex = 0;
 
@@ -58,6 +60,112 @@ game_render::Texture::~Texture() {
 	if (*(xptr_base<GLuint>::count) == 1) {
 		glDeleteTextures(1,  &(xptr_base<GLuint>::ptr));
 	}
+}
+game_render::Texture::operator bool() const
+{
+	return width != 0 || height != 0;
+}
+static long SwapBigEndian(long v) {
+	if (std::endian::native == std::endian::big) {//big endian
+		return v;
+	}
+	else {
+		char* c = (char*)&v;
+		std::swap(c[0], c[3]);
+		std::swap(c[1], c[2]);
+		return v;
+	}
+}
+game_render::Texture game_render::Texture::BmpTexture(const char* data)
+{
+	if (data[0] != 'B' || data[1] != 'M') return {};
+	long bmpSize = *(long*)(data + 2);
+	const char* pixelArray = data + *(long*)(data + 10);
+	long headerSize = *(long*)(data + 14);
+	const char* palleteArray = data + headerSize + 14;
+	long width, height, bpp, compression, imageSize, paletteCount;
+	if (headerSize == 40 || headerSize == 52) {
+		width = *(long*)(data + 18);
+		height = *(long*)(data + 22);
+		bpp = *(short*)(data + 28);
+		compression = *(long*)(data + 30);
+		imageSize = *(long*)(data + 34);
+		paletteCount = *(long*)(data + 46);
+	}
+	else return {};
+	long maskA = 0;
+	long maskR = 0;
+	long maskG = 0;
+	long maskB = 0;
+	int shiftA = 0;
+	int shiftR = 0;
+	int shiftG = 0;
+	int shiftB = 0;
+	if (compression == 0) {
+		maskR = SwapBigEndian(*(long*)(palleteArray + 0));
+		maskG = SwapBigEndian(*(long*)(palleteArray + 4));
+		maskB = SwapBigEndian(*(long*)(palleteArray + 8));
+	}
+	else if (compression == 6) {
+		maskR = SwapBigEndian(*(long*)(palleteArray + 0));
+		maskG = SwapBigEndian(*(long*)(palleteArray + 4));
+		maskB = SwapBigEndian(*(long*)(palleteArray + 8));
+		maskA = SwapBigEndian(*(long*)(palleteArray + 12));
+	}
+
+	for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
+	for (; maskG && !(maskG & 1); maskG >>= 1)shiftG++;
+	for (; maskB && !(maskB & 1); maskB >>= 1)shiftB++;
+	for (; maskA && !(maskA & 1); maskA >>= 1)shiftA++;
+
+	gl_math::Vec4* pixels = new gl_math::Vec4[width * height];
+	int rowSize = ((bpp * width + 31) / 32) * 4;
+	if (bpp == 8) {
+		std::vector<gl_math::Vec4> pallete = {};
+	}
+	else if (bpp == 16) {
+		for (int y = 0; y < height; y++) {
+			const char* pix = pixelArray += rowSize;
+			for (int x = 0; x < width; x++) {
+				long v = (*(pix++)) << 8 | (*(pix++));
+				float r = (float)((v >> shiftR) & maskR) / maskR;
+				float g = (float)((v >> shiftG) & maskG) / maskG;
+				float b = (float)((v >> shiftB) & maskB) / maskB;
+				float a = (float)((v >> shiftA) & maskA) / maskA;
+				pixels[width * y + x] = {r,g,b,a};
+			}
+		}
+	}
+	else if (bpp == 24) {
+		for (int y = 0; y < height; y++) {
+			const char* pix = pixelArray += rowSize;
+			for (int x = 0; x < width; x++) {
+				long v = ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
+				float r = (float)((v >> shiftR) & maskR) / maskR;
+				float g = (float)((v >> shiftG) & maskG) / maskG;
+				float b = (float)((v >> shiftB) & maskB) / maskB;
+				float a = (float)((v >> shiftA) & maskA) / maskA;
+				pixels[width * y + x] = { r,g,b,a };
+			}
+		}
+	}
+	else if (bpp == 32) {
+		for (int y = 0; y < height; y++) {
+			const char* pix = pixelArray += rowSize;
+			for (int x = 0; x < width; x++) {
+				long v = ((*(pix++)) << 24) | ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
+				float r = (float)((v >> shiftR) & maskR) / maskR;
+				float g = (float)((v >> shiftG) & maskG) / maskG;
+				float b = (float)((v >> shiftB) & maskB) / maskB;
+				float a = (float)((v >> shiftA) & maskA) / maskA;
+				pixels[width * y + x] = { r,g,b,a };
+			}
+		}
+	}
+
+	Texture t = Texture(width, height, 4, GL_FLOAT, pixels);
+	delete [] pixels;
+	return t;
 }
 void game_render::Texture::Bind() const {
 	glBindTexture(GL_TEXTURE_2D, xptr_base<GLuint>::ptr);

@@ -3,6 +3,9 @@
 
 template<class T>
 class xptr_base {
+private:
+	void decRefrense();
+	void incRefrense();
 protected:
 	T ptr;
 	std::atomic<size_t>* count;
@@ -21,7 +24,7 @@ public:
 };
 
 template<class T>
-class xptr final : public xptr_base<T*> {
+class xptr final : private xptr_base<T*> {
 public:
 	xptr(T* other) : xptr_base<T*>(other) {}
 	xptr(xptr<T>& other) : xptr_base<T*>(other) {}
@@ -112,7 +115,7 @@ xptr_base<T>::xptr_base(const xptr_base<T>& other)
 {
 	ptr = other.ptr;
 	count = other.count;
-	(*count)++;
+	incRefrense();
 }
 template<class T>
 xptr_base<T>::xptr_base(xptr_base<T>&& other) noexcept
@@ -125,14 +128,14 @@ xptr_base<T>::xptr_base(xptr_base<T>&& other) noexcept
 template<class T>
 xptr_base<T>& xptr_base<T>::operator=(T& other)
 {
-	delete this;
+	decRefrense();
 	ptr = other;
 	count = new std::atomic<size_t>(1);
 }
 template<class T>
 xptr_base<T>& xptr_base<T>::operator=(const xptr_base<T>& other)
 {
-	delete this;
+	decRefrense();
 	ptr = other.ptr;
 	count = other.count;
 	(*count)++;
@@ -157,10 +160,18 @@ bool xptr_base<T>::canDelete() const {
 	return count != NULL && *count == 1;
 }
 template<class T>
-inline xptr_base<T>::~xptr_base()
-{
+void xptr_base<T>::incRefrense() {
+	count++;
+}
+template<class T>
+void xptr_base<T>::decRefrense() {
 	if (count != NULL && --(*count) > 0) return;
 	delete count;
 	count = NULL;
 	ptr = {};
+}
+template<class T>
+inline xptr_base<T>::~xptr_base()
+{
+	decRefrense();
 }

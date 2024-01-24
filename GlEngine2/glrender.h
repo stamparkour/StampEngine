@@ -29,11 +29,13 @@ namespace game_render {
 		Texture(Texture&& v) noexcept;
 		Texture& operator =(const Texture& v);
 		Texture& operator =(Texture&& v) noexcept;
+		operator bool() const;
 		friend void swap(Texture& a, Texture& b);
 		size_t Width() const;
 		size_t Height() const;
 		void setPixels(int elementSize, GLenum type, const void* pixels);
 		~Texture();
+		static Texture BmpTexture(const char* data);
 	};
 
 	struct Material final {
