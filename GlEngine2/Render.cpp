@@ -273,7 +273,7 @@ game_render::Material game_render::Material::defaultMaterial = { false, false, {
 game_render::Material game_render::Material::shadowMaterial = { false, false, {}, {}, {}, 0, {} };
 
 void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject, int phase) {
-	if (phase == 1 || phase == 7) {
+	if (phase == 1 || phase == 7 && applyShadow || phase == 9 && !applyShadow) {
 		material.Bind();
 		mesh->Render(gameObject.getPrevTransform());
 	}
@@ -300,34 +300,45 @@ void game_component::Camera::OnResize(game_core::GameObject& gameObject) {
 	float ratio = (float)game_core::GameManager::Current()->ScreenX() / game_core::GameManager::Current()->ScreenY();
 	camera = gl_math::Mat4::Perspective(fovy, ratio, nearPlane, farPlane);
 }
+int aaojnbas = 0;
 void game_component::Camera::OnRender(game_core::GameObject& gameObject, int phase) {
 	if (phase == 0) {//no light render
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixf(camera * gameObject.transform.ToMatrixInverse());
-		glDisable(GL_STENCIL_TEST);
 		glCullFace(GL_BACK);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	}
-	else if (phase == 2) {//shadow front render
-		glCullFace(GL_FRONT);
-		glStencilMask(GL_TRUE);
-		glEnable(GL_STENCIL_TEST);
-		glDepthMask(GL_FALSE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-	}
-	else if (phase == 4) {//shadow back render
-		glStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
-		glCullFace(GL_BACK);
-	}
-	else if (phase == 6) {//lighting and color
 		glStencilMask(GL_FALSE);
 		glDepthMask(GL_TRUE);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glStencilFunc(GL_EQUAL, 0, 0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
 	}
-	else if (phase == 8) {//ui
-		glDisable(GL_STENCIL_TEST);
+	else if (phase == 2) {//shadow front render
+		glCullFace(GL_FRONT);
+		glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		glStencilMask(GL_TRUE);
+		glDepthMask(GL_FALSE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	}
+	else if (phase == 4) {//shadow back render
+		glCullFace(GL_BACK);
+		glStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		glStencilMask(GL_TRUE);
+		glDepthMask(GL_FALSE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	}
+	else if (phase == 6) {//shadows lighting and color
+		glCullFace(GL_BACK);
+		glStencilFunc(GL_EQUAL, 0, 255);
+		glStencilMask(GL_FALSE);
+		glDepthMask(GL_TRUE);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	}
+	else if (phase == 8) {//lighting and color
+		glStencilFunc(GL_ALWAYS, 0, 255);
+		glStencilMask(GL_FALSE);
+		glDepthMask(GL_TRUE);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	}
+	else if (phase == 10) {//ui
 	}
 }
 game_component::SunLight::SunLight() {
@@ -349,7 +360,7 @@ game_component::SunLight::SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 dif
 	this->specularColor = specularColor;
 }
 void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObject, int phase) {
-	if (phase == 0) {
+	if (phase == 0 || phase == 10) {
 		glDisable(GL_LIGHT0 + index);
 	}
 	else if (phase == 6) {

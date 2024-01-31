@@ -12,14 +12,9 @@ game_core::GameManager* game_core::GameManager::Current() noexcept {
 	return current;
 }
 void game_core::GameManager::Render() {
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(0);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(1);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(2);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(3);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(4);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(5);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(6);
-	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(7);
+	for(int j = 0; j < 12; j++)
+		for (int i = 0; i < scene->gameObjects.size(); i++) 
+			scene->gameObjects[i]->OnRender(j);
 }
 void game_core::GameManager::Resize(int x, int y) {
 	screenX = x;

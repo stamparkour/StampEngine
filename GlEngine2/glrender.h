@@ -72,6 +72,7 @@ namespace game_component {
 	struct MeshRenderer final : game_core::Component {
 		Component_Requirements(MeshRenderer)
 		MeshRenderer() : game_core::Component() {}
+		bool applyShadow{};
 		game_render::Mesh* mesh{};
 		game_render::Material material{};
 		void OnRender(game_core::GameObject& gameObject, int phase) override;

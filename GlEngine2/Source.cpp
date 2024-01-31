@@ -20,6 +20,14 @@ public:
 	}
 };
 
+struct TestComponent2 final : game_core::Component {
+	Component_Requirements(TestComponent)
+public:
+	void Update(game_core::GameObject& gameObject) override {
+		gameObject.transform.position.x = sinf(game_core::TimeManager::Time()) * 2;
+	}
+};
+
 game_core::GameManager manager{};
 game_core::Scene scene{};
 void win_event::Start(double time) {
@@ -31,6 +39,7 @@ void win_event::Start(double time) {
 	game_core::GameObject cube{};
 	game_component::MeshRenderer meshRenderer = {};
 	meshRenderer.mesh = &game_render::Mesh::cubePrimative;
+	meshRenderer.applyShadow = true;
 	meshRenderer.material = game_render::Material::defaultMaterial;
 	cube.AddComponent(meshRenderer);
 	cube.AddComponent(TestComponent{});
@@ -40,10 +49,24 @@ void win_event::Start(double time) {
 
 	game_core::GameObject shadow{};
 	game_component::ShadowRenderer shadowRenderer = {};
+	shadow.AddComponent(TestComponent2{});
 	shadowRenderer.mesh = &game_render::Mesh::cubePrimative;
 	shadow.AddComponent(shadowRenderer);
 	shadow.transform.position = { 0,-2,4 };
+	shadow.transform.scale = { 2,0.5f,2 };
 	scene.AddObject(shadow);
+
+	game_core::GameObject shadow2{};
+	shadow2.AddComponent(TestComponent2{});
+	shadow2.AddComponent(shadowRenderer);
+	shadow2.transform.position = { 0,-2,4 };
+	shadow2.transform.scale = { 0.1,3,3 };
+	scene.AddObject(shadow2);
+
+	game_core::GameObject cube2{};
+	cube2.AddComponent(meshRenderer);
+	cube2.transform.position = { 0,-1,4.5 };
+	scene.AddObject(cube2);
 
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
@@ -52,9 +75,11 @@ void win_event::Start(double time) {
 
 	manager.scene = &scene;
 	glClearColor(0.1f, 0.3f, 0.4f, 1.f);
+	glClearStencil(0);
 	glClearDepth(1);
 	glDepthFunc(GL_LEQUAL);
 	glDepthRange(0, 1);
+	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHTING);
