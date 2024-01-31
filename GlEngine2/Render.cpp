@@ -5,7 +5,7 @@
 
 int currentLightIndex = 0;
 
-game_render::Texture::Texture()  {
+game_render::Texture::Texture() : xptr_base<GLuint>() {
 	this->width = 0;
 	this->height = 0;
 }
@@ -21,12 +21,21 @@ game_render::Texture::Texture(size_t width, size_t height, int elementSize, GLen
 game_render::Texture::Texture(const Texture& v) : xptr_base<GLuint>((const xptr_base<GLuint>&)v) {
 	width = v.width;
 	height = v.height;
-	xptr_base<GLuint>::operator=(v);
 }
 game_render::Texture::Texture(Texture&& v) noexcept : xptr_base<GLuint>() {
 	this->width = 0;
 	this->height = 0;
 	swap(*this, v);
+}
+game_render::Texture& game_render::Texture::operator=(const Texture& v) {
+	width = v.width;
+	height = v.height;
+	xptr_base<GLuint>::operator=(v);
+	return *this;
+}
+game_render::Texture& game_render::Texture::operator=(Texture&& v) noexcept {
+	swap(*this, v);
+	return *this;
 }
 inline void game_render::swap(Texture& a, Texture& b) {
 	using std::swap;
@@ -40,26 +49,13 @@ size_t game_render::Texture::Width() const {
 size_t game_render::Texture::Height() const {
 	return height;
 }
-game_render::Texture& game_render::Texture::operator=(const Texture& v) {
-	width = v.width;
-	height = v.height;
-	xptr_base<GLuint>::operator=(v);
-	return *this;
-}
-game_render::Texture& game_render::Texture::operator=(Texture&& v) noexcept {
-	swap(*this, v);
-	return *this;
-}
 void game_render::Texture::setPixels(int elementSize, GLenum type, const void* pixels) {
 	GLenum v[] = { GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA };
 	Bind();
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, v[elementSize - 1], type, pixels);
 }
 game_render::Texture::~Texture() {
-	if ((xptr_base<GLuint>::count) == NULL) return;
-	if (*(xptr_base<GLuint>::count) == 1) {
-		glDeleteTextures(1,  &(xptr_base<GLuint>::ptr));
-	}
+	if (xptr_base<GLuint>::canDelete()) glDeleteTextures(1, &(xptr_base<GLuint>::ptr));
 }
 game_render::Texture::operator bool() const
 {
@@ -214,11 +210,11 @@ void game_render::Mesh::Render(const gl_math::Mat4& transform) const {
 		glTexCoordPointer(2, GL_FLOAT, sizeof(gl_math::Vec2), vert_uvs);
 	}
 	else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
+	
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
 }
 void game_render::Mesh::GenNormals() {
-	for (int i = 0; i < vertices_length; i += 3) { 
+	for (size_t i = 0; i < vertices_length; i += 3) { 
 		gl_math::Vec3 a = vert_positions[i + 1] - vert_positions[i];
 		gl_math::Vec3 b = vert_positions[i + 2] - vert_positions[i];
 		gl_math::Vec3 c = gl_math::Vec3::Cross(a, b).Normal();
@@ -228,7 +224,7 @@ void game_render::Mesh::GenNormals() {
 	}
 }
 #define cube_vertices (sizeof(cube_positions)/sizeof(cube_positions[0]))
-gl_math::Vec3 cube_positions[] = {
+const gl_math::Vec3 cube_positions[] = {
 	//back
 	{-1,-1,-1},{1,-1,-1},{1,1,-1},
 	{-1,-1,-1},{1,1,-1},{-1,1,-1},
@@ -248,7 +244,7 @@ gl_math::Vec3 cube_positions[] = {
 	{-1,-1,-1},{1,-1,1},{1,-1,-1},
 	{-1,-1,-1},{-1,-1,1},{1,-1,1},
 };
-gl_math::Vec3 cube_normals[] = {
+const gl_math::Vec3 cube_normals[] = {
 	{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1},{0,0,-1},
 	{1,0,0},{1,0,0},{1,0,0},{1,0,0},{1,0,0},{1,0,0},
 	{0,0,1},{0,0,1},{0,0,1},{0,0,1},{0,0,1},{0,0,1},
@@ -256,7 +252,7 @@ gl_math::Vec3 cube_normals[] = {
 	{0,1,0},{0,1,0},{0,1,0},{0,1,0},{0,1,0},{0,1,0},
 	{0,-1,0},{0,-1,0},{0,-1,0},{0,-1,0},{0,-1,0},{0,-1,0},
 };
-gl_math::Vec4 cube_color[] = {
+const gl_math::Vec4 cube_color[] = {
 	{0,0,-1,1},{0,0,-1,1},{0,0,-1,1},{0,0,-1,1},{0,0,-1,1},{0,0,-1,1},
 	{1,0,0,1},{1,0,0,1},{1,0,0,1},{1,0,0,1},{1,0,0,1},{1,0,0,1},
 	{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},
@@ -264,7 +260,7 @@ gl_math::Vec4 cube_color[] = {
 	{0,1,0,1},{0,1,0,1},{0,1,0,1},{0,1,0,1},{0,1,0,1},{0,1,0,1},
 	{0,-1,0,1},{0,-1,0,1},{0,-1,0,1},{0,-1,0,1},{0,-1,0,1},{0,-1,0,1},
 };
-gl_math::Vec2 cube_uv[] = {
+const gl_math::Vec2 cube_uv[] = {
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
@@ -274,9 +270,19 @@ gl_math::Vec2 cube_uv[] = {
 };
 game_render::Mesh game_render::Mesh::cubePrimative = { cube_positions,cube_normals,cube_color,cube_uv,cube_vertices };
 game_render::Material game_render::Material::defaultMaterial = { false, false, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 4, {0,0,0,1}, {} };
-void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject) {
-	material->Bind();
-	mesh->Render(gameObject.getTransform());
+game_render::Material game_render::Material::shadowMaterial = { false, false, {}, {}, {}, 0, {} };
+
+void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject, int phase) {
+	if (phase == 1 || phase == 7) {
+		material.Bind();
+		mesh->Render(gameObject.getPrevTransform());
+	}
+}
+void game_component::ShadowRenderer::OnRender(game_core::GameObject& gameObject, int phase) {
+	if (phase == 3 || phase == 5) {
+		material->Bind();
+		mesh->Render(gameObject.getPrevTransform());
+	}
 }
 game_component::Camera::Camera() noexcept {
 	fovy = 40;
@@ -294,9 +300,35 @@ void game_component::Camera::OnResize(game_core::GameObject& gameObject) {
 	float ratio = (float)game_core::GameManager::Current()->ScreenX() / game_core::GameManager::Current()->ScreenY();
 	camera = gl_math::Mat4::Perspective(fovy, ratio, nearPlane, farPlane);
 }
-void game_component::Camera::OnRender(game_core::GameObject& gameObject) {
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(camera * gameObject.transform.ToMatrixInverse());
+void game_component::Camera::OnRender(game_core::GameObject& gameObject, int phase) {
+	if (phase == 0) {//no light render
+		glMatrixMode(GL_PROJECTION);
+		glLoadMatrixf(camera * gameObject.transform.ToMatrixInverse());
+		glDisable(GL_STENCIL_TEST);
+		glCullFace(GL_BACK);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	}
+	else if (phase == 2) {//shadow front render
+		glCullFace(GL_FRONT);
+		glStencilMask(GL_TRUE);
+		glEnable(GL_STENCIL_TEST);
+		glDepthMask(GL_FALSE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+	}
+	else if (phase == 4) {//shadow back render
+		glStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		glCullFace(GL_BACK);
+	}
+	else if (phase == 6) {//lighting and color
+		glStencilMask(GL_FALSE);
+		glDepthMask(GL_TRUE);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glStencilFunc(GL_EQUAL, 0, 0xFF);
+	}
+	else if (phase == 8) {//ui
+		glDisable(GL_STENCIL_TEST);
+	}
 }
 game_component::SunLight::SunLight() {
 	index = currentLightIndex++;
@@ -316,18 +348,24 @@ game_component::SunLight::SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 dif
 	this->diffuseColor = diffuseColor;
 	this->specularColor = specularColor;
 }
-void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObject) {
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(gl_math::Mat4_Identity);
-	gl_math::Vec4 v = (gl_math::Vec4)gameObject.transform.forward();
-	gl_math::Vec4 n = -v;
-	glEnable(GL_LIGHT0 + index);
-	glLightfv(GL_LIGHT0 + index, GL_POSITION, (float*)&v);
-	glLightfv(GL_LIGHT0 + index, GL_SPOT_DIRECTION, (float*)&n);
-	glLightfv(GL_LIGHT0 + index, GL_AMBIENT, (float*)&ambientColor);
-	glLightfv(GL_LIGHT0 + index, GL_DIFFUSE, (float*)&diffuseColor);
-	glLightfv(GL_LIGHT0 + index, GL_SPECULAR, (float*)&specularColor);
+void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObject, int phase) {
+	if (phase == 0) {
+		glDisable(GL_LIGHT0 + index);
+	}
+	else if (phase == 6) {
+		glEnable(GL_LIGHT0 + index);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixf(gl_math::Mat4_Identity);
+		gl_math::Vec4 v = (gl_math::Vec4)gameObject.transform.forward();
+		gl_math::Vec4 n = -v;
+		glLightfv(GL_LIGHT0 + index, GL_POSITION, (float*)&v);
+		glLightfv(GL_LIGHT0 + index, GL_SPOT_DIRECTION, (float*)&n);
+		glLightfv(GL_LIGHT0 + index, GL_AMBIENT, (float*)&ambientColor);
+		glLightfv(GL_LIGHT0 + index, GL_DIFFUSE, (float*)&diffuseColor);
+		glLightfv(GL_LIGHT0 + index, GL_SPECULAR, (float*)&specularColor);
+	}
 }
+	
 void game_component::SunLight::SunLight::OnEnabled(game_core::GameObject& gameObject) {
 	glEnable(GL_LIGHT0 + index);
 }

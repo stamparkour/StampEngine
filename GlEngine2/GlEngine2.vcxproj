@@ -110,6 +110,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>opengl32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <HeapReserveSize>64</HeapReserveSize>
+      <StackReserveSize>64</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -121,6 +123,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -128,6 +131,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>opengl32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <HeapReserveSize>64</HeapReserveSize>
+      <StackReserveSize>64</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -139,11 +144,13 @@
     <ClCompile Include="winmanager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="filemanager.h" />
     <ClInclude Include="gamecore.h" />
     <ClInclude Include="glmat.h" />
     <ClInclude Include="glrender.h" />
     <ClInclude Include="glquat.h" />
     <ClInclude Include="glvec.h" />
+    <ClInclude Include="gl.h" />
     <ClInclude Include="wincore.h" />
     <ClInclude Include="winevent.h" />
     <ClInclude Include="xptr.h" />

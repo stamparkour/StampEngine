@@ -2,8 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <Windows.h>
-#include <gl/gl.h>
-#include <gl/glu.h>
+#include "gl.h"
 #include "wincore.h"
 
 #define GLWINMODE_ACTIVE_BIT 1
@@ -45,14 +44,17 @@ void OnCreate(HWND hwnd) {
 	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR), 1,
 		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_GENERIC_ACCELERATED,
-		PFD_TYPE_RGBA, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
+		PFD_TYPE_RGBA, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 8, PFD_MAIN_PLANE, 0, 0, 0, 0
 	};
 	int iPixelFormat = ChoosePixelFormat(displayContext, &pfd);
+	DescribePixelFormat(displayContext, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 	if (SetPixelFormat(displayContext, iPixelFormat, &pfd) == FALSE)
 		return;
 	HGLRC glContext = wglCreateContext(displayContext);
 	if (wglMakeCurrent(displayContext, glContext) == FALSE)
 		return;
+	int value;
+	glGetIntegerv(GL_STENCIL_BITS, &value);
 
 	InitTimer();
 	glDrawBuffer(GL_BACK);
@@ -64,7 +66,10 @@ void OnPaint(HWND hwnd) {
 	HDC hdc = wglGetCurrentDC();
 	HGLRC glc = wglGetCurrentContext();
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glStencilMask(GL_TRUE);
+	glDepthMask(GL_TRUE);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	win_event::Render(win_event::GetTime());
 
@@ -80,7 +85,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		win_input::KeyDown((int)wParam, (lParam & (1 << 30)));
+		win_input::KeyDown((int)wParam, ((int)lParam & (1 << 30)));
 		break;
 	case WM_KEYUP://https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 	case WM_SYSKEYUP:
@@ -125,7 +130,7 @@ bool ContainsCmdLineFlag(PWSTR args, WCHAR flag) {
 	return false;
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
+int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
 	WNDCLASS windowClass = {
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
 		Wndproc,
@@ -156,7 +161,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	}
 	else {
 		hwnd = CreateWindow(TEXT("StampClass_GL"), TEXT("Test Window"),
-			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX,
+			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 			CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, NULL, NULL, hInstance, NULL);
 	}
 
@@ -172,7 +177,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 	double prevTime = 0;
 	while (IsWindow(hwnd)) {
-		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0) {
+		for (int i = 0; i < 100 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
 			if (msg.message == WM_PAINT)
 				break;
 			TranslateMessage(&msg);

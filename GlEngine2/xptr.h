@@ -1,10 +1,11 @@
 #include <atomic>
+#include <cstring>
 #pragma once
 
 template<class T>
 class xptr_base {
 private:
-	void decRefrense();
+	bool decRefrense();
 	void incRefrense();
 protected:
 	T ptr;
@@ -27,18 +28,28 @@ template<class T>
 class xptr final : private xptr_base<T*> {
 public:
 	xptr(T* other) : xptr_base<T*>(other) {}
+	template<size_t X>
+	xptr(const T (&other)[X]) : xptr_base<T*>(NULL) {
+		size_t size = X * sizeof(T);
+		xptr_base<T*>::ptr = new T[X];
+		memcpy_s(xptr_base<T*>::ptr, size, &other, size);
+	}
 	xptr(xptr<T>& other) : xptr_base<T*>(other) {}
 	xptr(xptr<T>&& other) noexcept : xptr_base<T*>(other) {}
-	xptr<T>& operator =(T* other)
-	{
+	xptr<T>& operator =(T* other) {
 		xptr_base<T*>::operator =(other);
 	}
-	xptr<T>& operator =(const xptr<T>& other)
-	{
+	template<size_t X>
+	xptr<T>& operator =(const T (&other)[X]) {
+		size_t size = X * sizeof(T);
+		T* p = new T[X];
+		memcpy_s(xptr_base<T*>::ptr, size, &other, size);
+		xptr_base<T*>::operator =(p);
+	}
+	xptr<T>& operator =(const xptr<T>& other) {
 		xptr_base<T*>::operator =(other);
 	}
-	xptr<T>& operator =(xptr<T>&& other) noexcept
-	{
+	xptr<T>& operator =(xptr<T>&& other) noexcept {
 		xptr_base<T*>::operator =(other);
 	}
 	T operator *();
@@ -50,6 +61,7 @@ public:
 	operator bool() const noexcept;
 	operator void* ();
 	operator const void* () const;
+	~xptr();
 };
 
 
@@ -99,6 +111,10 @@ xptr<T>::operator bool() const noexcept
 	return xptr_base<T*>::count && xptr_base<T*>::ptr;
 }
 template<class T>
+inline xptr<T>::~xptr() {
+	if (xptr_base<T*>::canDelete()) delete [] xptr_base<T*>::ptr;
+}
+template<class T>
 inline xptr_base<T>::xptr_base()
 {
 	ptr = {};
@@ -138,7 +154,7 @@ xptr_base<T>& xptr_base<T>::operator=(const xptr_base<T>& other)
 	decRefrense();
 	ptr = other.ptr;
 	count = other.count;
-	(*count)++;
+	incRefrense();
 	return *this;
 }
 template<class T>
@@ -157,18 +173,19 @@ inline void swap(xptr_base<T>& a, xptr_base<T>& b)
 }
 template<class T>
 bool xptr_base<T>::canDelete() const {
-	return count != NULL && *count == 1;
+	return ptr && count != NULL && *count == 1;
 }
 template<class T>
 void xptr_base<T>::incRefrense() {
-	count++;
+	if(count) count++;
 }
 template<class T>
-void xptr_base<T>::decRefrense() {
-	if (count != NULL && --(*count) > 0) return;
+bool xptr_base<T>::decRefrense() {
+	if (count != NULL && --(*count) > 0) return false;
 	delete count;
 	count = NULL;
 	ptr = {};
+	return true;
 }
 template<class T>
 inline xptr_base<T>::~xptr_base()

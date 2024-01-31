@@ -1,7 +1,6 @@
 #include <Windows.h>
 #include <fstream>
-#include <gl/gl.h>
-#include <gl/glu.h>
+#include "gl.h"
 #include "wincore.h"
 #include "gamecore.h"
 #include "glrender.h"
@@ -9,7 +8,7 @@
 //mouse pos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
 //hide mouse https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
 //change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
-#define AngleToRad 0.0174532925199
+#define AngleToRad 0.0174532925199f
 
 
 
@@ -17,7 +16,7 @@ struct TestComponent final : game_core::Component {
 	Component_Requirements(TestComponent)
 public:
 	void Update(game_core::GameObject& gameObject) override {
-		gameObject.transform.Rotate(game_core::TimeManager::DeltaTime() * 0.7, game_core::TimeManager::DeltaTime() *2, 0);
+		gameObject.transform.Rotate(game_core::TimeManager::DeltaTime() * 0.7f, game_core::TimeManager::DeltaTime() *2, 0);
 	}
 };
 
@@ -25,22 +24,27 @@ game_core::GameManager manager{};
 game_core::Scene scene{};
 void win_event::Start(double time) {
 
-	std::fstream stream{""};
-
-	game_render::Texture tex = game_render::Texture::BmpTexture("");
-
 	game_core::GameObject cam{};
 	cam.AddComponent(game_component::Camera{});
 	scene.AddObject(cam);
+
 	game_core::GameObject cube{};
 	game_component::MeshRenderer meshRenderer = {};
 	meshRenderer.mesh = &game_render::Mesh::cubePrimative;
-	meshRenderer.material = &game_render::Material::defaultMaterial;
+	meshRenderer.material = game_render::Material::defaultMaterial;
 	cube.AddComponent(meshRenderer);
 	cube.AddComponent(TestComponent{});
 	cube.transform.Rotate(0, 0, -10 * AngleToRad);
 	cube.transform.position = { 0,-2,4 };
 	scene.AddObject(cube);
+
+	game_core::GameObject shadow{};
+	game_component::ShadowRenderer shadowRenderer = {};
+	shadowRenderer.mesh = &game_render::Mesh::cubePrimative;
+	shadow.AddComponent(shadowRenderer);
+	shadow.transform.position = { 0,-2,4 };
+	scene.AddObject(shadow);
+
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
 	sun.AddComponent(game_component::SunLight{ {0.05f, 0.05f, 0.05f,0}, {0.95f,0.95f,0.95f,0},{0,0,0,0} });
@@ -49,8 +53,7 @@ void win_event::Start(double time) {
 	manager.scene = &scene;
 	glClearColor(0.1f, 0.3f, 0.4f, 1.f);
 	glClearDepth(1);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
+	glDepthFunc(GL_LEQUAL);
 	glDepthRange(0, 1);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_NORMALIZE);
@@ -81,9 +84,9 @@ void win_event::Render(double time) {
 }
 
 void win_input::KeyDown(int keyCode, bool isRepeat) {//https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-
+	manager.KeyDown(keyCode);
 }
 
 void win_input::KeyUp(int keyCode) {
-
+	manager.KeyUp(keyCode);
 }

@@ -10,6 +10,7 @@
 
 namespace game_component {
 	struct MeshRenderer;
+	struct ShadowRenderer;
 	struct Camera;
 }
 
@@ -48,12 +49,14 @@ namespace game_render {
 		gl_math::Vec4 emissiveColor;
 		Texture texture;
 		static Material defaultMaterial;
+		static Material shadowMaterial;
 
 		void Bind() const;
 	};
 
 	struct Mesh final {
 		friend struct game_component::MeshRenderer;
+		friend struct game_component::ShadowRenderer;
 		xptr<gl_math::Vec3> vert_positions;
 		xptr<gl_math::Vec3> vert_normals;
 		xptr<gl_math::Vec4> vert_colors;
@@ -70,8 +73,18 @@ namespace game_component {
 		Component_Requirements(MeshRenderer)
 		MeshRenderer() : game_core::Component() {}
 		game_render::Mesh* mesh{};
-		game_render::Material* material{};
-		void OnRender(game_core::GameObject& gameObject) override;
+		game_render::Material material{};
+		void OnRender(game_core::GameObject& gameObject, int phase) override;
+	};
+
+	struct ShadowRenderer final : game_core::Component {
+		Component_Requirements(ShadowRenderer)
+	private:
+		game_render::Material* material = &game_render::Material::shadowMaterial;
+	public:
+		ShadowRenderer() : game_core::Component() {}
+		game_render::Mesh* mesh{};
+		void OnRender(game_core::GameObject& gameObject, int phase) override;
 	};
 
 	struct Camera final : game_core::Component {
@@ -85,7 +98,7 @@ namespace game_component {
 		Camera() noexcept;
 		Camera(float fovy, float nearPlane, float farPlane) noexcept;
 		void OnResize(game_core::GameObject& gameObject) override;
-		void OnRender(game_core::GameObject& gameObject) override;
+		void OnRender(game_core::GameObject& gameObject, int phase) override;
 	};
 
 	struct SunLight final : game_core::Component {
@@ -99,7 +112,7 @@ namespace game_component {
 		SunLight();
 		SunLight(gl_math::Vec4 color);
 		SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 diffuseColor, gl_math::Vec4 specularColor);
-		void OnRender(game_core::GameObject& gameObject) override;
+		void OnRender(game_core::GameObject& gameObject, int phase) override;
 		void OnEnabled(game_core::GameObject& gameObject) override;
 		void OnDisabled(game_core::GameObject& gameObject) override;
 	};

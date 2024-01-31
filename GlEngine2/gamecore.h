@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 
+#define LayerMask_Main 1
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);}
 
 namespace game_core {
@@ -46,15 +47,16 @@ namespace game_core {
 	private:
 		std::vector<Component*> components;
 		GameObjectState state;
+		gl_math::Mat4 transformMatrix;
 	public:
 		game_core::Transform transform;
 		std::string name;
-		int groupMask;
+		int layerMask;
 		GameObject* parent;
 
 		GameObject();
 		GameObject(std::string name);
-		GameObject(std::string name, int groupMask);
+		GameObject(std::string name, int layerMask);
 		GameObject(const GameObject& v);
 		GameObject(GameObject&& v) noexcept;
 		GameObject& operator =(const GameObject& v);
@@ -66,6 +68,7 @@ namespace game_core {
 		bool exsists();
 		std::vector<GameObject*> getChildren();
 		gl_math::Mat4 getTransform();
+		gl_math::Mat4 getPrevTransform() const;
 		template <typename T>
 		void AddComponent(T& component);
 		template <typename T>
@@ -79,8 +82,9 @@ namespace game_core {
 	protected:
 		void Awake();
 		void Update();
+		void SyncUpdate();
 		void FixedUpdate();
-		void OnRender();
+		void OnRender(int phase);
 		void OnResize();
 	};
 	
@@ -97,7 +101,7 @@ namespace game_core {
 		virtual void OnDestroy(GameObject& gameObject) {}
 		virtual void Update(GameObject& gameObject) {}
 		virtual void FixedUpdate(GameObject& gameObject) {}
-		virtual void OnRender(GameObject& gameObject) {}
+		virtual void OnRender(GameObject& gameObject, int phase) {}
 		virtual void OnResize(GameObject& gameObject) {}
 		virtual size_t Size() = 0;
 	}; 
@@ -162,6 +166,8 @@ namespace game_core {
 		void SyncUpdate();
 		void Resize(int x, int y);
 		void Render();
+		void KeyDown(char virtualKey);
+		void KeyUp(char virtualKey);
 
 		static GameManager* Current() noexcept;
 	};

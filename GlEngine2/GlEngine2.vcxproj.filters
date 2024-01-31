@@ -83,6 +83,12 @@
     <ClInclude Include="xptr.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>
+    <ClInclude Include="filemanager.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="gl.h">
+      <Filter>Header Files\manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="wininput.h">

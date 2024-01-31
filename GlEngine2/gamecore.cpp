@@ -12,14 +12,25 @@ game_core::GameManager* game_core::GameManager::Current() noexcept {
 	return current;
 }
 void game_core::GameManager::Render() {
-	for (int i = 0; i < scene->gameObjects.size(); i++) {
-		scene->gameObjects[i]->OnRender();
-	}
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(0);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(1);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(2);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(3);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(4);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(5);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(6);
+	for (int i = 0; i < scene->gameObjects.size(); i++) scene->gameObjects[i]->OnRender(7);
 }
 void game_core::GameManager::Resize(int x, int y) {
 	screenX = x;
 	screenY = y;
 	resized = true;
+}
+void game_core::GameManager::KeyDown(char virtualKey) {
+	controls.KeyDown(virtualKey);
+}
+void game_core::GameManager::KeyUp(char virtualKey) {
+	controls.KeyUp(virtualKey);
 }
 void game_core::GameManager::Update(double time) {
 	this->time.NextTimestep(time);
@@ -33,6 +44,9 @@ void game_core::GameManager::Update(double time) {
 	}
 }
 void game_core::GameManager::SyncUpdate() {
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->SyncUpdate();
+	}
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		if (scene->gameObjects[i]->state == GameObjectState::Destroying) {
 			for (int j = 0; j < scene->gameObjects[i]->components.size(); j++) {
@@ -93,44 +107,49 @@ game_core::GameObject::GameObject() {
 	transform = {};
 	state = game_core::GameObjectState::Created;
 	name = "";
-	groupMask = 1;
+	layerMask = 1;
+	transformMatrix = {};
 	parent = NULL;
 }
 game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	components = {v.components.size(), 0};
 	transform = v.transform;
+	transformMatrix = v.transformMatrix;
 	for (int i = 0; i < v.components.size(); i++) {
 		components[i] = (Component*)malloc(v.components[i]->Size());
 		memcpy(components[i], v.components[i], v.components[i]->Size());
 	}
 	state = v.state;
 	name = v.name;
-	groupMask = v.groupMask;
+	layerMask = v.layerMask;
 	parent = v.parent;
 }
 game_core::GameObject::GameObject(std::string name) {
 	components = {};
 	transform = {};
+	transformMatrix = {};
 	state = game_core::GameObjectState::Created;
 	this->name = name;
-	groupMask = 1;
+	layerMask = 1;
 	parent = NULL;
 }
 game_core::GameObject::GameObject(std::string name, int groupMask) {
 	components = {};
 	transform = {};
+	transformMatrix = {};
 	state = game_core::GameObjectState::Created;
 	this->name = name;
-	this->groupMask = groupMask;
+	this->layerMask = groupMask;
 	parent = NULL;
 }
 game_core::GameObject::GameObject(GameObject&& v) noexcept {
 	using std::swap;
 	components = {};
 	transform = {};
+	transformMatrix = {};
 	state = game_core::GameObjectState::Created;
 	name = "";
-	groupMask = 1;
+	layerMask = 1;
 	parent = NULL;
 	swap(*this, v);
 }
@@ -143,7 +162,7 @@ game_core::GameObject& game_core::GameObject::operator=(const GameObject& v) {
 	}
 	state = v.state;
 	name = v.name;
-	groupMask = v.groupMask;
+	layerMask = v.layerMask;
 	parent = v.parent;
 	return *this;
 }
@@ -158,8 +177,9 @@ inline void game_core::swap(game_core::GameObject& a, game_core::GameObject& b) 
 	swap(a.transform, b.transform);
 	swap(a.state, b.state);
 	swap(a.name, b.name);
-	swap(a.groupMask, b.groupMask);
+	swap(a.layerMask, b.layerMask);
 	swap(a.parent, b.parent);
+	swap(a.transformMatrix, b.transformMatrix);
 }
 game_core::GameObject::~GameObject() {
 	for (int i = 0; i < components.size(); i++) {
@@ -175,9 +195,12 @@ bool game_core::GameObject::exsists() {
 	}
 	return false;
 }
-gl_math::Mat4 game_core::GameObject::getTransform(){
+gl_math::Mat4 game_core::GameObject::getTransform() {
 	if (parent == NULL) return transform.ToMatrix();
-	return transform.ToMatrix(); * parent->getTransform();
+	return transform.ToMatrix(); *parent->getTransform();
+}
+gl_math::Mat4 game_core::GameObject::getPrevTransform() const {
+	return transformMatrix;
 }
 void game_core::GameObject::Awake() {
 	for (int i = 0; i < components.size(); i++) {
@@ -215,10 +238,10 @@ void game_core::GameObject::FixedUpdate() {
 		components[i]->FixedUpdate(*this);
 	}
 }
-void game_core::GameObject::OnRender() {
+void game_core::GameObject::OnRender(int phase) {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
-		components[i]->OnRender(*this);
+		components[i]->OnRender(*this, phase);
 	}
 }
 void game_core::GameObject::OnResize() {
@@ -258,4 +281,8 @@ bool game_core::ControlsManager::isKeyDown(char virtualKey) {
 }
 bool game_core::ControlsManager::isKeyUp(char virtualKey) {
 	return !isKeyDown(virtualKey);
+}
+void game_core::GameObject::SyncUpdate()
+{
+	this->transformMatrix = getTransform();
 }
