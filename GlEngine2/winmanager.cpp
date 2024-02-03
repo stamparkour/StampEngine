@@ -43,7 +43,7 @@ void OnCreate(HWND hwnd) {
 	HDC displayContext = GetDC(hwnd);
 	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR), 1,
-		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_GENERIC_ACCELERATED,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
 		PFD_TYPE_RGBA, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 8, PFD_MAIN_PLANE, 0, 0, 0, 0
 	};
 	int iPixelFormat = ChoosePixelFormat(displayContext, &pfd);
@@ -66,7 +66,7 @@ void OnPaint(HWND hwnd) {
 	HDC hdc = wglGetCurrentDC();
 	HGLRC glc = wglGetCurrentContext();
 
-	glStencilMask(GL_TRUE);
+	glStencilMask(0xFF);
 	glDepthMask(GL_TRUE);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

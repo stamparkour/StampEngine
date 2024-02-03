@@ -42,11 +42,29 @@ Vec3::Vec3(float x, float y, float z) noexcept {
 	this->y = y;
 	this->z = z;
 }
-void Vec3::operator +=(const Vec3& b) noexcept {
-	*this = *this + b;
+Vec3& Vec3::operator +=(const Vec3& b) noexcept {
+	x += b.x;
+	y += b.y;
+	z += b.z;
+	return *this;
 }
-void Vec3::operator -=(const Vec3& b) noexcept {
-	*this = *this - b;
+Vec3& Vec3::operator -=(const Vec3& b) noexcept {
+	x -= b.x;
+	y -= b.y;
+	z -= b.z;
+	return *this;
+}
+Vec3& Vec3::operator *=(float b) noexcept {
+	x *= b;
+	y *= b;
+	z *= b;
+	return *this;
+}
+Vec3& Vec3::operator /=(float b) noexcept {
+	x /= b;
+	y /= b;
+	z /= b;
+	return *this;
 }
 Vec3 Vec3::operator +(const Vec3& b) const noexcept {
 	return { x + b.x,y + b.y, z + b.z };

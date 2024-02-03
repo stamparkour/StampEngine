@@ -17,6 +17,19 @@ struct TestComponent final : game_core::Component {
 public:
 	void Update(game_core::GameObject& gameObject) override {
 		gameObject.transform.Rotate(game_core::TimeManager::DeltaTime() * 0.7f, game_core::TimeManager::DeltaTime() *2, 0);
+		float mag = 5;
+		if (game_core::ControlsManager::isKeyDown('W'))
+			gameObject.transform.position += gl_math::Vec3{ 0,0,1 } *game_core::TimeManager::DeltaTime() * mag;
+		if (game_core::ControlsManager::isKeyDown('S'))
+			gameObject.transform.position += gl_math::Vec3{ 0,0,-1 } *game_core::TimeManager::DeltaTime() * mag;
+		if (game_core::ControlsManager::isKeyDown('D'))
+			gameObject.transform.position += gl_math::Vec3{ 1,0,0 } *game_core::TimeManager::DeltaTime() * mag;
+		if (game_core::ControlsManager::isKeyDown('A'))
+			gameObject.transform.position += gl_math::Vec3{ -1,0,0 } *game_core::TimeManager::DeltaTime() * mag;
+		if (game_core::ControlsManager::isKeyDown('R'))
+			gameObject.transform.position += gl_math::Vec3{ 0,1,0 } *game_core::TimeManager::DeltaTime() * mag;
+		if (game_core::ControlsManager::isKeyDown('F'))
+			gameObject.transform.position += gl_math::Vec3{ 0,-1,0 } *game_core::TimeManager::DeltaTime() * mag;
 	}
 };
 
@@ -56,13 +69,6 @@ void win_event::Start(double time) {
 	shadow.transform.scale = { 2,0.5f,2 };
 	scene.AddObject(shadow);
 
-	game_core::GameObject shadow2{};
-	shadow2.AddComponent(TestComponent2{});
-	shadow2.AddComponent(shadowRenderer);
-	shadow2.transform.position = { 0,-2,4 };
-	shadow2.transform.scale = { 0.1,3,3 };
-	scene.AddObject(shadow2);
-
 	game_core::GameObject cube2{};
 	cube2.AddComponent(meshRenderer);
 	cube2.transform.position = { 0,-1,4.5 };
@@ -70,7 +76,9 @@ void win_event::Start(double time) {
 
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
-	sun.AddComponent(game_component::SunLight{ {0.05f, 0.05f, 0.05f,0}, {0.95f,0.95f,0.95f,0},{0,0,0,0} });
+	auto sunlight = game_component::SunLight{ {0.05f, 0.05f, 0.05f,0}, {0.95f,0.95f,0.95f,0},{0,0,0,0} };
+	sunlight.isShadowLight = false;
+	sun.AddComponent(sunlight);
 	scene.AddObject(sun);
 
 	manager.scene = &scene;

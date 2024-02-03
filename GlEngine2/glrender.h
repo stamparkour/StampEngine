@@ -110,6 +110,7 @@ namespace game_component {
 		gl_math::Vec4 ambientColor;
 		gl_math::Vec4 diffuseColor;
 		gl_math::Vec4 specularColor;
+		bool isShadowLight;
 		SunLight();
 		SunLight(gl_math::Vec4 color);
 		SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 diffuseColor, gl_math::Vec4 specularColor);

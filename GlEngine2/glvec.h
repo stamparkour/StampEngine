@@ -31,8 +31,10 @@ namespace gl_math {
 		Vec3() noexcept;
 		Vec3(float x, float y, float z) noexcept;
 
-		void operator +=(const Vec3& b) noexcept;
-		void operator -=(const Vec3& b) noexcept;
+		Vec3& operator +=(const Vec3& b) noexcept;
+		Vec3& operator -=(const Vec3& b) noexcept;
+		Vec3& operator *=(float b) noexcept;
+		Vec3& operator /=(float b) noexcept;
 		Vec3 operator +(const Vec3& b) const noexcept;
 		Vec3 operator -(const Vec3& b) const noexcept;
 		Vec3 operator -() const noexcept;
