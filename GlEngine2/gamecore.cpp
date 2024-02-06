@@ -1,8 +1,10 @@
 #include "gamecore.h"
-
+#include <xaudio2.h>
 game_core::GameManager* game_core::GameManager::current = NULL;
 
 void game_core::GameManager::Initialize() {
+	audio.Initialize();
+
 	game_core::GameManager::current = this;
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		scene->gameObjects[i]->Awake();
@@ -83,9 +85,10 @@ double game_core::TimeManager::FixedTime() {
 double game_core::TimeManager::FixedDeltaTime() { 
 	return game_core::GameManager::Current()->time.fixedDeltaTime;
 }
-void game_core::Scene::AddObject(const game_core::GameObject& object) {
+game_core::GameObject& game_core::Scene::AddObject(const game_core::GameObject& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
 	gameObjects.push_back(o);
+	return *o;
 }
 void game_core::Scene::AddObject(game_core::GameObject&& object) {
 	game_core::GameObject* o = new game_core::GameObject(object);
@@ -280,4 +283,16 @@ bool game_core::ControlsManager::isKeyUp(char virtualKey) {
 void game_core::GameObject::SyncUpdate()
 {
 	this->transformMatrix = getTransform();
+}
+//https://learn.microsoft.com/en-us/windows/win32/xaudio2/how-to--play-a-sound-with-xaudio2
+bool game_core::AudioManager::Initialize() {
+	HRESULT hr;
+	IXAudio2* pXAudio2 = nullptr;
+	if (FAILED(hr = XAudio2Create(&pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
+		return true;
+	IXAudio2MasteringVoice* pMasterVoice = nullptr;
+	if (FAILED(hr = pXAudio2->CreateMasteringVoice(&pMasterVoice)))
+		return true;
+
+	return false;
 }

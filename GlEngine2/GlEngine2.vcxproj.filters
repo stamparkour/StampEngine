@@ -89,6 +89,12 @@
     <ClInclude Include="gl.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
+    <ClInclude Include="audio.h">
+      <Filter>Header Files\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="glmath.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="wininput.h">

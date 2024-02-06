@@ -10,11 +10,24 @@
 //change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
 #define AngleToRad 0.0174532925199f
 
-
+struct DestroyComponent final : game_core::Component {
+	Component_Requirements(DestroyComponent)
+public:
+	float t = 0;
+	void Start(game_core::GameObject& gameObject) override {
+		t = game_core::TimeManager::Time() + 10;
+	}
+	void Update(game_core::GameObject& gameObject) override {
+		if (t < game_core::TimeManager::Time()) {
+			gameObject.Destroy();
+		}
+	}
+};
 
 struct TestComponent final : game_core::Component {
 	Component_Requirements(TestComponent)
 public:
+	float test = 0;
 	void Update(game_core::GameObject& gameObject) override {
 		gameObject.transform.Rotate(game_core::TimeManager::DeltaTime() * 0.7f, game_core::TimeManager::DeltaTime() *2, 0);
 		float mag = 5;
@@ -30,6 +43,21 @@ public:
 			gameObject.transform.position += gl_math::Vec3{ 0,1,0 } *game_core::TimeManager::DeltaTime() * mag;
 		if (game_core::ControlsManager::isKeyDown('F'))
 			gameObject.transform.position += gl_math::Vec3{ 0,-1,0 } *game_core::TimeManager::DeltaTime() * mag;
+
+		if (test < game_core::TimeManager::Time()) {
+			game_core::GameObject obj{};
+			game_component::MeshRenderer meshRenderer = {};
+			meshRenderer.mesh = &game_render::Mesh::cubePrimative;
+			meshRenderer.applyShadow = true;
+			meshRenderer.material = game_render::Material::defaultMaterial;
+			obj.AddComponent(meshRenderer);
+			obj.transform.position = gameObject.transform.position;
+			obj.transform.rotation = gameObject.transform.rotation;
+			obj.transform.scale = { 0.2f,0.2f,0.2f };
+			obj.AddComponent(DestroyComponent{});
+			game_core::GameManager::Current()->scene->AddObject(obj);
+			test = game_core::TimeManager::Time() + 0.01;
+		}
 	}
 };
 

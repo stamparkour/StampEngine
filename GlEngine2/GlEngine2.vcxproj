@@ -144,11 +144,13 @@
     <ClCompile Include="winmanager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="audio.h" />
     <ClInclude Include="filemanager.h" />
     <ClInclude Include="gamecore.h" />
     <ClInclude Include="glmat.h" />
     <ClInclude Include="glrender.h" />
     <ClInclude Include="glquat.h" />
+    <ClInclude Include="glmath.h" />
     <ClInclude Include="glvec.h" />
     <ClInclude Include="gl.h" />
     <ClInclude Include="wincore.h" />

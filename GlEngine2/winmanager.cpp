@@ -130,6 +130,11 @@ bool ContainsCmdLineFlag(PWSTR args, WCHAR flag) {
 }
 
 int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
+	HRESULT hr;
+	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(hr))
+		return hr;
+	
 	WNDCLASS windowClass = {
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
 		Wndproc,
@@ -189,7 +194,7 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		win_event::SyncUpdate(win_event::GetTime());
 
 		double time = win_event::GetTime();
-		double wait = 1.0 / 65 - (time - prevTime);
+		double wait = 1.0 / 60 - (time - prevTime);
 		if (wait <= 0) {
 			prevTime = time;
 		}
@@ -199,6 +204,7 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		}
 	}
 
+	CoUninitialize();
 	return 0;
 }
 

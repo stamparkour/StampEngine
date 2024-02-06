@@ -1,6 +1,6 @@
 #include "wincore.h"
 #include "gamecore.h"
-#include "gltransform.h"
+#include "glmath.h"
 using namespace gl_math;
 
 void game_core::Transform::Rotate(float x, float y, float z) {

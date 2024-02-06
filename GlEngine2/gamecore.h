@@ -1,5 +1,6 @@
 #pragma once
-#include "gltransform.h"
+#include "glmath.h"
+#include "audio.h"
 #include <vector>
 #include <string>
 
@@ -112,7 +113,7 @@ namespace game_core {
 	private:
 		std::vector<GameObject*> gameObjects;
 	public:
-		void AddObject(const GameObject& object);
+		GameObject& AddObject(const GameObject& object);
 		void AddObject(GameObject&& object);
 
 		GameObject* getGameObjectByName(std::string name);
@@ -146,6 +147,14 @@ namespace game_core {
 		static bool isKeyUp(char virtualKey);
 	};
 
+	struct AudioManager {
+		friend struct GameManager;
+	private:
+		bool Initialize();
+	public:
+
+	};
+
 	struct GameManager final {
 	private:
 		int screenX;
@@ -155,7 +164,8 @@ namespace game_core {
 	public:
 		TimeManager time;
 		ControlsManager controls;
-		Scene* scene;
+		AudioManager audio;
+		Scene* scene = 0;
 
 		inline int ScreenX() const noexcept { return screenX; }
 		inline int ScreenY() const noexcept { return screenY;  }
