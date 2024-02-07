@@ -28,18 +28,20 @@ template<class T>
 class xptr final : private xptr_base<T*> {
 public:
 	xptr(T* other) : xptr_base<T*>(other) {}
-	template<size_t X>
+	template<class T, size_t X>
 	xptr(const T (&other)[X]) : xptr_base<T*>(NULL) {
 		size_t size = X * sizeof(T);
 		xptr_base<T*>::ptr = new T[X];
 		memcpy_s(xptr_base<T*>::ptr, size, &other, size);
 	}
 	xptr(xptr<T>& other) : xptr_base<T*>(other) {}
-	xptr(xptr<T>&& other) noexcept : xptr_base<T*>(other) {}
 	xptr<T>& operator =(T* other) {
 		xptr_base<T*>::operator =(other);
 	}
-	template<size_t X>
+	xptr<T>& operator =(const T* other) {
+		xptr_base<T*>::operator =(other);
+	}
+	template<class T, size_t X>
 	xptr<T>& operator =(const T (&other)[X]) {
 		size_t size = X * sizeof(T);
 		T* p = new T[X];
@@ -53,6 +55,9 @@ public:
 		xptr_base<T*>::operator =(other);
 	}
 	T operator *();
+	T** operator &() {
+		return *xptr_base<T*>::ptr;
+	}
 	T* operator ->();
 	T operator [](size_t i);
 	const T operator *() const;
@@ -61,6 +66,9 @@ public:
 	operator bool() const noexcept;
 	operator void* ();
 	operator const void* () const;
+	operator explicit T* () {
+		return xptr_base<T*>::ptr;
+	}
 	~xptr();
 };
 
@@ -73,7 +81,7 @@ T xptr<T>::operator*()
 template<class T>
 T* xptr<T>::operator->()
 {
-	return *xptr_base<T*>::ptr;
+	return xptr_base<T*>::ptr;
 }
 template<class T>
 const T xptr<T>::operator[](size_t i) const

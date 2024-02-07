@@ -336,13 +336,13 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) {
 	size_t dataIndex;
 	size_t dataSize;
 	if (!getChunk<length>('atad', ptr, dataIndex, dataSize)) return;
-	memcpy_s(fmt, sizeof(WAVEFORMATEX), ptr + fmtIndex, fmtLength);
+	memcpy_s(&fmt, sizeof(WAVEFORMATEX), (char*)ptr + fmtIndex, fmtLength);
 	data.pAudioData = ptr + dataIndex;
 	data.AudioBytes = dataSize;
 	data.PlayBegin = 0;
 	data.PlayLength = 0;
 	data.Flags = XAUDIO2_END_OF_STREAM;
-	pContext = this;
+	data.pContext = this;
 
 	auto pXAudio2 = GameManager::Current()->audio.pXAudio2;
 	HRESULT hr;
