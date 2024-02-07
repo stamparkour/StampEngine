@@ -287,7 +287,7 @@ void game_core::GameObject::SyncUpdate()
 //https://learn.microsoft.com/en-us/windows/win32/xaudio2/how-to--play-a-sound-with-xaudio2
 bool game_core::AudioManager::Initialize() {
 	HRESULT hr;
-	IXAudio2* pXAudio2 = nullptr;
+	pXAudio2 = nullptr;
 	if (FAILED(hr = XAudio2Create(&pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
 		return true;
 	IXAudio2MasteringVoice* pMasterVoice = nullptr;
@@ -295,4 +295,59 @@ bool game_core::AudioManager::Initialize() {
 		return true;
 
 	return false;
+}
+bool game_core::AudioClip::Play(float volume) {
+	HRESULT hr;
+	if (FAILED(hr = pSourceVoice->Start(0)))
+		return true;
+	return false;
+}
+
+template<size_t length>
+bool getChunk(long fourcc, const char(&data)[length], size_t& index, size_t& size) {
+	for (size_t i = 12; i < length;) {
+		if (*(long*)(data + i) != fourcc) {
+			i += 4;
+			size = *(long*)(data + i);
+			i += 4;
+			index = ((i + 1) / 2) * 2;
+			return true;
+		}
+		else {
+			i += 4;
+			i += *(long*)(data + i) + 4;
+			i = ((i + 1) / 2) * 2;
+		}
+	}
+	return false;
+}
+
+template<size_t length>
+inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) {
+	ptr = new char[length];
+	memcpy_s(ptr, length, buffer, length);
+	//little endian
+	if (*(long*)(ptr + 0) != 'FFIR') return;
+	long fileSize = *(long*)(ptr + 4) + 8;
+	if (*(long*)(ptr + 8) != 'EVAW') return;
+	size_t fmtIndex;
+	size_t fmtLength;
+	if(!getChunk<length>(' tmf', ptr, fmtIndex, fmtLength)) return;
+	size_t dataIndex;
+	size_t dataSize;
+	if (!getChunk<length>('atad', ptr, dataIndex, dataSize)) return;
+	memcpy_s(fmt, sizeof(WAVEFORMATEX), ptr + fmtIndex, fmtLength);
+	data.pAudioData = ptr + dataIndex;
+	data.AudioBytes = dataSize;
+	data.PlayBegin = 0;
+	data.PlayLength = 0;
+	data.Flags = XAUDIO2_END_OF_STREAM;
+	pContext = this;
+
+	auto pXAudio2 = GameManager::Current()->audio.pXAudio2;
+	HRESULT hr;
+	if (FAILED(hr = pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&fmt)))
+		throw hr;
+	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
+		throw hr;
 }

@@ -1,8 +1,10 @@
 #pragma once
 #include "glmath.h"
 #include "audio.h"
+#include "xptr.h"
 #include <vector>
 #include <string>
+#include <xaudio2.h>
 
 #define LayerMask_Main 1
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);}
@@ -147,13 +149,29 @@ namespace game_core {
 		static bool isKeyUp(char virtualKey);
 	};
 
-	struct AudioManager {
+	struct AudioClip final {
+	private:
+		WAVEFORMATEX fmt{};
+		XAUDIO2_BUFFER data{};
+		xptr<IXAudio2SourceVoice> pSourceVoice = 0;
+		xptr<char> ptr = 0;
+	public:
+		AudioClip() {}
+		template<size_t length>
+		AudioClip(const char (&buffer)[length]);
+		bool Play(float volume);
+	};
+
+	struct AudioManager final {
 		friend struct GameManager;
+		friend struct AudioClip;
 	private:
 		bool Initialize();
+		IXAudio2* pXAudio2;
 	public:
-
 	};
+
+	
 
 	struct GameManager final {
 	private:

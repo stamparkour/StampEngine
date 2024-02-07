@@ -101,4 +101,9 @@
       <Filter>Header Files\windows</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="F:\OneDrive\Music\My Recordings\TEST.wav">
+      <Filter>Header Files\manager</Filter>
+    </Media>
+  </ItemGroup>
 </Project>

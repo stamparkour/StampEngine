@@ -53,10 +53,10 @@ public:
 		xptr_base<T*>::operator =(other);
 	}
 	T operator *();
-	T operator ->();
+	T* operator ->();
 	T operator [](size_t i);
 	const T operator *() const;
-	const T operator ->() const;
+	const T* operator ->() const;
 	const T operator [](size_t i) const;
 	operator bool() const noexcept;
 	operator void* ();
@@ -71,7 +71,7 @@ T xptr<T>::operator*()
 	return *xptr_base<T*>::ptr;
 }
 template<class T>
-T xptr<T>::operator->()
+T* xptr<T>::operator->()
 {
 	return *xptr_base<T*>::ptr;
 }
@@ -86,9 +86,9 @@ const T xptr<T>::operator*() const
 	return *xptr_base<T*>::ptr;
 }
 template<class T>
-const T xptr<T>::operator->() const
+const T* xptr<T>::operator->() const
 {
-	return *xptr_base<T*>::ptr;
+	return xptr_base<T*>::ptr;
 }
 template<class T>
 T xptr<T>::operator[](size_t i)
