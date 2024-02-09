@@ -185,7 +185,8 @@ bool xptr_base<T>::canDelete() const {
 }
 template<class T>
 void xptr_base<T>::incRefrense() {
-	if(count) count++;
+	if(count)
+		(*count)++;
 }
 template<class T>
 bool xptr_base<T>::decRefrense() {

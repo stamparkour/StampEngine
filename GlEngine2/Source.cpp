@@ -15,7 +15,7 @@ struct DestroyComponent final : game_core::Component {
 public:
 	float t = 0;
 	void Start(game_core::GameObject& gameObject) override {
-		t = game_core::TimeManager::Time() + 10;
+		t = game_core::TimeManager::Time() + 5;
 	}
 	void Update(game_core::GameObject& gameObject) override {
 		if (t < game_core::TimeManager::Time()) {
@@ -56,13 +56,13 @@ public:
 			obj.transform.scale = { 0.2f,0.2f,0.2f };
 			obj.AddComponent(DestroyComponent{});
 			game_core::GameManager::Current()->scene->AddObject(obj);
-			test = game_core::TimeManager::Time() + 0.01;
+			test = game_core::TimeManager::Time() + 0.1;
 		}
 	}
 };
 
 struct TestComponent2 final : game_core::Component {
-	Component_Requirements(TestComponent)
+	Component_Requirements(TestComponent2)
 public:
 	void Update(game_core::GameObject& gameObject) override {
 		gameObject.transform.position.x = sinf(game_core::TimeManager::Time()) * 2;
@@ -82,6 +82,8 @@ void win_event::Start(double time) {
 	meshRenderer.mesh = &game_render::Mesh::cubePrimative;
 	meshRenderer.applyShadow = true;
 	meshRenderer.material = game_render::Material::defaultMaterial;
+	meshRenderer.material.useTexture = true;
+	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
 	cube.AddComponent(meshRenderer);
 	cube.AddComponent(TestComponent{});
 	cube.transform.Rotate(0, 0, -10 * AngleToRad);
@@ -99,7 +101,7 @@ void win_event::Start(double time) {
 
 	game_core::GameObject cube2{};
 	cube2.AddComponent(meshRenderer);
-	cube2.transform.position = { 0,-1,4.5 };
+	cube2.transform.position = { 0,-1,5 };
 	scene.AddObject(cube2);
 
 	game_core::GameObject sun{};
@@ -110,6 +112,7 @@ void win_event::Start(double time) {
 	scene.AddObject(sun);
 
 	manager.scene = &scene;
+
 	glClearColor(0.1f, 0.3f, 0.4f, 1.f);
 	glClearStencil(0);
 	glClearDepth(1);

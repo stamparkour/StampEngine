@@ -7,9 +7,11 @@
 #include <xaudio2.h>
 
 #define LayerMask_Main 1
-#define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);}
+#define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);} void AssignSelf(const Component& other) override { *this = (class_name&)other; }
 
 namespace game_core {
+	xptr<char> readFile(const char* path, size_t* oSize);
+
 	struct Transform {
 		gl_math::Vec3 position{};
 		gl_math::Vec3 scale{ 1,1,1 };
@@ -107,6 +109,7 @@ namespace game_core {
 		virtual void OnRender(GameObject& gameObject, int phase) {}
 		virtual void OnResize(GameObject& gameObject) {}
 		virtual size_t Size() = 0;
+		virtual void AssignSelf(const Component& other) = 0;
 	}; 
 	
 	struct Scene final {

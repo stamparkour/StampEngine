@@ -1,4 +1,6 @@
 #include "gamecore.h"
+#include <filesystem>
+#include <fstream>
 #include <xaudio2.h>
 game_core::GameManager* game_core::GameManager::current = NULL;
 
@@ -115,7 +117,9 @@ game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	transformMatrix = v.transformMatrix;
 	for (int i = 0; i < v.components.size(); i++) {
 		components[i] = (Component*)malloc(v.components[i]->Size());
-		memcpy(components[i], v.components[i], v.components[i]->Size());
+		memset(components[i], 0, v.components[i]->Size());
+		memcpy(components[i], v.components[i], sizeof(Component));
+		components[i]->AssignSelf(*v.components[i]);
 	}
 	state = v.state;
 	name = v.name;
@@ -350,4 +354,14 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) {
 		throw hr;
 	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
 		throw hr;
+}
+xptr<char> game_core::readFile(const char* path, size_t* oSize) {
+	std::fstream stream = std::fstream(path, std::ios::binary | std::ios::in);
+	stream.seekg(0, stream.end);
+	size_t length = stream.tellg();
+	stream.seekg(0, stream.beg);
+	if (oSize) *oSize = length;
+	char* c = new char[length];
+	stream.read(c, length);
+	return c;
 }

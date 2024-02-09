@@ -9,14 +9,14 @@ game_render::Texture::Texture() : xptr_base<GLuint>() {
 	this->width = 0;
 	this->height = 0;
 }
-game_render::Texture::Texture(size_t width, size_t height, int elementSize, GLenum type, const void* pixels) : xptr_base<GLuint>() {
+game_render::Texture::Texture(size_t width, size_t height, int elementSize, GLenum type, const void* pixels) : xptr_base<GLuint>(0) {
 	glGenTextures(1, &ptr);
 	Bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	setPixels(elementSize, type, pixels);
 	this->width = width;
 	this->height = height;
+	setPixels(elementSize, type, pixels);
 }
 game_render::Texture::Texture(const Texture& v) : xptr_base<GLuint>((const xptr_base<GLuint>&)v) {
 	width = v.width;
@@ -55,7 +55,8 @@ void game_render::Texture::setPixels(int elementSize, GLenum type, const void* p
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, v[elementSize - 1], type, pixels);
 }
 game_render::Texture::~Texture() {
-	if (xptr_base<GLuint>::canDelete()) glDeleteTextures(1, &(xptr_base<GLuint>::ptr));
+	if (xptr_base<GLuint>::canDelete() && xptr_base<GLuint>::ptr)
+		glDeleteTextures(1, &(xptr_base<GLuint>::ptr));
 }
 game_render::Texture::operator bool() const
 {
@@ -76,11 +77,11 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 {
 	if (data[0] != 'B' || data[1] != 'M') return {};
 	long bmpSize = *(long*)(data + 2);
-	const char* pixelArray = data + *(long*)(data + 10);
+	const unsigned char* pixelArray = (unsigned char*)data + *(long*)(data + 10);
 	long headerSize = *(long*)(data + 14);
 	const char* palleteArray = data + headerSize + 14;
 	long width, height, bpp, compression, imageSize, paletteCount;
-	if (headerSize == 40 || headerSize == 52) {
+	if (headerSize == 40 || headerSize == 52 || headerSize == 124) {
 		width = *(long*)(data + 18);
 		height = *(long*)(data + 22);
 		bpp = *(short*)(data + 28);
@@ -90,29 +91,31 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 	}
 	else return {};
 	long maskA = 0;
-	long maskR = 0;
-	long maskG = 0;
-	long maskB = 0;
+	long maskR = 0xFF;
+	long maskG = 0xFF;
+	long maskB = 0xFF;
 	int shiftA = 0;
 	int shiftR = 0;
-	int shiftG = 0;
-	int shiftB = 0;
-	if (compression == 0) {
-		maskR = SwapBigEndian(*(long*)(palleteArray + 0));
-		maskG = SwapBigEndian(*(long*)(palleteArray + 4));
-		maskB = SwapBigEndian(*(long*)(palleteArray + 8));
-	}
-	else if (compression == 6) {
-		maskR = SwapBigEndian(*(long*)(palleteArray + 0));
-		maskG = SwapBigEndian(*(long*)(palleteArray + 4));
-		maskB = SwapBigEndian(*(long*)(palleteArray + 8));
-		maskA = SwapBigEndian(*(long*)(palleteArray + 12));
-	}
+	int shiftG = 8;
+	int shiftB = 16;
+	if (compression != 0) {
+		if (compression == 3) {
+			maskR = SwapBigEndian(*(long*)(data + 50 + 0));
+			maskG = SwapBigEndian(*(long*)(data + 50 + 4));
+			maskB = SwapBigEndian(*(long*)(data + 50 + 8));
+		}
+		else if (compression == 6) {
+			maskR = SwapBigEndian(*(long*)(data + 50 + 0));
+			maskG = SwapBigEndian(*(long*)(data + 50 + 4));
+			maskB = SwapBigEndian(*(long*)(data + 50 + 8));
+			maskA = SwapBigEndian(*(long*)(data + 50 + 12));
+		}
 
-	for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
-	for (; maskG && !(maskG & 1); maskG >>= 1)shiftG++;
-	for (; maskB && !(maskB & 1); maskB >>= 1)shiftB++;
-	for (; maskA && !(maskA & 1); maskA >>= 1)shiftA++;
+		for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
+		for (; maskG && !(maskG & 1); maskG >>= 1)shiftG++;
+		for (; maskB && !(maskB & 1); maskB >>= 1)shiftB++;
+		for (; maskA && !(maskA & 1); maskA >>= 1)shiftA++;
+	}
 
 	gl_math::Vec4* pixels = new gl_math::Vec4[width * height];
 	int rowSize = ((bpp * width + 31) / 32) * 4;
@@ -121,41 +124,45 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 	}
 	else if (bpp == 16) {
 		for (int y = 0; y < height; y++) {
-			const char* pix = pixelArray += rowSize;
+			const unsigned char* pix = pixelArray;
 			for (int x = 0; x < width; x++) {
-				long v = (*(pix++)) << 8 | (*(pix++));
-				float r = (float)((v >> shiftR) & maskR) / maskR;
-				float g = (float)((v >> shiftG) & maskG) / maskG;
-				float b = (float)((v >> shiftB) & maskB) / maskB;
-				float a = (float)((v >> shiftA) & maskA) / maskA;
+				unsigned  long v = (*(pix++)) << 8 | (*(pix++));
+				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+				float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+				float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
 				pixels[width * y + x] = {r,g,b,a};
 			}
+			pixelArray += rowSize;
 		}
 	}
 	else if (bpp == 24) {
 		for (int y = 0; y < height; y++) {
-			const char* pix = pixelArray += rowSize;
+			const unsigned char* pix = pixelArray;
 			for (int x = 0; x < width; x++) {
-				long v = ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
-				float r = (float)((v >> shiftR) & maskR) / maskR;
-				float g = (float)((v >> shiftG) & maskG) / maskG;
-				float b = (float)((v >> shiftB) & maskB) / maskB;
-				float a = (float)((v >> shiftA) & maskA) / maskA;
+				unsigned long v = ((*(pix + 0)) << 16) | ((*(pix + 1)) << 8) | (*(pix + 2));
+				pix += 3;
+				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+				float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+				float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
 				pixels[width * y + x] = { r,g,b,a };
 			}
+			pixelArray += rowSize;
 		}
 	}
 	else if (bpp == 32) {
 		for (int y = 0; y < height; y++) {
-			const char* pix = pixelArray += rowSize;
+			const unsigned char* pix = pixelArray;
 			for (int x = 0; x < width; x++) {
-				long v = ((*(pix++)) << 24) | ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
-				float r = (float)((v >> shiftR) & maskR) / maskR;
-				float g = (float)((v >> shiftG) & maskG) / maskG;
-				float b = (float)((v >> shiftB) & maskB) / maskB;
-				float a = (float)((v >> shiftA) & maskA) / maskA;
+				unsigned long v = ((*(pix++)) << 24) | ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
+				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+				float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+				float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
 				pixels[width * y + x] = { r,g,b,a };
 			}
+			pixelArray += rowSize;
 		}
 	}
 
@@ -341,18 +348,21 @@ game_component::SunLight::SunLight() {
 	ambientColor = { 0,0,0,1 };
 	diffuseColor = { 1,1,1,1 };
 	specularColor = { 1,1,1,1 };
+	isShadowLight = false;
 }
 game_component::SunLight::SunLight(gl_math::Vec4 color) {
 	index = currentLightIndex++;
 	ambientColor = { 0,0,0,1 };
 	diffuseColor = color;
 	specularColor = { 1,1,1,1 };
+	isShadowLight = false;
 }
 game_component::SunLight::SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 diffuseColor, gl_math::Vec4 specularColor) {
 	index = currentLightIndex++;
 	this->ambientColor = ambientColor;
 	this->diffuseColor = diffuseColor;
 	this->specularColor = specularColor;
+	isShadowLight = false;
 }
 void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObject, int phase) {
 	
