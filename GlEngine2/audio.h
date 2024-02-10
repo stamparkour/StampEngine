@@ -3,11 +3,12 @@
 #include "gamecore.h"
 
 namespace game_component {
-	struct AudioSource final : game_core::Component {
-		Component_Requirements(AudioSource)
+	struct AudioSourceEffect final : game_core::Component {
+		Component_Requirements(AudioSourceEffect)
 	public:
 		xptr<game_core::AudioClip> clip = nullptr;
-		AudioSource() noexcept;
+		AudioSourceEffect() noexcept;
 		void Update(game_core::GameObject& gameObject) override;
+		bool isPlaying();
 	};
 }

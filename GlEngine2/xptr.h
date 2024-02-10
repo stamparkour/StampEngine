@@ -76,7 +76,7 @@ public:
 	operator bool() const noexcept;
 	operator void* ();
 	operator const void* () const;
-	operator explicit T* () {
+	explicit operator T* () {
 		return xptr_base<T*>::ptr;
 	}
 	~xptr();
