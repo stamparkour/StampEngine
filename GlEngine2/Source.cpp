@@ -84,7 +84,7 @@ void win_event::Start(double time) {
 	meshRenderer.applyShadow = true;
 	meshRenderer.material = game_render::Material::defaultMaterial;
 	meshRenderer.material.useTexture = true;
-	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
+	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Usesrs\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
 	cube.AddComponent(meshRenderer);
 	cube.AddComponent(TestComponent{});
 	cube.transform.Rotate(0, 0, -10 * AngleToRad);

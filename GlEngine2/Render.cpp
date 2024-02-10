@@ -76,7 +76,7 @@ static long SwapBigEndian(long v) {
 game_render::Texture game_render::Texture::BmpTexture(const char* d)
 {
 	const uint8_t* data = (const uint8_t*)d;
-	if (data[0] != 'B' || data[1] != 'M') return {};
+	if (!data || data[0] != 'B' || data[1] != 'M') return {};
 	uint32_t bmpSize = *(uint32_t*)(data + 2);
 	const uint8_t* pixelArray = (uint8_t*)data + *(uint32_t*)(data + 10);
 	uint32_t headerSize = *(uint32_t*)(data + 14);
@@ -200,22 +200,22 @@ void game_render::Mesh::Render(const gl_math::Mat4& transform) const {
 	glLoadMatrixf(transform);
 	if (vert_positions) {
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(gl_math::Vec3), vert_positions);
+		glVertexPointer(3, GL_FLOAT, sizeof(gl_math::Vec3), (const void*)vert_positions);
 	}
 	else glDisableClientState(GL_VERTEX_ARRAY);
 	if (vert_normals) {
 		glEnableClientState(GL_NORMAL_ARRAY);
-		glNormalPointer(GL_FLOAT, sizeof(gl_math::Vec3), vert_normals);
+		glNormalPointer(GL_FLOAT, sizeof(gl_math::Vec3), (const void*)vert_normals);
 	}
 	else glDisableClientState(GL_NORMAL_ARRAY);
 	if (vert_colors) {
 		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(4, GL_FLOAT, sizeof(gl_math::Vec4), vert_colors);
+		glColorPointer(4, GL_FLOAT, sizeof(gl_math::Vec4), (const void*)vert_colors);
 	}
 	else glDisableClientState(GL_COLOR_ARRAY);
 	if (vert_uvs) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(gl_math::Vec2), vert_uvs);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(gl_math::Vec2), (const void*)vert_uvs);
 	}
 	else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	
