@@ -1,6 +1,5 @@
 #pragma once
 #include "glmath.h"
-#include "audio.h"
 #include "xptr.h"
 #include <vector>
 #include <string>
@@ -152,17 +151,39 @@ namespace game_core {
 		static bool isKeyUp(char virtualKey);
 	};
 
-	struct AudioClip final {
+	class VoiceCallback : public IXAudio2VoiceCallback
+	{
+	public:
+		VoiceCallback()  {}
+		~VoiceCallback() {  }
+
+		//Called when the voice has just finished playing a contiguous audio stream.
+
+		//Unused methods are stubs
+	};
+
+	struct AudioClip final : IXAudio2VoiceCallback {
 	private:
 		WAVEFORMATEX fmt{};
 		XAUDIO2_BUFFER data{};
-		xptr<IXAudio2SourceVoice> pSourceVoice = 0;
-		xptr<char> ptr = 0;
+		xptr<IXAudio2SourceVoice> pSourceVoice = nullptr;
+		xptr<char> ptr = nullptr;
+		HANDLE hBufferEndEvent;
+		bool playing = false;
 	public:
-		AudioClip() {}
+		AudioClip() : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {}
 		template<size_t length>
 		AudioClip(const char (&buffer)[length]);
+		~AudioClip();
 		bool Play(float volume);
+		void OnStreamEnd();
+		void OnVoiceProcessingPassEnd() { }
+		void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
+		void OnBufferEnd(void* pBufferContext) { }
+		void OnBufferStart(void* pBufferContext) {    }
+		void OnLoopEnd(void* pBufferContext) {    }
+		void OnVoiceError(void* pBufferContext, HRESULT Error) { }
+		bool isPlaying() const;
 	};
 
 	struct AudioManager final {
@@ -173,8 +194,6 @@ namespace game_core {
 		IXAudio2* pXAudio2;
 	public:
 	};
-
-	
 
 	struct GameManager final {
 	private:

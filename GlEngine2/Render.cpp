@@ -73,42 +73,43 @@ static long SwapBigEndian(long v) {
 		return v;
 	}
 }
-game_render::Texture game_render::Texture::BmpTexture(const char* data)
+game_render::Texture game_render::Texture::BmpTexture(const char* d)
 {
+	const uint8_t* data = (const uint8_t*)d;
 	if (data[0] != 'B' || data[1] != 'M') return {};
-	long bmpSize = *(long*)(data + 2);
-	const unsigned char* pixelArray = (unsigned char*)data + *(long*)(data + 10);
-	long headerSize = *(long*)(data + 14);
-	const char* palleteArray = data + headerSize + 14;
-	long width, height, bpp, compression, imageSize, paletteCount;
+	uint32_t bmpSize = *(uint32_t*)(data + 2);
+	const uint8_t* pixelArray = (uint8_t*)data + *(uint32_t*)(data + 10);
+	uint32_t headerSize = *(uint32_t*)(data + 14);
+	const uint8_t* palleteArray = data + headerSize + 14;
+	uint32_t width, height, bpp, compression, imageSize, paletteCount;
 	if (headerSize == 40 || headerSize == 52 || headerSize == 124) {
-		width = *(long*)(data + 18);
-		height = *(long*)(data + 22);
-		bpp = *(short*)(data + 28);
-		compression = *(long*)(data + 30);
-		imageSize = *(long*)(data + 34);
-		paletteCount = *(long*)(data + 46);
+		width = *(uint32_t*)(data + 18);
+		height = *(uint32_t*)(data + 22);
+		bpp = *(uint16_t*)(data + 28);
+		compression = *(uint32_t*)(data + 30);
+		imageSize = *(uint32_t*)(data + 34);
+		paletteCount = *(uint32_t*)(data + 46);
 	}
 	else return {};
-	long maskA = 0;
-	long maskR = 0xFF;
-	long maskG = 0xFF;
-	long maskB = 0xFF;
+	uint32_t maskA = 0;
+	uint32_t maskR = 0xFF;
+	uint32_t maskG = 0xFF;
+	uint32_t maskB = 0xFF;
 	int shiftA = 0;
 	int shiftR = 0;
 	int shiftG = 8;
 	int shiftB = 16;
 	if (compression != 0) {
 		if (compression == 3) {
-			maskR = SwapBigEndian(*(long*)(data + 50 + 0));
-			maskG = SwapBigEndian(*(long*)(data + 50 + 4));
-			maskB = SwapBigEndian(*(long*)(data + 50 + 8));
+			maskR = SwapBigEndian(*(uint32_t*)(data + 50 + 0));
+			maskG = SwapBigEndian(*(uint32_t*)(data + 50 + 4));
+			maskB = SwapBigEndian(*(uint32_t*)(data + 50 + 8));
 		}
 		else if (compression == 6) {
-			maskR = SwapBigEndian(*(long*)(data + 50 + 0));
-			maskG = SwapBigEndian(*(long*)(data + 50 + 4));
-			maskB = SwapBigEndian(*(long*)(data + 50 + 8));
-			maskA = SwapBigEndian(*(long*)(data + 50 + 12));
+			maskR = SwapBigEndian(*(uint32_t*)(data + 50 + 0));
+			maskG = SwapBigEndian(*(uint32_t*)(data + 50 + 4));
+			maskB = SwapBigEndian(*(uint32_t*)(data + 50 + 8));
+			maskA = SwapBigEndian(*(uint32_t*)(data + 50 + 12));
 		}
 
 		for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
@@ -124,9 +125,9 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 	}
 	else if (bpp == 16) {
 		for (int y = 0; y < height; y++) {
-			const unsigned char* pix = pixelArray;
+			const uint8_t* pix = pixelArray;
 			for (int x = 0; x < width; x++) {
-				unsigned  long v = (*(pix++)) << 8 | (*(pix++));
+				uint32_t v = (*(pix++)) << 8 | (*(pix++));
 				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
 				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
 				float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
@@ -137,10 +138,10 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 		}
 	}
 	else if (bpp == 24) {
-		for (int y = 0; y < height; y++) {
-			const unsigned char* pix = pixelArray;
-			for (int x = 0; x < width; x++) {
-				unsigned long v = ((*(pix + 0)) << 16) | ((*(pix + 1)) << 8) | (*(pix + 2));
+		for (uint32_t y = 0; y < height; y++) {
+			const uint8_t* pix = pixelArray;
+			for (uint32_t x = 0; x < width; x++) {
+				uint32_t v = ((*(pix + 0)) << 16) | ((*(pix + 1)) << 8) | (*(pix + 2));
 				pix += 3;
 				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
 				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
@@ -152,10 +153,10 @@ game_render::Texture game_render::Texture::BmpTexture(const char* data)
 		}
 	}
 	else if (bpp == 32) {
-		for (int y = 0; y < height; y++) {
-			const unsigned char* pix = pixelArray;
-			for (int x = 0; x < width; x++) {
-				unsigned long v = ((*(pix++)) << 24) | ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
+		for (uint32_t y = 0; y < height; y++) {
+			const uint8_t* pix = pixelArray;
+			for (uint32_t x = 0; x < width; x++) {
+				uint32_t v = ((*(pix++)) << 24) | ((*(pix++)) << 16) | ((*(pix++)) << 8) | (*(pix++));
 				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
 				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
 				float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;

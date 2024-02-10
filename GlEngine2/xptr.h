@@ -27,6 +27,7 @@ public:
 template<class T>
 class xptr final : private xptr_base<T*> {
 public:
+	xptr() : xptr_base<T*>() {}
 	xptr(T* other) : xptr_base<T*>(other) {}
 	template<class T, size_t X>
 	xptr(const T (&other)[X]) : xptr_base<T*>(NULL) {
@@ -34,9 +35,15 @@ public:
 		xptr_base<T*>::ptr = new T[X];
 		memcpy_s(xptr_base<T*>::ptr, size, &other, size);
 	}
+	xptr(std::nullptr_t other) {
+		xptr_base<T*>::operator =(nullptr);
+	}
 	xptr(xptr<T>& other) : xptr_base<T*>(other) {}
 	xptr<T>& operator =(T* other) {
 		xptr_base<T*>::operator =(other);
+	}
+	xptr<T>& operator =(std::nullptr_t other) {
+		xptr_base<T*>::operator =(nullptr);
 	}
 	xptr<T>& operator =(const T* other) {
 		xptr_base<T*>::operator =(other);
@@ -47,12 +54,15 @@ public:
 		T* p = new T[X];
 		memcpy_s(xptr_base<T*>::ptr, size, &other, size);
 		xptr_base<T*>::operator =(p);
+		return *this;
 	}
 	xptr<T>& operator =(const xptr<T>& other) {
 		xptr_base<T*>::operator =(other);
+		return *this;
 	}
 	xptr<T>& operator =(xptr<T>&& other) noexcept {
 		xptr_base<T*>::operator =(other);
+		return *this;
 	}
 	T operator *();
 	T** operator &() {

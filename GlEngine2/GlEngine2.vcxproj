@@ -138,6 +138,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Audio.cpp" />
     <ClCompile Include="gamecore.cpp" />
     <ClCompile Include="gamemanager.cpp" />
     <ClCompile Include="math.cpp" />

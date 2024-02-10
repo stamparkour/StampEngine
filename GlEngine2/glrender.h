@@ -1,7 +1,6 @@
 #pragma once
 #include <Windows.h>
-#include <gl/gl.h>
-#include <gl/glu.h>
+#include "gl.h"
 #include "glvec.h"
 #include "glmat.h"
 #include "glquat.h"

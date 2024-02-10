@@ -300,26 +300,19 @@ bool game_core::AudioManager::Initialize() {
 
 	return false;
 }
-bool game_core::AudioClip::Play(float volume) {
-	HRESULT hr;
-	if (FAILED(hr = pSourceVoice->Start(0)))
-		return true;
-	return false;
-}
-
 template<size_t length>
 bool getChunk(long fourcc, const char(&data)[length], size_t& index, size_t& size) {
 	for (size_t i = 12; i < length;) {
 		if (*(long*)(data + i) != fourcc) {
 			i += 4;
-			size = *(long*)(data + i);
+			size = *(uint32_t*)(data + i);
 			i += 4;
 			index = ((i + 1) / 2) * 2;
 			return true;
 		}
 		else {
 			i += 4;
-			i += *(long*)(data + i) + 4;
+			i += *(uint32_t*)(data + i) + 4;
 			i = ((i + 1) / 2) * 2;
 		}
 	}
@@ -327,18 +320,18 @@ bool getChunk(long fourcc, const char(&data)[length], size_t& index, size_t& siz
 }
 
 template<size_t length>
-inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) {
+inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {
 	ptr = new char[length];
 	memcpy_s(ptr, length, buffer, length);
 	//little endian
 	if (*(long*)(ptr + 0) != 'FFIR') return;
 	long fileSize = *(long*)(ptr + 4) + 8;
 	if (*(long*)(ptr + 8) != 'EVAW') return;
-	size_t fmtIndex;
-	size_t fmtLength;
+	size_t fmtIndex = 0;
+	size_t fmtLength = 0;
 	if(!getChunk<length>(' tmf', ptr, fmtIndex, fmtLength)) return;
-	size_t dataIndex;
-	size_t dataSize;
+	size_t dataIndex = 0;
+	size_t dataSize = 0;
 	if (!getChunk<length>('atad', ptr, dataIndex, dataSize)) return;
 	memcpy_s(&fmt, sizeof(WAVEFORMATEX), (char*)ptr + fmtIndex, fmtLength);
 	data.pAudioData = ptr + dataIndex;
@@ -350,13 +343,14 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) {
 
 	auto pXAudio2 = GameManager::Current()->audio.pXAudio2;
 	HRESULT hr;
-	if (FAILED(hr = pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&fmt)))
+	if (FAILED(hr = pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&fmt,0, XAUDIO2_DEFAULT_FREQ_RATIO, this, NULL, NULL)))
 		throw hr;
 	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
 		throw hr;
 }
 xptr<char> game_core::readFile(const char* path, size_t* oSize) {
 	std::fstream stream = std::fstream(path, std::ios::binary | std::ios::in);
+	if (!stream) return nullptr;
 	stream.seekg(0, stream.end);
 	size_t length = stream.tellg();
 	stream.seekg(0, stream.beg);
@@ -364,4 +358,21 @@ xptr<char> game_core::readFile(const char* path, size_t* oSize) {
 	char* c = new char[length];
 	stream.read(c, length);
 	return c;
+}
+game_core::AudioClip::~AudioClip() {
+	CloseHandle(hBufferEndEvent);
+}
+void game_core::AudioClip::OnStreamEnd() {
+	SetEvent(hBufferEndEvent);
+	playing = false;
+}
+bool game_core::AudioClip::isPlaying() const {
+	return playing;
+}
+bool game_core::AudioClip::Play(float volume) {
+	playing = true;
+	HRESULT hr;
+	if (FAILED(hr = pSourceVoice->Start(0)))
+		return true;
+	return false;
 }
