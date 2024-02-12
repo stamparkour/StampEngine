@@ -84,7 +84,7 @@ void win_event::Start(double time) {
 	meshRenderer.applyShadow = true;
 	meshRenderer.material = game_render::Material::defaultMaterial;
 	meshRenderer.material.useTexture = true;
-	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Usesrs\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
+	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
 	cube.AddComponent(meshRenderer);
 	cube.AddComponent(TestComponent{});
 	cube.transform.Rotate(0, 0, -10 * AngleToRad);
@@ -96,7 +96,7 @@ void win_event::Start(double time) {
 	shadow.AddComponent(TestComponent2{});
 	shadowRenderer.mesh = &game_render::Mesh::cubePrimative;
 	shadow.AddComponent(shadowRenderer);
-	shadow.transform.position = { 0,-2,4 };
+	shadow.transform.position = { 0,-2.1,4 };
 	shadow.transform.scale = { 2,0.5f,2 };
 	scene.AddObject(shadow);
 
