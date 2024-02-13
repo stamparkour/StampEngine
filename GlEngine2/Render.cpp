@@ -101,15 +101,15 @@ game_render::Texture game_render::Texture::BmpTexture(const char* d)
 	int shiftB = 16;
 	if (compression != 0) {
 		if (compression == 3) {
-			maskR = SwapBigEndian(*(uint32_t*)(data + 50 + 0));
-			maskG = SwapBigEndian(*(uint32_t*)(data + 50 + 4));
-			maskB = SwapBigEndian(*(uint32_t*)(data + 50 + 8));
+			maskR = SwapBigEndian(*(uint32_t*)(data + 54 + 0));
+			maskG = SwapBigEndian(*(uint32_t*)(data + 54 + 4));
+			maskB = SwapBigEndian(*(uint32_t*)(data + 54 + 8));
 		}
 		else if (compression == 6) {
-			maskR = SwapBigEndian(*(uint32_t*)(data + 50 + 0));
-			maskG = SwapBigEndian(*(uint32_t*)(data + 50 + 4));
-			maskB = SwapBigEndian(*(uint32_t*)(data + 50 + 8));
-			maskA = SwapBigEndian(*(uint32_t*)(data + 50 + 12));
+			maskR = SwapBigEndian(*(uint32_t*)(data + 54 + 0));
+			maskG = SwapBigEndian(*(uint32_t*)(data + 54 + 4));
+			maskB = SwapBigEndian(*(uint32_t*)(data + 54 + 8));
+			maskA = SwapBigEndian(*(uint32_t*)(data + 54 + 12));
 		}
 
 		for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
