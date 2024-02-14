@@ -2,8 +2,8 @@
 game_component::AudioSourceEffect::AudioSourceEffect() noexcept {
 	
 }
-void game_component::AudioSourceEffect::Update(game_core::GameObject& gameObject) {
-	if (autoDelete && clip && !isPlaying())gameObject.Destroy();
+void game_component::AudioSourceEffect::Update() {
+	if (autoDelete && clip && !isPlaying())selfObject()->Destroy();
 }
 
 bool game_component::AudioSourceEffect::isPlaying() {

@@ -81,7 +81,7 @@ game_render::Texture game_render::Texture::BmpTexture(const char* d)
 	const uint8_t* pixelArray = (uint8_t*)data + *(uint32_t*)(data + 10);
 	uint32_t headerSize = *(uint32_t*)(data + 14);
 	const uint8_t* palleteArray = data + headerSize + 14;
-	uint32_t width, height, bpp, compression, imageSize, paletteCount;
+	uint32_t width = 0, height = 0, bpp = 0, compression = 0, imageSize = 0, paletteCount = 0;
 	if (headerSize == 40 || headerSize == 52 || headerSize == 124) {
 		width = *(uint32_t*)(data + 18);
 		height = *(uint32_t*)(data + 22);
@@ -124,9 +124,9 @@ game_render::Texture game_render::Texture::BmpTexture(const char* d)
 		std::vector<gl_math::Vec4> pallete = {};
 	}
 	else if (bpp == 16) {
-		for (int y = 0; y < height; y++) {
+		for (uint32_t y = 0; y < height; y++) {
 			const uint8_t* pix = pixelArray;
-			for (int x = 0; x < width; x++) {
+			for (uint32_t x = 0; x < width; x++) {
 				uint32_t v = (*(pix++)) << 8 | (*(pix++));
 				float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
 				float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
@@ -231,6 +231,51 @@ void game_render::Mesh::GenNormals() {
 		vert_normals[i + 2] = c;
 	}
 }
+const char* nextLine(const char* v) {
+	while (!*v && *v != '\n') v++;
+	return v;
+}
+game_render::Mesh game_render::Mesh::ObjMesh(const char* data) {
+	std::vector<gl_math::Vec3> pos{};
+	std::vector<gl_math::Vec3> normal{};
+	std::vector<gl_math::Vec4> vert_colors{};
+	std::vector<gl_math::Vec2> uv{};
+	for (const char* d = data; *d; d = nextLine(d)) {
+		float x;
+		float y;
+		float z;
+		float w;
+		float r;
+		float g;
+		float b;
+		if (sscanf_s(d,"v %f %f %f %f %f %f %f", &x, &y, &z, &w, &r, &g, &b) >= 7) {
+			pos.push_back({ x,y,z });
+			vert_colors.push_back({ r,g,b,1 });
+		}
+	}
+	for (const char* d = data; *d; d = nextLine(d)) {
+		float x;
+		float y;
+		if (sscanf_s(d, "vt %f %f", &x, &y) == 2) {
+			uv.push_back({ x,y });
+		}
+	}
+	for (const char* d = data; *d; d = nextLine(d)) {
+		float x;
+		float y;
+		float z;
+		if (sscanf_s(d, "vn %f %f %f", &x, &y, &z) == 3) {
+			normal.push_back({ x,y,z });
+		}
+	}
+	size_t face = 0;
+	for (const char* d = data; *d; d = nextLine(d)) {
+		if (*d == 'f') face++;
+	}
+	for (const char* d = data; *d; d = nextLine(d)) {
+		aaaa
+	}
+}
 #define cube_vertices (sizeof(cube_positions)/sizeof(cube_positions[0]))
 const gl_math::Vec3 cube_positions[] = {
 	//back
@@ -280,16 +325,16 @@ game_render::Mesh game_render::Mesh::cubePrimative = { cube_positions,cube_norma
 game_render::Material game_render::Material::defaultMaterial = { false, false, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 4, {0,0,0,1}, {} };
 game_render::Material game_render::Material::shadowMaterial = { false, false, {}, {}, {}, 0, {} };
 
-void game_component::MeshRenderer::OnRender(game_core::GameObject& gameObject, int phase) {
+void game_component::MeshRenderer::OnRender(int phase) {
 	if (phase == 1 || phase == 7 && applyShadow || phase == 9 && !applyShadow) {
 		material.Bind();
-		mesh->Render(gameObject.getPrevTransform());
+		mesh->Render(selfObject()->getPrevTransform());
 	}
 }
-void game_component::ShadowRenderer::OnRender(game_core::GameObject& gameObject, int phase) {
+void game_component::ShadowRenderer::OnRender(int phase) {
 	if (phase == 3 || phase == 5) {
 		material->Bind();
-		mesh->Render(gameObject.getPrevTransform());
+		mesh->Render(selfObject()->getPrevTransform());
 	}
 }
 game_component::Camera::Camera() noexcept {
@@ -304,14 +349,14 @@ game_component::Camera::Camera(float fovy, float nearPlane, float farPlane) noex
 	this->farPlane = farPlane;
 	camera = gl_math::Mat4_Identity;
 }
-void game_component::Camera::OnResize(game_core::GameObject& gameObject) {
+void game_component::Camera::OnResize() {
 	float ratio = (float)game_core::GameManager::Current()->ScreenX() / game_core::GameManager::Current()->ScreenY();
 	camera = gl_math::Mat4::Perspective(fovy, ratio, nearPlane, farPlane);
 }
-void game_component::Camera::OnRender(game_core::GameObject& gameObject, int phase) {
+void game_component::Camera::OnRender(int phase) {
 	if (phase == 0) {//no light render
 		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(camera * gameObject.transform.ToMatrixInverse());
+		glLoadMatrixf(camera * selfObject()->transform.ToMatrixInverse());
 		glCullFace(GL_BACK);
 		glStencilMask(GL_FALSE);
 		glDepthMask(GL_TRUE);
@@ -365,13 +410,13 @@ game_component::SunLight::SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 dif
 	this->specularColor = specularColor;
 	isShadowLight = false;
 }
-void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObject, int phase) {
+void game_component::SunLight::SunLight::OnRender(int phase) {
 	
 	if (phase == 6 || isShadowLight && phase == 0) {
 		glEnable(GL_LIGHT0 + index);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadMatrixf(gl_math::Mat4_Identity);
-		gl_math::Vec4 v = (gl_math::Vec4)gameObject.transform.forward();
+		gl_math::Vec4 v = (gl_math::Vec4)selfObject()->transform.forward();
 		gl_math::Vec4 n = -v;
 		glLightfv(GL_LIGHT0 + index, GL_POSITION, (float*)&v);
 		glLightfv(GL_LIGHT0 + index, GL_SPOT_DIRECTION, (float*)&n);
@@ -384,9 +429,9 @@ void game_component::SunLight::SunLight::OnRender(game_core::GameObject& gameObj
 	}
 }
 	
-void game_component::SunLight::SunLight::OnEnabled(game_core::GameObject& gameObject) {
+void game_component::SunLight::SunLight::OnEnabled() {
 	glEnable(GL_LIGHT0 + index);
 }
-void game_component::SunLight::SunLight::OnDisabled(game_core::GameObject& gameObject) {
+void game_component::SunLight::SunLight::OnDisabled() {
 	glDisable(GL_LIGHT0 + index);
 }

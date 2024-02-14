@@ -10,7 +10,7 @@ namespace game_component {
 		bool autoDelete = false;
 		AudioSourceEffect() noexcept;
 		AudioSourceEffect(xptr<game_core::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
-		void Update(game_core::GameObject& gameObject) override;
+		void Update() override;
 		bool isPlaying();
 
 		static void PlayClip(xptr<game_core::AudioClip> clip);

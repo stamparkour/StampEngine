@@ -97,18 +97,21 @@ namespace game_core {
 		friend struct GameManager;
 		ComponentState state { ComponentState::Created};
 		Component() {}
+	private:
+		GameObject* gameObject{};
 	protected:
-		virtual void Awake(GameObject& gameObject) {}
-		virtual void OnDisabled(GameObject& gameObject) {}
-		virtual void OnEnabled(GameObject& gameObject) {}
-		virtual void Start(GameObject& gameObject) {}
-		virtual void OnDestroy(GameObject& gameObject) {}
-		virtual void Update(GameObject& gameObject) {}
-		virtual void FixedUpdate(GameObject& gameObject) {}
-		virtual void OnRender(GameObject& gameObject, int phase) {}
-		virtual void OnResize(GameObject& gameObject) {}
+		virtual void Awake() {}
+		virtual void OnDisabled() {}
+		virtual void OnEnabled() {}
+		virtual void Start() {}
+		virtual void OnDestroy() {}
+		virtual void Update() {}
+		virtual void FixedUpdate() {}
+		virtual void OnRender(int phase) {}
+		virtual void OnResize() {}
 		virtual size_t Size() = 0;
 		virtual void AssignSelf(const Component& other) = 0;
+		GameObject* selfObject() const;
 	}; 
 	
 	struct Scene final {
@@ -227,12 +230,14 @@ template <typename T>
 void game_core::GameObject::AddComponent(T& component) {
 	game_core::Component* __dummy = static_cast<T*>(0);
 	T* v = new T(component);
+	v->gameObject = this;
 	components.push_back(v);
 }
 template <typename T>
 void game_core::GameObject::AddComponent(T&& component) {
 	game_core::Component* __dummy = static_cast<T*>(0);
 	T* v = new T(component);
+	v->gameObject = this;
 	components.push_back(v);
 }
 template <typename T>

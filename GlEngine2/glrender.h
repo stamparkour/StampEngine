@@ -53,18 +53,28 @@ namespace game_render {
 		void Bind() const;
 	};
 
-	struct Mesh final {
+	struct MeshBase {
+	public:
+		virtual void Render(const gl_math::Mat4& transform) const = 0;
+	};
+
+	struct Mesh final : MeshBase {
 		friend struct game_component::MeshRenderer;
 		friend struct game_component::ShadowRenderer;
-		xptr<gl_math::Vec3> vert_positions;
-		xptr<gl_math::Vec3> vert_normals;
-		xptr<gl_math::Vec4> vert_colors;
-		xptr<gl_math::Vec2> vert_uvs;
-		size_t vertices_length;
+		xptr<gl_math::Vec3> vert_positions{};
+		xptr<gl_math::Vec3> vert_normals{};
+		xptr<gl_math::Vec4> vert_colors{};
+		xptr<gl_math::Vec2> vert_uvs{};
+		size_t vertices_length = 0;
+		Mesh() {}
+		Mesh(xptr<gl_math::Vec3> vert_positions, xptr<gl_math::Vec3> vert_normals, xptr<gl_math::Vec4> vert_colors, xptr<gl_math::Vec2> vert_uvs, size_t vertices_length) :
+			vert_positions(vert_positions), vert_normals(vert_normals), vert_colors(vert_colors), vert_uvs(vert_uvs), vertices_length(vertices_length)
+		{}
 		void GenNormals();
 		static Mesh cubePrimative;
+		static Mesh ObjMesh(const char* data);
 	private:
-		void Render(const gl_math::Mat4& transform) const;
+		void Render(const gl_math::Mat4& transform) const override;
 	};
 }
 namespace game_component {
@@ -72,9 +82,9 @@ namespace game_component {
 		Component_Requirements(MeshRenderer)
 		MeshRenderer() : game_core::Component() {}
 		bool applyShadow{};
-		game_render::Mesh* mesh{};
+		game_render::MeshBase* mesh{};
 		game_render::Material material{};
-		void OnRender(game_core::GameObject& gameObject, int phase) override;
+		void OnRender(int phase) override;
 	};
 
 	struct ShadowRenderer final : game_core::Component {
@@ -84,7 +94,7 @@ namespace game_component {
 	public:
 		ShadowRenderer() : game_core::Component() {}
 		game_render::Mesh* mesh{};
-		void OnRender(game_core::GameObject& gameObject, int phase) override;
+		void OnRender(int phase) override;
 	};
 
 	struct Camera final : game_core::Component {
@@ -97,8 +107,8 @@ namespace game_component {
 		float farPlane;
 		Camera() noexcept;
 		Camera(float fovy, float nearPlane, float farPlane) noexcept;
-		void OnResize(game_core::GameObject& gameObject) override;
-		void OnRender(game_core::GameObject& gameObject, int phase) override;
+		void OnResize() override;
+		void OnRender(int phase) override;
 	};
 
 	struct SunLight final : game_core::Component {
@@ -113,8 +123,8 @@ namespace game_component {
 		SunLight();
 		SunLight(gl_math::Vec4 color);
 		SunLight(gl_math::Vec4 ambientColor, gl_math::Vec4 diffuseColor, gl_math::Vec4 specularColor);
-		void OnRender(game_core::GameObject& gameObject, int phase) override;
-		void OnEnabled(game_core::GameObject& gameObject) override;
-		void OnDisabled(game_core::GameObject& gameObject) override;
+		void OnRender(int phase) override;
+		void OnEnabled() override;
+		void OnDisabled() override;
 	};
 }

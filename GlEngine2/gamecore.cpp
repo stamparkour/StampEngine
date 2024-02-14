@@ -49,7 +49,7 @@ void game_core::GameManager::SyncUpdate() {
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		if (scene->gameObjects[i]->state == GameObjectState::Destroying) {
 			for (int j = 0; j < scene->gameObjects[i]->components.size(); j++) {
-				scene->gameObjects[i]->components[j]->OnDestroy(*scene->gameObjects[i]);
+				scene->gameObjects[i]->components[j]->OnDestroy();
 			}
 			delete scene->gameObjects[i];
 			scene->gameObjects.erase(scene->gameObjects.begin() + i);
@@ -59,7 +59,7 @@ void game_core::GameManager::SyncUpdate() {
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		for (int j = 0; j < scene->gameObjects[i]->components.size(); j++) {
 			if (scene->gameObjects[i]->components[j]->state == ComponentState::Destroying) {
-				scene->gameObjects[i]->components[j]->OnDestroy(*scene->gameObjects[i]);
+				scene->gameObjects[i]->components[j]->OnDestroy();
 				delete scene->gameObjects[i]->components[j];
 				scene->gameObjects[i]->components.erase(scene->gameObjects[i]->components.begin() + j);
 				j--;
@@ -206,50 +206,50 @@ gl_math::Mat4 game_core::GameObject::getPrevTransform() const {
 }
 void game_core::GameObject::Awake() {
 	for (int i = 0; i < components.size(); i++) {
-		components[i]->Awake(*this);
+		components[i]->Awake();
 	}
 }
 void game_core::GameObject::Update() {
 	if (state == GameObjectState::Created) {
 		state = GameObjectState::Enabling;
 		for (int i = 0; i < components.size(); i++) {
-			components[i]->Start(*this);
+			components[i]->Start();
 		}
 	}
 	if (state == GameObjectState::Enabling) {
 		state = GameObjectState::Enabled;
 		for (int i = 0; i < components.size(); i++) {
-			components[i]->OnEnabled(*this);
+			components[i]->OnEnabled();
 		}
 	}
 	if (state == GameObjectState::Enabled) {
 		for (int i = 0; i < components.size(); i++) {
-			components[i]->Update(*this);
+			components[i]->Update();
 		}
 	}
 	if (state == GameObjectState::Disabling) {
 		state = GameObjectState::Disabled;
 		for (int i = 0; i < components.size(); i++) {
-			components[i]->OnDisabled(*this);
+			components[i]->OnDisabled();
 		}
 	}
 }
 void game_core::GameObject::FixedUpdate() {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
-		components[i]->FixedUpdate(*this);
+		components[i]->FixedUpdate();
 	}
 }
 void game_core::GameObject::OnRender(int phase) {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
-		components[i]->OnRender(*this, phase);
+		components[i]->OnRender(phase);
 	}
 }
 void game_core::GameObject::OnResize() {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
-		components[i]->OnResize(*this);
+		components[i]->OnResize();
 	}
 }
 void game_core::GameObject::Destroy() {
@@ -375,4 +375,9 @@ bool game_core::AudioClip::Play(float volume) {
 	if (FAILED(hr = pSourceVoice->Start(0)))
 		return true;
 	return false;
+}
+
+game_core::GameObject* game_core::Component::selfObject() const
+{
+	return this->gameObject;
 }
