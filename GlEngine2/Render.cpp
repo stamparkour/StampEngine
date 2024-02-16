@@ -293,9 +293,9 @@ void game_component::ShadowRenderer::OnRender(game_core::GameObject& gameObject,
 	}
 }
 game_component::Camera::Camera() noexcept {
-	fovy = 40;
+	fovy = 60 * 0.0174532925199f;
 	nearPlane = 0.2f;
-	farPlane = 50;
+	farPlane = 300;
 	camera = gl_math::Mat4_Identity;
 }
 game_component::Camera::Camera(float fovy, float nearPlane, float farPlane) noexcept {

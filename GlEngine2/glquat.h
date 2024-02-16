@@ -30,5 +30,6 @@ namespace gl_math {
 		static Quat RotationZ(float v) noexcept;
 		static Quat RotationAxis(float r, const Vec3& axis) noexcept;
 		static Quat RotationZXY(float x, float y, float z) noexcept;
+		static Quat RotationZYX(float x, float y, float z) noexcept;
 	} const Quat_Identity{ 1,0,0,0 };
 }

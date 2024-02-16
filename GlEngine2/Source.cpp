@@ -11,62 +11,88 @@
 //change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
 #define AngleToRad 0.0174532925199f
 
-struct DestroyComponent final : game_core::Component {
-	Component_Requirements(DestroyComponent)
+class CameraController final : public game_core::Component {
+	Component_Requirements(CameraController)
 public:
-	float t = 0;
-	void Start(game_core::GameObject& gameObject) override {
-		t = game_core::TimeManager::Time() + 5;
-	}
+	float rx = 0;
+	float ry = 0;
 	void Update(game_core::GameObject& gameObject) override {
-		if (t < game_core::TimeManager::Time()) {
-			gameObject.Destroy();
-		}
-	}
-};
-
-struct TestComponent final : game_core::Component {
-	Component_Requirements(TestComponent)
-public:
-	float test = 0;
-	void Update(game_core::GameObject& gameObject) override {
-		gameObject.transform.Rotate(game_core::TimeManager::DeltaTime() * 0.7f, game_core::TimeManager::DeltaTime() *2, 0);
-		float mag = 5;
+		float mag = 5 * game_core::TimeManager::DeltaTime();
+		float rag = 110 * AngleToRad * game_core::TimeManager::DeltaTime();
 		if (game_core::ControlsManager::isKeyDown('W'))
-			gameObject.transform.position += gl_math::Vec3{ 0,0,1 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gameObject.transform.forward() * mag;
 		if (game_core::ControlsManager::isKeyDown('S'))
-			gameObject.transform.position += gl_math::Vec3{ 0,0,-1 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gameObject.transform.back() * mag;
 		if (game_core::ControlsManager::isKeyDown('D'))
-			gameObject.transform.position += gl_math::Vec3{ 1,0,0 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gameObject.transform.right() * mag;
 		if (game_core::ControlsManager::isKeyDown('A'))
-			gameObject.transform.position += gl_math::Vec3{ -1,0,0 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gameObject.transform.left() * mag;
 		if (game_core::ControlsManager::isKeyDown('R'))
-			gameObject.transform.position += gl_math::Vec3{ 0,1,0 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gl_math::Vec3{0,1,0} *mag;
 		if (game_core::ControlsManager::isKeyDown('F'))
-			gameObject.transform.position += gl_math::Vec3{ 0,-1,0 } *game_core::TimeManager::DeltaTime() * mag;
+			gameObject.transform.position += gl_math::Vec3{0,-1,0} *mag;
+		if (game_core::ControlsManager::isKeyDown(VK_UP))
+			ry += rag;
+		if (game_core::ControlsManager::isKeyDown(VK_DOWN))
+			ry -= rag;
+		if (game_core::ControlsManager::isKeyDown(VK_RIGHT))
+			rx += rag;
+		if (game_core::ControlsManager::isKeyDown(VK_LEFT))
+			rx -= rag;
 
-		if (test < game_core::TimeManager::Time()) {
-			game_core::GameObject obj{};
-			game_component::MeshRenderer meshRenderer = {};
-			meshRenderer.mesh = &game_render::Mesh::cubePrimative;
-			meshRenderer.applyShadow = true;
-			meshRenderer.material = game_render::Material::defaultMaterial;
-			obj.AddComponent(meshRenderer);
-			obj.transform.position = gameObject.transform.position;
-			obj.transform.rotation = gameObject.transform.rotation;
-			obj.transform.scale = { 0.2f,0.2f,0.2f };
-			obj.AddComponent(DestroyComponent{});
-			game_core::GameManager::Current()->scene->AddObject(obj);
-			test = game_core::TimeManager::Time() + 0.1;
-		}
+		gameObject.transform.rotation = gl_math::Quat::RotationZYX(-ry, rx, 0);
 	}
 };
 
-struct TestComponent2 final : game_core::Component {
-	Component_Requirements(TestComponent2)
+#define GRAV_MASS 1.f
+#define GRAV_RADIUS 1.f
+class Gravity;
+std::vector<Gravity*>* gravity;
+class Gravity final : public game_core::Component {
+	Component_Requirements(Gravity)
+private:
+	
+	size_t index = -1;
+	gl_math::Vec3 pos = {};
+	gl_math::Vec3 vel = {};
 public:
+	void Start(game_core::GameObject& gameObject) {
+		if (!gravity) gravity = new std::vector<Gravity*>();
+		index = gravity->size();
+		gravity->push_back(this);
+		float range = 100;
+		pos = { ((float)rand() / RAND_MAX) * range - range/2,((float)rand() / RAND_MAX) * range - range / 2 ,((float)rand() / RAND_MAX) * range - range / 2 };
+		
+	}
 	void Update(game_core::GameObject& gameObject) override {
-		gameObject.transform.position.x = sinf(game_core::TimeManager::Time()) * 2;
+		if (index == 0) {
+			for (size_t i = 0; i < gravity->size(); i++) {
+				(*gravity)[i]->pos += (*gravity)[i]->vel * game_core::TimeManager::DeltaTime();
+			}
+		}
+
+		for (size_t i = 0; i < index; i++) {
+			gl_math::Vec3 offset = (*gravity)[i]->pos - pos;
+			float distSqrd = offset.MagnitudeSquared();
+			if (distSqrd == 0) continue;
+			float d = sqrt(distSqrd);
+			gl_math::Vec3 norm = offset / d;
+			float f = 0;
+			gl_math::Vec3 force = { 0,0,0 };
+			if (d < GRAV_RADIUS) {
+				f = GRAV_MASS * 100 / GRAV_RADIUS * d - GRAV_MASS * 100;
+				gl_math::Vec3 v = (*gravity)[i]->vel - vel;
+				force += v * 0.1 * game_core::TimeManager::DeltaTime();;
+			}
+			else {
+				f = GRAV_MASS / distSqrd;
+			}
+			force += norm * f * game_core::TimeManager::DeltaTime();
+			vel += force;
+			(*gravity)[i]->vel -= force;
+		}
+
+		gameObject.transform.position = pos;
 	}
 };
 
@@ -76,34 +102,23 @@ void win_event::Start(double time) {
 
 	game_core::GameObject cam{};
 	cam.AddComponent(game_component::Camera{});
+	cam.AddComponent(CameraController{});
+	cam.transform.position.z = -100;
 	scene.AddObject(cam);
 
-	game_core::GameObject cube{};
-	game_component::MeshRenderer meshRenderer = {};
-	meshRenderer.mesh = &game_render::Mesh::cubePrimative;
-	meshRenderer.applyShadow = true;
-	meshRenderer.material = game_render::Material::defaultMaterial;
-	meshRenderer.material.useTexture = true;
-	meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
-	cube.AddComponent(meshRenderer);
-	cube.AddComponent(TestComponent{});
-	cube.transform.Rotate(0, 0, -10 * AngleToRad);
-	cube.transform.position = { 0,-2,4 };
-	scene.AddObject(cube);
-
-	game_core::GameObject shadow{};
-	game_component::ShadowRenderer shadowRenderer = {};
-	shadow.AddComponent(TestComponent2{});
-	shadowRenderer.mesh = &game_render::Mesh::cubePrimative;
-	shadow.AddComponent(shadowRenderer);
-	shadow.transform.position = { 0,-2.1,4 };
-	shadow.transform.scale = { 2,0.5f,2 };
-	scene.AddObject(shadow);
-
-	game_core::GameObject cube2{};
-	cube2.AddComponent(meshRenderer);
-	cube2.transform.position = { 0,-1,5 };
-	scene.AddObject(cube2);
+	for (int i = 0; i < 500; i++) {
+		game_core::GameObject cube{};
+		game_component::MeshRenderer meshRenderer = {};
+		meshRenderer.mesh = &game_render::Mesh::cubePrimative;
+		meshRenderer.applyShadow = true;
+		meshRenderer.material = game_render::Material::defaultMaterial;
+		meshRenderer.material.useTexture = true;
+		meshRenderer.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
+		cube.AddComponent(meshRenderer);
+		cube.transform.scale = gl_math::Vec3{ 1,1,1 } * 0.5f;
+		cube.AddComponent(Gravity{});
+		scene.AddObject(cube);
+	}
 
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
