@@ -277,9 +277,13 @@ game_render::Mesh game_render::Mesh::ObjMesh(const char* data) {
 		if (*(d++) == 'f') {
 			int a;
 			int n;
-			if(sscanf(d, " %d%n", &a, &n) == 1)
+			if (sscanf_s(d, " %d%n", &a, &n) == 1) {
+
+			}
 		}
 	}
+
+	return {};
 }
 #define cube_vertices (sizeof(cube_positions)/sizeof(cube_positions[0]))
 const gl_math::Vec3 cube_positions[] = {
@@ -343,9 +347,9 @@ void game_component::ShadowRenderer::OnRender(int phase) {
 	}
 }
 game_component::Camera::Camera() noexcept {
-	fovy = 40;
+	fovy = 60 * 0.0174532925199f;
 	nearPlane = 0.2f;
-	farPlane = 50;
+	farPlane = 500;
 	camera = gl_math::Mat4_Identity;
 }
 game_component::Camera::Camera(float fovy, float nearPlane, float farPlane) noexcept {

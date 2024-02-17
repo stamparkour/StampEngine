@@ -214,6 +214,10 @@ Quat Quat::RotationZXY(float x, float y, float z) noexcept {
 	return Quat::RotationZ(z) * Quat::RotationX(x) * Quat::RotationY(y);
 }
 
+Quat Quat::RotationZYX(float x, float y, float z) noexcept {
+	return Quat::RotationZ(z) * Quat::RotationY(y) * Quat::RotationX(x);
+}
+
 Mat4 Mat4::operator +(const Mat4& b) const {
 	return { v1 + b.v1,v2 + b.v2,v3 + b.v3,v4 + b.v4,v5 + b.v5,v6 + b.v6,v7 + b.v7,v8 + b.v8,v9 + b.v9,v10 + b.v10,v11 + b.v11,v12 + b.v12,v13 + b.v13,v14 + b.v14,v15 + b.v15,v16 + b.v16 };
 }

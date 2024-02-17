@@ -1,9 +1,9 @@
 #pragma once
-#include "glmath.h"
-#include "xptr.h"
 #include <vector>
 #include <string>
 #include <xaudio2.h>
+#include "glmath.h"
+#include "xptr.h"
 
 #define LayerMask_Main 1
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);} void AssignSelf(const Component& other) override { *this = (class_name&)other; }

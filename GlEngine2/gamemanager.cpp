@@ -12,7 +12,7 @@ Mat4 game_core::Transform::ToMatrix() const {
 }
 
 Mat4 game_core::Transform::ToMatrixInverse() const {
-	return Mat4::Translate(-position.x, -position.y, -position.z) * rotation.Inverse().ToRotationMatrix() * Mat4::Scale(1 / scale.x, 1 / scale.y, 1 / scale.z);
+	return rotation.Inverse().ToRotationMatrix() * Mat4::Translate(-position.x, -position.y, -position.z) * Mat4::Scale(1 / scale.x, 1 / scale.y, 1 / scale.z);
 }
 
 Vec3 game_core::Transform::forward() const {
