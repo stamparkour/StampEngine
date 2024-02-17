@@ -271,9 +271,14 @@ game_render::Mesh game_render::Mesh::ObjMesh(const char* data) {
 	size_t face = 0;
 	for (const char* d = data; *d; d = nextLine(d)) {
 		if (*d == 'f') face++;
+		int n = 0;
 	}
 	for (const char* d = data; *d; d = nextLine(d)) {
-		aaaa
+		if (*(d++) == 'f') {
+			int a;
+			int n;
+			if(sscanf(d, " %d%n", &a, &n) == 1)
+		}
 	}
 }
 #define cube_vertices (sizeof(cube_positions)/sizeof(cube_positions[0]))
