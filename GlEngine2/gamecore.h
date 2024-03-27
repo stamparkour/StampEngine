@@ -3,13 +3,12 @@
 #include <string>
 #include <xaudio2.h>
 #include "glmath.h"
-#include "xptr.h"
-
+#include <memory>
 #define LayerMask_Main 1
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);} void AssignSelf(const Component& other) override { *this = (class_name&)other; }
 
 namespace game_core {
-	xptr<char> readFile(const char* path, size_t* oSize);
+	char* readFile(const char* path, size_t* out_Size, bool isBinary);
 
 	struct Transform {
 		gl_math::Vec3 position{};
@@ -95,6 +94,7 @@ namespace game_core {
 	struct Component {
 		friend struct GameObject;
 		friend struct GameManager;
+		friend void game_core::swap(game_core::GameObject& a, game_core::GameObject& b);
 		ComponentState state { ComponentState::Created};
 		Component() {}
 	private:
@@ -152,25 +152,14 @@ namespace game_core {
 	public:
 		static bool isKeyDown(char virtualKey);
 		static bool isKeyUp(char virtualKey);
-	};
-
-	class VoiceCallback : public IXAudio2VoiceCallback
-	{
-	public:
-		VoiceCallback()  {}
-		~VoiceCallback() {  }
-
-		//Called when the voice has just finished playing a contiguous audio stream.
-
-		//Unused methods are stubs
-	};
+	}; 
 
 	struct AudioClip final : IXAudio2VoiceCallback {
 	private:
 		WAVEFORMATEX fmt{};
 		XAUDIO2_BUFFER data{};
-		xptr<IXAudio2SourceVoice> pSourceVoice = nullptr;
-		xptr<char> ptr = nullptr;
+		std::shared_ptr<IXAudio2SourceVoice> pSourceVoice = nullptr;
+		std::shared_ptr<char> ptr = nullptr;
 		HANDLE hBufferEndEvent;
 		bool playing = false;
 	public:
@@ -244,8 +233,8 @@ template <typename T>
 T* game_core::GameObject::GetComponent() {
 	game_core::Component* __dummy = static_cast<T*>(0);
 	for (int i = 0; i < components.size(); i++) {
-		if ((typeid (*components[i])) == T) {
-			return components[i];
+		if ((typeid (*components[i])) == typeid(T)) {
+			return (T*)components[i];
 		}
 	}
 	return NULL;
@@ -254,7 +243,7 @@ template <typename T>
 bool game_core::GameObject::RemoveComponent() {
 	game_core::Component* __dummy = static_cast<T*>(0);
 	for (int i = 0; i < components.size(); i++) {
-		if ((typeid (*components[i])) == T) {
+		if ((typeid (*components[i])) == typeid(T)) {
 			components[i]->state = game_core::ComponentState::Destroying;
 			return true;
 		}

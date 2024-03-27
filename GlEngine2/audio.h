@@ -6,13 +6,13 @@ namespace game_component {
 	struct AudioSourceEffect final : game_core::Component {
 		Component_Requirements(AudioSourceEffect)
 	public:
-		xptr<game_core::AudioClip> clip = nullptr;
+		std::shared_ptr<game_core::AudioClip> clip = nullptr;
 		bool autoDelete = false;
 		AudioSourceEffect() noexcept;
-		AudioSourceEffect(xptr<game_core::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
+		AudioSourceEffect(std::shared_ptr<game_core::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
 		void Update() override;
 		bool isPlaying();
 
-		static void PlayClip(xptr<game_core::AudioClip> clip);
+		static void PlayClip(std::shared_ptr<game_core::AudioClip> clip);
 	};
 }

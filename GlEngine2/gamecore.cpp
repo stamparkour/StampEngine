@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <xaudio2.h>
+#include <memory>
 game_core::GameManager* game_core::GameManager::current = NULL;
 
 void game_core::GameManager::Initialize() {
@@ -120,6 +121,7 @@ game_core::GameObject::GameObject(const game_core::GameObject& v) {
 		memset(components[i], 0, v.components[i]->Size());
 		memcpy(components[i], v.components[i], sizeof(Component));
 		components[i]->AssignSelf(*v.components[i]);
+		components[i]->gameObject = this;
 	}
 	state = v.state;
 	name = v.name;
@@ -176,6 +178,12 @@ game_core::GameObject& game_core::GameObject::operator=(GameObject&& v) noexcept
 inline void game_core::swap(game_core::GameObject& a, game_core::GameObject& b) {
 	using std::swap;
 	swap(a.components, b.components);
+	for (int i = 0; i < a.components.size(); i++) {
+		a.components[i]->gameObject = &a;
+	}
+	for (int i = 0; i < b.components.size(); i++) {
+		b.components[i]->gameObject = &b;
+	}
 	swap(a.transform, b.transform);
 	swap(a.state, b.state);
 	swap(a.name, b.name);
@@ -322,19 +330,19 @@ bool getChunk(long fourcc, const char(&data)[length], size_t& index, size_t& siz
 template<size_t length>
 inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {
 	ptr = new char[length];
-	memcpy_s(ptr, length, buffer, length);
+	memcpy_s(ptr.get(), length, buffer, length);
 	//little endian
-	if (*(long*)(ptr + 0) != 'FFIR') return;
-	long fileSize = *(long*)(ptr + 4) + 8;
-	if (*(long*)(ptr + 8) != 'EVAW') return;
+	if (*(long*)(ptr.get() + 0) != 'FFIR') return;
+	long fileSize = *(long*)(ptr.get() + 4) + 8;
+	if (*(long*)(ptr.get() + 8) != 'EVAW') return;
 	size_t fmtIndex = 0;
 	size_t fmtLength = 0;
-	if(!getChunk<length>(' tmf', ptr, fmtIndex, fmtLength)) return;
+	if(!getChunk<length>(' tmf', ptr.get(), fmtIndex, fmtLength)) return;
 	size_t dataIndex = 0;
 	size_t dataSize = 0;
-	if (!getChunk<length>('atad', ptr, dataIndex, dataSize)) return;
-	memcpy_s(&fmt, sizeof(WAVEFORMATEX), (char*)ptr + fmtIndex, fmtLength);
-	data.pAudioData = ptr + dataIndex;
+	if (!getChunk<length>('atad', ptr.get(), dataIndex, dataSize)) return;
+	memcpy_s(&fmt, sizeof(WAVEFORMATEX), (char*)ptr.get() + fmtIndex, fmtLength);
+	data.pAudioData = ptr.get() + dataIndex;
 	data.AudioBytes = dataSize;
 	data.PlayBegin = 0;
 	data.PlayLength = 0;
@@ -343,20 +351,21 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEnd
 
 	auto pXAudio2 = GameManager::Current()->audio.pXAudio2;
 	HRESULT hr;
-	if (FAILED(hr = pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&fmt,0, XAUDIO2_DEFAULT_FREQ_RATIO, this, NULL, NULL)))
+	if (FAILED(hr = pXAudio2->CreateSourceVoice(&pSourceVoice.get(), (WAVEFORMATEX*)&fmt, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this, NULL, NULL)))
 		throw hr;
 	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
 		throw hr;
 }
-xptr<char> game_core::readFile(const char* path, size_t* oSize) {
-	std::fstream stream = std::fstream(path, std::ios::binary | std::ios::in);
+char* game_core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
+	std::fstream stream = std::fstream(path, (isBinary ? std::ios::binary: 0) | std::ios::in);
 	if (!stream) return nullptr;
 	stream.seekg(0, stream.end);
 	size_t length = stream.tellg();
 	stream.seekg(0, stream.beg);
-	if (oSize) *oSize = length;
-	char* c = new char[length];
+	if (out_Size) *out_Size = length;
+	char* c = new char[length+1];
 	stream.read(c, length);
+	c[length] = 0;
 	return c;
 }
 game_core::AudioClip::~AudioClip() {

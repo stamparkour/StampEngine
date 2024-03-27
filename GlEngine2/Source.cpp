@@ -17,7 +17,7 @@ public:
 	float rx = 0;
 	float ry = 0;
 	void Update() override {
-		float mag = 5 * game_core::TimeManager::DeltaTime();
+		float mag = 10 * game_core::TimeManager::DeltaTime();
 		float rag = 110 * AngleToRad * game_core::TimeManager::DeltaTime();
 		if (game_core::ControlsManager::isKeyDown('W'))
 			selfObject()->transform.position += selfObject()->transform.forward() * mag;
@@ -45,7 +45,7 @@ public:
 };
 
 #define GRAV_MASS 1.f
-#define GRAV_RADIUS 1.f
+#define GRAV_RADIUS 2.0f
 class Gravity;
 std::vector<Gravity*>* gravity;
 class Gravity final : public game_core::Component {
@@ -54,20 +54,26 @@ private:
 
 	size_t index = -1;
 	gl_math::Vec3 pos = {};
+	gl_math::Vec3 ppos = {};
 	gl_math::Vec3 vel = {};
+	float temp = 0;
+	game_component::MeshRenderer* renderer;
 public:
-	void Start() {
+	gl_math::Vec3 orig;
+	void Start() override {
 		if (!gravity) gravity = new std::vector<Gravity*>();
 		index = gravity->size();
 		gravity->push_back(this);
-		float range = 100;
-		pos = { ((float)rand() / RAND_MAX) * range - range / 2,((float)rand() / RAND_MAX) * range - range / 2 ,((float)rand() / RAND_MAX) * range - range / 2 };
+		float range = 200;
+		pos = orig + gl_math::Vec3{ ((float)rand() / RAND_MAX) * range - range / 2,((float)rand() / RAND_MAX) * range - range / 2, 0};
+		renderer = selfObject()->GetComponent<game_component::MeshRenderer>();
 
 	}
 	void Update() override {
 		if (index == 0) {
 			for (size_t i = 0; i < gravity->size(); i++) {
 				(*gravity)[i]->pos += (*gravity)[i]->vel * game_core::TimeManager::DeltaTime();
+				//(*gravity)[i]->ppos = (*gravity)[i]->pos + (*gravity)[i]->vel * game_core::TimeManager::DeltaTime();
 			}
 		}
 
@@ -80,9 +86,12 @@ public:
 			float f = 0;
 			gl_math::Vec3 force = { 0,0,0 };
 			if (d < GRAV_RADIUS) {
-				f = GRAV_MASS * 100 / GRAV_RADIUS * d - GRAV_MASS * 100;
+				float t = (temp + (*gravity)[i]->temp) / 2;
+				f = GRAV_MASS * 10 * t / distSqrd * (d / GRAV_RADIUS - 1);
 				gl_math::Vec3 v = (*gravity)[i]->vel - vel;
-				force += v * 0.04 * game_core::TimeManager::DeltaTime();;
+				force += v * 0.2f * game_core::TimeManager::DeltaTime();
+				temp += 1 / distSqrd * 0.02;
+				(*gravity)[i]->temp += 1 / distSqrd * 0.02;
 			}
 			else {
 				f = GRAV_MASS / distSqrd;
@@ -93,6 +102,18 @@ public:
 		}
 
 		selfObject()->transform.position = pos;
+		temp *= 1 - 0.02 * game_core::TimeManager::DeltaTime();
+		renderer->material.diffuseColor = gl_math::Vec4{ 1,1,1,0 } * min(1, temp / 40);
+	}
+};
+
+class LightingTest final : public game_core::Component {
+	Component_Requirements(LightingTest)
+private:
+
+public:
+	void Update() override {
+		selfObject()->transform.Rotate(0, game_core::TimeManager::DeltaTime() * 360 / 4 * AngleToRad, 0);
 	}
 };
 
@@ -100,41 +121,29 @@ public:
 game_core::GameManager manager{};
 game_core::Scene scene{};
 void win_event::Start(double time) {
-
+	std::shared_ptr<game_render::Mesh> mesh = std::shared_ptr<game_render::Mesh>{ game_render::Mesh::ObjMesh(game_core::readFile("mesh.obj", NULL, false)) };
+	game_render::Texture tex = game_render::Texture::BmpTexture(game_core::readFile("test.bmp", NULL, true));
 	game_core::GameObject cam{};
 	cam.AddComponent(game_component::Camera{});
 	cam.AddComponent(CameraController{});
-	cam.transform.position = { 0,0,0};
+	cam.transform.position = { 0,0,-5};
 	scene.AddObject(cam);
-
-	game_core::GameObject c{};
-	game_component::MeshRenderer mr = {};
-	mr.mesh = &game_render::Mesh::cubePrimative;
-	mr.applyShadow = true;
-	mr.material = game_render::Material::defaultMaterial;
-	mr.material.useTexture = true;
-	mr.material.texture = game_render::Texture::BmpTexture(game_core::readFile("C:\\Users\\Stamp\\Downloads\\640-480-sample.bmp", NULL));
-	c.AddComponent(mr);
-	c.transform.Rotate(0, 0, -10 * AngleToRad);
-	c.transform.position = { 0,-2,4 };
-	scene.AddObject(c);
 
 	game_core::GameObject cube{};
 	game_component::MeshRenderer meshRenderer = {};
-	meshRenderer.mesh = &game_render::Mesh::cubePrimative;
+	meshRenderer.mesh = mesh;
 	meshRenderer.material = game_render::Material::defaultMaterial;
+	meshRenderer.material.texture = tex;
+	meshRenderer.material.specularHighlight = 0;
 	cube.AddComponent(meshRenderer);
 	scene.AddObject(cube);
-	cube.AddComponent(Gravity{});
-	for (int i = 0; i < 200; i++) {
-		scene.AddObject(cube);
-	}
 
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
 	auto sunlight = game_component::SunLight{ {0.05f, 0.05f, 0.05f,0}, {0.95f,0.95f,0.95f,0},{0,0,0,0} };
 	sunlight.isShadowLight = false;
 	sun.AddComponent(sunlight);
+	sun.AddComponent(LightingTest{});
 	scene.AddObject(sun);
 
 	manager.scene = &scene;

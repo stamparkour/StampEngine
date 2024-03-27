@@ -4,7 +4,7 @@
 using namespace gl_math;
 
 void game_core::Transform::Rotate(float x, float y, float z) {
-	rotation = (rotation * Quat::RotationZXY(x, y, z)).Unit();
+	rotation = (Quat::RotationZXY(x, y, z) * rotation).Unit();
 }
 
 Mat4 game_core::Transform::ToMatrix() const {

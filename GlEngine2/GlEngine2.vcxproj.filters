@@ -83,9 +83,6 @@
     <ClInclude Include="glrender.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
-    <ClInclude Include="xptr.h">
-      <Filter>Header Files\math</Filter>
-    </ClInclude>
     <ClInclude Include="filemanager.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>

@@ -2,8 +2,51 @@
 #include "glquat.h"
 #include "glvec.h"
 #include "glquat.h"
-#include "xptr.h"
 using namespace gl_math;
+Vec2I::Vec2I() noexcept {
+	x = 0;
+	y = 0;
+}
+Vec2I::Vec2I(int x, int y) noexcept {
+	this->x = x;
+	this->y = y;
+}
+Vec2I gl_math::Vec2I::operator+(const Vec2I& b) const noexcept
+{
+	return { x + b.x,y + b.y };
+}
+Vec2I gl_math::Vec2I::operator-(const Vec2I& b) const noexcept
+{
+	return { x - b.x,y - b.y };
+}
+Vec2I gl_math::Vec2I::operator*(int b) const noexcept
+{
+	return { x * b,y * b };
+}
+Vec2I gl_math::Vec2I::operator/(int b) const noexcept
+{
+	return { x / b,y / b };
+}
+Vec2I& gl_math::Vec2I::operator+=(const Vec2I& b) noexcept
+{
+	return *this = *this + b;
+}
+Vec2I& gl_math::Vec2I::operator-=(const Vec2I& b) noexcept
+{
+	return *this = *this - b;
+}
+Vec2I& gl_math::Vec2I::operator*=(int b) noexcept
+{
+	return *this = *this * b;
+}
+Vec2I& gl_math::Vec2I::operator/=(int b) noexcept
+{
+	return *this = *this / b;
+}
+Vec2I gl_math::Vec2I::operator-() const noexcept
+{
+	return { -x,-y };
+}
 Vec2::Vec2() noexcept {
 	x = 0;
 	y = 0;

@@ -5,7 +5,7 @@
 #include "glmat.h"
 #include "glquat.h"
 #include "gamecore.h"
-#include "xptr.h"
+#include <memory>
 
 namespace game_component {
 	struct MeshRenderer;
@@ -17,9 +17,10 @@ namespace game_render {
 
 	struct Material;
 
-	class Texture final: private xptr_base<GLuint> {
+	class Texture final {
 		size_t width;
 		size_t height;
+		std::shared_ptr<GLuint> id;
 		friend Material;
 		void Bind() const;
 	public:
@@ -34,7 +35,6 @@ namespace game_render {
 		size_t Width() const;
 		size_t Height() const;
 		void setPixels(int elementSize, GLenum type, const void* pixels);
-		~Texture();
 		static Texture BmpTexture(const char* data);
 	};
 
@@ -61,19 +61,38 @@ namespace game_render {
 	struct Mesh final : MeshBase {
 		friend struct game_component::MeshRenderer;
 		friend struct game_component::ShadowRenderer;
-		xptr<gl_math::Vec3> vert_positions{};
-		xptr<gl_math::Vec3> vert_normals{};
-		xptr<gl_math::Vec4> vert_colors{};
-		xptr<gl_math::Vec2> vert_uvs{};
+		std::shared_ptr<gl_math::Vec3> vert_positions{};
+		std::shared_ptr<gl_math::Vec3> vert_normals{};
+		std::shared_ptr<gl_math::Vec4> vert_colors{};
+		std::shared_ptr<gl_math::Vec2> vert_uvs{};
 		size_t vertices_length = 0;
 		Mesh() {}
-		Mesh(xptr<gl_math::Vec3> vert_positions, xptr<gl_math::Vec3> vert_normals, xptr<gl_math::Vec4> vert_colors, xptr<gl_math::Vec2> vert_uvs, size_t vertices_length) :
+		Mesh(std::shared_ptr<gl_math::Vec3> vert_positions, std::shared_ptr<gl_math::Vec3> vert_normals, std::shared_ptr<gl_math::Vec4> vert_colors, std::shared_ptr<gl_math::Vec2> vert_uvs, size_t vertices_length) :
 			vert_positions(vert_positions), vert_normals(vert_normals), vert_colors(vert_colors), vert_uvs(vert_uvs), vertices_length(vertices_length)
 		{}
 		void GenNormals();
 		static Mesh cubePrimative;
-		static Mesh ObjMesh(const char* data);
+		static game_render::Mesh* ObjMesh(const char* data);
 	private:
+		void Render(const gl_math::Mat4& transform) const override;
+	};
+	struct FontMap {
+		std::shared_ptr<gl_math::Vec2I> positions;
+		std::shared_ptr<int> widths;
+		int heights;
+		size_t length;
+
+		static FontMap ParseMap(const char* txt);
+	};
+
+	struct FontMesh final : MeshBase {
+		FontMap map;
+		void setText(char* txt);
+	private:
+		std::shared_ptr<gl_math::Vec3> vert_positions{};
+		std::shared_ptr<gl_math::Vec3> vert_normals{};
+		std::shared_ptr<gl_math::Vec2> vert_uvs{};
+		size_t vertices_length = 0;
 		void Render(const gl_math::Mat4& transform) const override;
 	};
 }
@@ -82,7 +101,7 @@ namespace game_component {
 		Component_Requirements(MeshRenderer)
 		MeshRenderer() : game_core::Component() {}
 		bool applyShadow{};
-		game_render::MeshBase* mesh{};
+		std::shared_ptr<game_render::MeshBase> mesh{};
 		game_render::Material material{};
 		void OnRender(int phase) override;
 	};

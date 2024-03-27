@@ -23,6 +23,24 @@ namespace gl_math {
 		static float Dot(const Vec2& A, const Vec2& B) noexcept;
 	};
 
+	struct Vec2I {
+		int x;
+		int y;
+
+		Vec2I() noexcept;
+		Vec2I(int x, int y) noexcept;
+
+		Vec2I operator +(const Vec2I& b) const noexcept;
+		Vec2I operator -(const Vec2I& b) const noexcept;
+		Vec2I operator *(int b) const noexcept;
+		Vec2I operator /(int b) const noexcept;
+		Vec2I& operator +=(const Vec2I& b) noexcept;
+		Vec2I& operator -=(const Vec2I& b) noexcept;
+		Vec2I& operator *=(int b) noexcept;
+		Vec2I& operator /=(int b) noexcept;
+		Vec2I operator -() const noexcept;
+	};
+
 	struct Vec3 {
 		float x = 0;
 		float y = 0;

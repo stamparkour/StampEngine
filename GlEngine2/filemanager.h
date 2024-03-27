@@ -1,6 +1,6 @@
 #pragma once
-#include "xptr.h"
+#include <memory>
 
-xptr<char> ReadFile() {
+std::shared_ptr<char> ReadFile() {
 
 }
