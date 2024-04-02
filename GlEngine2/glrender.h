@@ -71,23 +71,25 @@ namespace game_render {
 			vert_positions(vert_positions), vert_normals(vert_normals), vert_colors(vert_colors), vert_uvs(vert_uvs), vertices_length(vertices_length)
 		{}
 		void GenNormals();
-		static Mesh cubePrimative;
+		static std::shared_ptr< game_render::Mesh> cubePrimative;
 		static game_render::Mesh* ObjMesh(const char* data);
 	private:
 		void Render(const gl_math::Mat4& transform) const override;
 	};
 	struct FontMap {
-		std::shared_ptr<gl_math::Vec2I> positions;
-		std::shared_ptr<int> widths;
-		int heights;
+		std::shared_ptr<gl_math::Rect> positions;
 		size_t length;
 
-		static FontMap ParseMap(const char* txt);
+		static FontMap ParseMap(const char* txt, Texture& ref);
 	};
 
-	struct FontMesh final : MeshBase {
+	enum struct TextAlignment {
+		TopLeft,
+	};
+
+	struct TextMesh final : MeshBase {
 		FontMap map;
-		void setText(char* txt);
+		void setText(const char* txt, float scale = 1, float horizGap = 0, float vertGap = 2, TextAlignment alignment = TextAlignment::TopLeft);
 	private:
 		std::shared_ptr<gl_math::Vec3> vert_positions{};
 		std::shared_ptr<gl_math::Vec3> vert_normals{};

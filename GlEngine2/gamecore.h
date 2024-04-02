@@ -8,7 +8,7 @@
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);} void AssignSelf(const Component& other) override { *this = (class_name&)other; }
 
 namespace game_core {
-	char* readFile(const char* path, size_t* out_Size, bool isBinary);
+	std::shared_ptr<char> readFile(const char* path, size_t* out_Size, bool isBinary);
 
 	struct Transform {
 		gl_math::Vec3 position{};

@@ -356,7 +356,7 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEnd
 	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
 		throw hr;
 }
-char* game_core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
+std::shared_ptr<char> game_core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
 	std::fstream stream = std::fstream(path, (isBinary ? std::ios::binary: 0) | std::ios::in);
 	if (!stream) return nullptr;
 	stream.seekg(0, stream.end);
@@ -366,7 +366,7 @@ char* game_core::readFile(const char* path, size_t* out_Size, bool isBinary = fa
 	char* c = new char[length+1];
 	stream.read(c, length);
 	c[length] = 0;
-	return c;
+	return std::shared_ptr<char>{c};
 }
 game_core::AudioClip::~AudioClip() {
 	CloseHandle(hBufferEndEvent);

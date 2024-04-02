@@ -13,8 +13,98 @@ const char* nextLine(const char* v) {
 	return v;
 }
 
-game_render::FontMap game_render::FontMap::ParseMap(const char* txt) {
-	return {};
+game_render::FontMap game_render::FontMap::ParseMap(const char* txt, Texture& ref) {
+	std::shared_ptr<gl_math::Rect> v = std::shared_ptr<gl_math::Rect>{ new gl_math::Rect[256] };
+	for (const char* t = txt; t && *t; t = nextLine(t)) {
+		int x;
+		int y;
+		int w;
+		int h;
+		int ox = 0;
+		int oy;
+		int c;
+		int k = sscanf_s(t, "\\%d %d %d %d %d %d", &c, &x, &y, &w, &h, &oy);
+		y = ref.Height() - y - h;
+		if (k == 5) {
+			v.get()[c] = gl_math::Rect{ (float)x / ref.Width(),(float)y / ref.Height(),(float)w / ref.Width(),(float)h / ref.Height() };
+		}
+		else if (k == 6) {
+			v.get()[c] = gl_math::Rect{ (float)x / ref.Width(),(float)y / ref.Height(),(float)w / ref.Width(),(float)h / ref.Height(), (float)ox / ref.Width(), (float)oy / ref.Height() };
+		}
+		k = sscanf_s(t, "%1c %d %d %d %d %d", (char*)&c, 1, &x, &y, &w, &h, &oy);
+		y = ref.Height() - y - h;
+		if (k == 5) {
+			v.get()[c] = gl_math::Rect{ (float)x/ref.Width(),(float)y / ref.Height(),(float)w / ref.Width(),(float)h / ref.Height() };
+		}
+		else if (k == 6) {
+			v.get()[c] = gl_math::Rect{ (float)x / ref.Width(),(float)y / ref.Height(),(float)w / ref.Width(),(float)h / ref.Height(), (float)ox / ref.Width(), (float)oy / ref.Height() };
+		}
+	}
+	return {v,256};
+}
+void game_render::TextMesh::setText(const char* txt, float scale, float horizGap, float vertGap, TextAlignment alignment) {
+	std::vector<gl_math::Rect> rects{};
+	float sx = scale / map.positions.get()['M'].w;
+	float sy = scale / map.positions.get()['M'].h;
+	for (const char* t = txt; *t; t++) {
+		if (*t >= map.length) continue;
+		auto v = map.positions.get()[*t];
+		rects.push_back(v);
+	}
+	gl_math::Vec3 v{0,0,0};
+
+	vertices_length = rects.size() * 6;
+	vert_positions = std::shared_ptr<gl_math::Vec3>{ new gl_math::Vec3[rects.size() * 6] };
+	vert_uvs = std::shared_ptr<gl_math::Vec2>{ new gl_math::Vec2[rects.size() * 6] };
+	vert_normals = std::shared_ptr<gl_math::Vec3>{ new gl_math::Vec3[rects.size() * 6] };
+	for (int i = 0; i < rects.size(); i++) {
+		float w = rects[i].w*sx;
+		float h = rects[i].h*sy;
+		float x = rects[i].x;
+		float y = rects[i].y;
+		float oy = rects[i].oy * sy;
+		vert_positions.get()[i * 6 + 0] = v + gl_math::Vec3{ 0,-oy,0};
+		vert_positions.get()[i * 6 + 1] = v + gl_math::Vec3{ w,-oy,0 };
+		vert_positions.get()[i * 6 + 2] = v + gl_math::Vec3{w,h-oy,0};
+		vert_positions.get()[i * 6 + 3] = v + gl_math::Vec3{ 0,-oy,0 };
+		vert_positions.get()[i * 6 + 4] = v + gl_math::Vec3{ w,h - oy,0 };
+		vert_positions.get()[i * 6 + 5] = v + gl_math::Vec3{ 0,h - oy,0 };
+		vert_normals.get()[i * 6 + 0] = { 0,1,0 };
+		vert_normals.get()[i * 6 + 1] = { 0,1,0 };
+		vert_normals.get()[i * 6 + 2] = { 0,1,0 };
+		vert_normals.get()[i * 6 + 3] = { 0,1,0 };
+		vert_normals.get()[i * 6 + 4] = { 0,1,0 };
+		vert_normals.get()[i * 6 + 5] = { 0,1,0 };
+		vert_uvs.get()[i * 6 + 0] = { x,y };
+		vert_uvs.get()[i * 6 + 1] = { x + rects[i].w,y };
+		vert_uvs.get()[i * 6 + 2] = { x + rects[i].w,y + rects[i].h };
+		vert_uvs.get()[i * 6 + 3] = { x,y };
+		vert_uvs.get()[i * 6 + 4] = { x + rects[i].w,y + rects[i].h };
+		vert_uvs.get()[i * 6 + 5] = { x,y + rects[i].h };
+		v += {w+ horizGap, 0, 0};
+	}
+}
+void game_render::TextMesh::Render(const gl_math::Mat4& transform) const {
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(transform);
+	if (vert_positions) {
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(gl_math::Vec3), (const void*)vert_positions.get());
+	}
+	else glDisableClientState(GL_VERTEX_ARRAY);
+	if (vert_normals) {
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glNormalPointer(GL_FLOAT, sizeof(gl_math::Vec3), (const void*)vert_normals.get());
+	}
+	else glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	if (vert_uvs) {
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(gl_math::Vec2), (const void*)vert_uvs.get());
+	}
+	else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
 }
 game_render::Texture::Texture() {
 	this->width = 0;
@@ -115,6 +205,7 @@ game_render::Texture game_render::Texture::BmpTexture(const char* d)
 			maskR = SwapBigEndian(*(uint32_t*)(data + 54 + 0));
 			maskG = SwapBigEndian(*(uint32_t*)(data + 54 + 4));
 			maskB = SwapBigEndian(*(uint32_t*)(data + 54 + 8));
+			maskA = SwapBigEndian(*(uint32_t*)(data + 54 + 12));
 		}
 		else if (compression == 6) {
 			maskR = SwapBigEndian(*(uint32_t*)(data + 54 + 0));
@@ -122,6 +213,11 @@ game_render::Texture game_render::Texture::BmpTexture(const char* d)
 			maskB = SwapBigEndian(*(uint32_t*)(data + 54 + 8));
 			maskA = SwapBigEndian(*(uint32_t*)(data + 54 + 12));
 		}
+
+		shiftA = 0;
+		shiftR = 0;
+		shiftG = 0;
+		shiftB = 0;
 
 		for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
 		for (; maskG && !(maskG & 1); maskG >>= 1)shiftG++;
@@ -394,8 +490,8 @@ gl_math::Vec2 cube_uv[] = {
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 };
-game_render::Mesh game_render::Mesh::cubePrimative = { std::shared_ptr<gl_math::Vec3>{cube_positions},std::shared_ptr<gl_math::Vec3>{cube_normals},
-std::shared_ptr<gl_math::Vec4>{cube_color},std::shared_ptr<gl_math::Vec2>{cube_uv},cube_vertices };
+std::shared_ptr< game_render::Mesh> game_render::Mesh::cubePrimative = std::shared_ptr< game_render::Mesh>{ new game_render::Mesh{ std::shared_ptr<gl_math::Vec3>{cube_positions},std::shared_ptr<gl_math::Vec3>{cube_normals},
+std::shared_ptr<gl_math::Vec4>{cube_color},std::shared_ptr<gl_math::Vec2>{cube_uv},cube_vertices } };
 game_render::Material game_render::Material::defaultMaterial = { false, true, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 1, {0,0,0,1}, {} };
 game_render::Material game_render::Material::shadowMaterial = { false, false, {}, {}, {}, 0, {} };
 
@@ -429,6 +525,7 @@ void game_component::Camera::OnResize() {
 }
 void game_component::Camera::OnRender(int phase) {
 	if (phase == 0) {//no light render
+		glEnable(GL_LIGHTING);
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixf(camera * selfObject()->transform.ToMatrixInverse());
 		glCullFace(GL_BACK);
@@ -458,6 +555,7 @@ void game_component::Camera::OnRender(int phase) {
 		glDepthMask(GL_TRUE);
 	}
 	else if (phase == 10) {//ui
+		glDisable(GL_LIGHTING);
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixf(gl_math::Mat4_Identity);
 		glDepthMask(GL_FALSE);

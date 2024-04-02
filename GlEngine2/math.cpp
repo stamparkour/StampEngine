@@ -3,6 +3,38 @@
 #include "glvec.h"
 #include "glquat.h"
 using namespace gl_math;
+RectI::RectI() noexcept {
+	this->x = 0;
+	this->y = 0;
+	this->w = 0;
+	this->h = 0;
+	this->ox = 0;
+	this->oy = 0;
+}
+RectI::RectI(int x, int y, int w, int h, int ox, int oy) noexcept {
+	this->x = x;
+	this->y = y;
+	this->w = w;
+	this->h = h;
+	this->ox = ox;
+	this->oy = oy;
+}
+Rect::Rect() noexcept {
+	this->x = 0;
+	this->y = 0;
+	this->w = 0;
+	this->h = 0;
+	this->ox = 0;
+	this->oy = 0;
+}
+Rect::Rect(float x, float y, float w, float h, float ox, float oy) noexcept {
+	this->x = x;
+	this->y = y;
+	this->w = w;
+	this->h = h;
+	this->ox = ox;
+	this->oy = oy;
+}
 Vec2I::Vec2I() noexcept {
 	x = 0;
 	y = 0;

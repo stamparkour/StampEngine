@@ -121,22 +121,49 @@ public:
 game_core::GameManager manager{};
 game_core::Scene scene{};
 void win_event::Start(double time) {
-	std::shared_ptr<game_render::Mesh> mesh = std::shared_ptr<game_render::Mesh>{ game_render::Mesh::ObjMesh(game_core::readFile("mesh.obj", NULL, false)) };
-	game_render::Texture tex = game_render::Texture::BmpTexture(game_core::readFile("test.bmp", NULL, true));
+
+	game_render::Texture font = game_render::Texture::BmpTexture(game_core::readFile("font.bmp", NULL, true).get());
+	game_render::FontMap map = game_render::FontMap::ParseMap(game_core::readFile("font.txt", NULL, false).get(), font);
+	game_component::MeshRenderer textTest = {};
+	textTest.material = game_render::Material::defaultMaterial;
+	textTest.material.texture = font;
+	std::shared_ptr< game_render::TextMesh> textMesh = std::shared_ptr< game_render::TextMesh>{ new game_render::TextMesh{} };
+	textMesh.get()->map = map;
+	textMesh.get()->setText("THE QUICK BROWN FOX JUMPED OVER THE LAZY DOG", 0.5, 0.f);
+	textTest.mesh = textMesh;
+
+	std::shared_ptr<game_render::Mesh> mesh = std::shared_ptr<game_render::Mesh>{ game_render::Mesh::ObjMesh(game_core::readFile("mesh.obj", NULL, false).get()) };
+	game_render::Texture tex = game_render::Texture::BmpTexture(game_core::readFile("test.bmp", NULL, true).get());
+
 	game_core::GameObject cam{};
 	cam.AddComponent(game_component::Camera{});
 	cam.AddComponent(CameraController{});
 	cam.transform.position = { 0,0,-5};
 	scene.AddObject(cam);
 
-	game_core::GameObject cube{};
+	game_core::GameObject monke{};
 	game_component::MeshRenderer meshRenderer = {};
 	meshRenderer.mesh = mesh;
 	meshRenderer.material = game_render::Material::defaultMaterial;
 	meshRenderer.material.texture = tex;
 	meshRenderer.material.specularHighlight = 0;
-	cube.AddComponent(meshRenderer);
+	monke.AddComponent(meshRenderer);
+	scene.AddObject(monke);
+
+	game_core::GameObject cube{};
+	game_component::MeshRenderer meshRenderer1 = {};
+	meshRenderer1.mesh = game_render::Mesh::cubePrimative;
+	meshRenderer1.material = game_render::Material::defaultMaterial;
+	meshRenderer1.material.texture = tex;
+	meshRenderer1.material.specularHighlight = 0;
+	cube.transform.position = { -5,0,0 };
+	cube.AddComponent(meshRenderer1);
 	scene.AddObject(cube);
+
+	game_core::GameObject textObj{};
+	textObj.AddComponent(textTest);
+	textObj.transform.position = { 5,0,0 };
+	scene.AddObject(textObj);
 
 	game_core::GameObject sun{};
 	sun.transform.Rotate(-120 * AngleToRad, 0, 0);
@@ -156,12 +183,13 @@ void win_event::Start(double time) {
 	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_NORMALIZE);
-	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 	glFogi(GL_FOG_MODE, GL_LINEAR);
 	glFogf(GL_FOG_START, 0.5);
 	glFogf(GL_FOG_END, 1.);
 	glFogfv(GL_FOG_COLOR, (float*)gl_math::Vec4{0,0,0,0});
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	manager.Initialize();
 }

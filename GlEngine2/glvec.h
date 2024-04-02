@@ -41,6 +41,30 @@ namespace gl_math {
 		Vec2I operator -() const noexcept;
 	};
 
+	struct Rect {
+		float x;
+		float y;
+		float w;
+		float h;
+		float ox;
+		float oy;
+
+		Rect() noexcept;
+		Rect(float x, float y, float w, float h, float ox = 0, float oy = 0) noexcept;
+	};
+
+	struct RectI {
+		int x;
+		int y;
+		int w;
+		int h;
+		int ox;
+		int oy;
+
+		RectI() noexcept;
+		RectI(int x, int y, int w, int h, int ox = 0, int oy = 0) noexcept;
+	};
+
 	struct Vec3 {
 		float x = 0;
 		float y = 0;
