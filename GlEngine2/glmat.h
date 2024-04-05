@@ -32,7 +32,9 @@ namespace gl_math {
 		Vec4 operator *(const Vec3& b) const;
 		operator const float* () const;
 
+		//ratio : y / x
 		static Mat4 Perspective(float fovy, float ratio, float nearPlane, float farPlane);
+		//ratio : y / x
 		static Mat4 Orthographic(float scale, float ratio, float nearPlane, float farPlane);
 		static Mat4 Scale(float x, float y, float z);
 		static Mat4 Translate(float x, float y, float z);

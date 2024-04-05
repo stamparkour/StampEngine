@@ -41,6 +41,8 @@ namespace game_render {
 	struct Material final {
 		bool useVertexColor;
 		bool useTexture;
+		bool applyShadow{};
+		bool transparent;
 		gl_math::Vec4 ambientColor;
 		gl_math::Vec4 diffuseColor;
 		gl_math::Vec4 specularColor;
@@ -102,10 +104,25 @@ namespace game_component {
 	struct MeshRenderer final : game_core::Component {
 		Component_Requirements(MeshRenderer)
 		MeshRenderer() : game_core::Component() {}
+		std::shared_ptr<game_render::MeshBase> mesh{};
+		game_render::Material material{};
+		void OnRender(int phase) override;
+	};
+	struct UIRenderer final : game_core::Component {
+		Component_Requirements(UIRenderer)
+			UIRenderer() : game_core::Component() {}
 		bool applyShadow{};
 		std::shared_ptr<game_render::MeshBase> mesh{};
 		game_render::Material material{};
 		void OnRender(int phase) override;
+	};
+	struct RectTransform final : game_core::Component {
+		Component_Requirements(RectTransform)
+	public:
+		gl_math::Vec2 alignment;
+		float left;
+		float right;
+		void Update() override;
 	};
 
 	struct ShadowRenderer final : game_core::Component {

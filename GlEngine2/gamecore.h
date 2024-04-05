@@ -199,8 +199,8 @@ namespace game_core {
 		AudioManager audio;
 		Scene* scene = 0;
 
-		inline int ScreenX() const noexcept { return screenX; }
-		inline int ScreenY() const noexcept { return screenY;  }
+		static int ScreenX() { return current->screenX; }
+		static int ScreenY() { return current->screenY;  }
 
 		void Initialize();
 		void Update(double time);

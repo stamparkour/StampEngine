@@ -13,6 +13,9 @@ const char* nextLine(const char* v) {
 	return v;
 }
 
+void game_component::RectTransform::Update() {
+
+}
 game_render::FontMap game_render::FontMap::ParseMap(const char* txt, Texture& ref) {
 	std::shared_ptr<gl_math::Rect> v = std::shared_ptr<gl_math::Rect>{ new gl_math::Rect[256] };
 	for (const char* t = txt; t && *t; t = nextLine(t)) {
@@ -298,6 +301,12 @@ void game_render::Material::Bind() const {
 	else {
 		glDisable(GL_TEXTURE_2D);
 	}
+	if (transparent) {
+		glDisable(GL_DEPTH_TEST);
+	}
+	else {
+		glEnable(GL_DEPTH_TEST);
+	}
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (float*)&specularColor);
 	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, (int)(specularHighlight * 128));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, (float*)&emissiveColor);
@@ -492,11 +501,11 @@ gl_math::Vec2 cube_uv[] = {
 };
 std::shared_ptr< game_render::Mesh> game_render::Mesh::cubePrimative = std::shared_ptr< game_render::Mesh>{ new game_render::Mesh{ std::shared_ptr<gl_math::Vec3>{cube_positions},std::shared_ptr<gl_math::Vec3>{cube_normals},
 std::shared_ptr<gl_math::Vec4>{cube_color},std::shared_ptr<gl_math::Vec2>{cube_uv},cube_vertices } };
-game_render::Material game_render::Material::defaultMaterial = { false, true, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 1, {0,0,0,1}, {} };
-game_render::Material game_render::Material::shadowMaterial = { false, false, {}, {}, {}, 0, {} };
+game_render::Material game_render::Material::defaultMaterial = { false, true, false, false, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 1, {0,0,0,1}, {} };
+game_render::Material game_render::Material::shadowMaterial = { false, false, false, false, {}, {}, {}, 0, {} };
 
 void game_component::MeshRenderer::OnRender(int phase) {
-	if (phase == 1 || phase == 7 && applyShadow || phase == 9 && !applyShadow) {
+	if (phase == 1 || phase == 7 && material.applyShadow || phase == 9 && !material.applyShadow) {
 		material.Bind();
 		mesh->Render(selfObject()->getPrevTransform());
 	}
@@ -555,10 +564,11 @@ void game_component::Camera::OnRender(int phase) {
 		glDepthMask(GL_TRUE);
 	}
 	else if (phase == 10) {//ui
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
 		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(gl_math::Mat4_Identity);
-		glDepthMask(GL_FALSE);
+		glLoadMatrixf(gl_math::Mat4::Orthographic(game_core::GameManager::ScreenX(), 
+			(float)game_core::GameManager::ScreenY() / game_core::GameManager::ScreenX(), 0, 100));
 	}
 }
 game_component::SunLight::SunLight() {

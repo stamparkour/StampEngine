@@ -1,0 +1,2 @@
+;keyword path
+test_texture ./test.bmp
