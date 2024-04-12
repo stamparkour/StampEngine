@@ -60,6 +60,9 @@
     <ClCompile Include="Audio.cpp">
       <Filter>Source Files\manager</Filter>
     </ClCompile>
+    <ClCompile Include="Resources.cpp">
+      <Filter>Source Files\manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="winevent.h">
@@ -83,9 +86,6 @@
     <ClInclude Include="glrender.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
-    <ClInclude Include="filemanager.h">
-      <Filter>Header Files\math</Filter>
-    </ClInclude>
     <ClInclude Include="gl.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
@@ -94,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="glmath.h">
       <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="gameresources.h">
+      <Filter>Header Files\manager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

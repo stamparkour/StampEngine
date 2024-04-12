@@ -1,6 +1,6 @@
 #pragma once
 
-namespace win_event {
+namespace win::event {
 	void Start(double time);
 	void Update(double time);
 	void SyncUpdate(double time);

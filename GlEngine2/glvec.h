@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gl_math {
+namespace game::math {
 	struct Vec2;
 	struct Vec3;
 	struct Vec4;

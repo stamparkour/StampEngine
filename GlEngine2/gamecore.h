@@ -7,23 +7,23 @@
 #define LayerMask_Main 1
 #define Component_Requirements(class_name) size_t Size() override { return sizeof(class_name);} void AssignSelf(const Component& other) override { *this = (class_name&)other; }
 
-namespace game_core {
+namespace game::core {
 	std::shared_ptr<char> readFile(const char* path, size_t* out_Size, bool isBinary);
 
 	struct Transform {
-		gl_math::Vec3 position{};
-		gl_math::Vec3 scale{ 1,1,1 };
-		gl_math::Quat rotation = gl_math::Quat_Identity;
+		game::math::Vec3 position{};
+		game::math::Vec3 scale{ 1,1,1 };
+		game::math::Quat rotation = game::math::Quat_Identity;
 
 		void Rotate(float x, float y, float z);
-		gl_math::Mat4 ToMatrix() const;
-		gl_math::Mat4 ToMatrixInverse() const;
-		gl_math::Vec3 forward() const;
-		gl_math::Vec3 back() const;
-		gl_math::Vec3 left() const;
-		gl_math::Vec3 right() const;
-		gl_math::Vec3 up() const;
-		gl_math::Vec3 down() const;
+		game::math::Mat4 ToMatrix() const;
+		game::math::Mat4 ToMatrixInverse() const;
+		game::math::Vec3 forward() const;
+		game::math::Vec3 back() const;
+		game::math::Vec3 left() const;
+		game::math::Vec3 right() const;
+		game::math::Vec3 up() const;
+		game::math::Vec3 down() const;
 	};
 
 	enum struct GameObjectState {
@@ -50,9 +50,9 @@ namespace game_core {
 	private:
 		std::vector<Component*> components;
 		GameObjectState state;
-		gl_math::Mat4 transformMatrix;
+		game::math::Mat4 transformMatrix;
 	public:
-		game_core::Transform transform;
+		game::core::Transform transform;
 		std::string name;
 		int layerMask;
 		GameObject* parent;
@@ -70,8 +70,8 @@ namespace game_core {
 
 		bool exsists();
 		std::vector<GameObject*> getChildren();
-		gl_math::Mat4 getTransform();
-		gl_math::Mat4 getPrevTransform() const;
+		game::math::Mat4 getTransform();
+		game::math::Mat4 getPrevTransform() const;
 		template <typename T>
 		void AddComponent(T& component);
 		template <typename T>
@@ -94,7 +94,7 @@ namespace game_core {
 	struct Component {
 		friend struct GameObject;
 		friend struct GameManager;
-		friend void game_core::swap(game_core::GameObject& a, game_core::GameObject& b);
+		friend void game::core::swap(game::core::GameObject& a, game::core::GameObject& b);
 		ComponentState state { ComponentState::Created};
 		Component() {}
 	private:
@@ -216,22 +216,22 @@ namespace game_core {
 }
 
 template <typename T>
-void game_core::GameObject::AddComponent(T& component) {
-	game_core::Component* __dummy = static_cast<T*>(0);
+void game::core::GameObject::AddComponent(T& component) {
+	game::core::Component* __dummy = static_cast<T*>(0);
 	T* v = new T(component);
 	v->gameObject = this;
 	components.push_back(v);
 }
 template <typename T>
-void game_core::GameObject::AddComponent(T&& component) {
-	game_core::Component* __dummy = static_cast<T*>(0);
+void game::core::GameObject::AddComponent(T&& component) {
+	game::core::Component* __dummy = static_cast<T*>(0);
 	T* v = new T(component);
 	v->gameObject = this;
 	components.push_back(v);
 }
 template <typename T>
-T* game_core::GameObject::GetComponent() {
-	game_core::Component* __dummy = static_cast<T*>(0);
+T* game::core::GameObject::GetComponent() {
+	game::core::Component* __dummy = static_cast<T*>(0);
 	for (int i = 0; i < components.size(); i++) {
 		if ((typeid (*components[i])) == typeid(T)) {
 			return (T*)components[i];
@@ -240,11 +240,11 @@ T* game_core::GameObject::GetComponent() {
 	return NULL;
 }
 template <typename T>
-bool game_core::GameObject::RemoveComponent() {
-	game_core::Component* __dummy = static_cast<T*>(0);
+bool game::core::GameObject::RemoveComponent() {
+	game::core::Component* __dummy = static_cast<T*>(0);
 	for (int i = 0; i < components.size(); i++) {
 		if ((typeid (*components[i])) == typeid(T)) {
-			components[i]->state = game_core::ComponentState::Destroying;
+			components[i]->state = game::core::ComponentState::Destroying;
 			return true;
 		}
 	}

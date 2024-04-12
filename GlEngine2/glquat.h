@@ -1,7 +1,7 @@
 #pragma once
 #include <math.h>
 
-namespace gl_math {
+namespace game::math {
 	struct Quat {
 		float w;
 		float x;

@@ -3,36 +3,36 @@
 #include <fstream>
 #include <xaudio2.h>
 #include <memory>
-game_core::GameManager* game_core::GameManager::current = NULL;
+game::core::GameManager* game::core::GameManager::current = NULL;
 
-void game_core::GameManager::Initialize() {
+void game::core::GameManager::Initialize() {
 	audio.Initialize();
 
-	game_core::GameManager::current = this;
+	game::core::GameManager::current = this;
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		scene->gameObjects[i]->Awake();
 	}
 }
-game_core::GameManager* game_core::GameManager::Current() noexcept {
+game::core::GameManager* game::core::GameManager::Current() noexcept {
 	return current;
 }
-void game_core::GameManager::Render() {
+void game::core::GameManager::Render() {
 	for(int j = 0; j < 12; j++)
 		for (int i = 0; i < scene->gameObjects.size(); i++) 
 			scene->gameObjects[i]->OnRender(j);
 }
-void game_core::GameManager::Resize(int x, int y) {
+void game::core::GameManager::Resize(int x, int y) {
 	screenX = x;
 	screenY = y;
 	resized = true;
 }
-void game_core::GameManager::KeyDown(char virtualKey) {
+void game::core::GameManager::KeyDown(char virtualKey) {
 	controls.KeyDown(virtualKey);
 }
-void game_core::GameManager::KeyUp(char virtualKey) {
+void game::core::GameManager::KeyUp(char virtualKey) {
 	controls.KeyUp(virtualKey);
 }
-void game_core::GameManager::Update(double time) {
+void game::core::GameManager::Update(double time) {
 	this->time.NextTimestep(time);
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		scene->gameObjects[i]->Update();
@@ -43,7 +43,7 @@ void game_core::GameManager::Update(double time) {
 		}
 	}
 }
-void game_core::GameManager::SyncUpdate() {
+void game::core::GameManager::SyncUpdate() {
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		scene->gameObjects[i]->SyncUpdate();
 	}
@@ -68,51 +68,51 @@ void game_core::GameManager::SyncUpdate() {
 		}
 	}
 }
-void game_core::TimeManager::NextTimestep(double time) {
+void game::core::TimeManager::NextTimestep(double time) {
 	deltaTime = time - this->time;
 	this->time = time;
 }
-void game_core::TimeManager::NextFixedTimestep(double time) {
+void game::core::TimeManager::NextFixedTimestep(double time) {
 	fixedDeltaTime = time - this->fixedTime;
 	this->fixedTime = time;
 }
-double game_core::TimeManager::Time() {
-	return game_core::GameManager::Current()->time.time;
+double game::core::TimeManager::Time() {
+	return game::core::GameManager::Current()->time.time;
 }
-double game_core::TimeManager::DeltaTime() { 
-	return game_core::GameManager::Current()->time.deltaTime;
+double game::core::TimeManager::DeltaTime() { 
+	return game::core::GameManager::Current()->time.deltaTime;
 }
-double game_core::TimeManager::FixedTime() {
-	return game_core::GameManager::Current()->time.fixedTime;
+double game::core::TimeManager::FixedTime() {
+	return game::core::GameManager::Current()->time.fixedTime;
 }
-double game_core::TimeManager::FixedDeltaTime() { 
-	return game_core::GameManager::Current()->time.fixedDeltaTime;
+double game::core::TimeManager::FixedDeltaTime() { 
+	return game::core::GameManager::Current()->time.fixedDeltaTime;
 }
-game_core::GameObject& game_core::Scene::AddObject(const game_core::GameObject& object) {
-	game_core::GameObject* o = new game_core::GameObject(object);
+game::core::GameObject& game::core::Scene::AddObject(const game::core::GameObject& object) {
+	game::core::GameObject* o = new game::core::GameObject(object);
 	gameObjects.push_back(o);
 	return *o;
 }
-void game_core::Scene::AddObject(game_core::GameObject&& object) {
-	game_core::GameObject* o = new game_core::GameObject(object);
+void game::core::Scene::AddObject(game::core::GameObject&& object) {
+	game::core::GameObject* o = new game::core::GameObject(object);
 	gameObjects.push_back(o);
 }
-game_core::GameObject* game_core::Scene::getGameObjectByName(std::string name) {
+game::core::GameObject* game::core::Scene::getGameObjectByName(std::string name) {
 	for (int i = 0; i < gameObjects.size(); i++) {
 		if (!gameObjects[i]->name.compare(name)) return gameObjects[i];
 	}
 	return NULL;
 }
-game_core::GameObject::GameObject() {
+game::core::GameObject::GameObject() {
 	components = {};
 	transform = {};
-	state = game_core::GameObjectState::Created;
+	state = game::core::GameObjectState::Created;
 	name = "";
 	layerMask = 1;
 	transformMatrix = {};
 	parent = NULL;
 }
-game_core::GameObject::GameObject(const game_core::GameObject& v) {
+game::core::GameObject::GameObject(const game::core::GameObject& v) {
 	components = {v.components.size(), 0};
 	transform = v.transform;
 	transformMatrix = v.transformMatrix;
@@ -128,36 +128,36 @@ game_core::GameObject::GameObject(const game_core::GameObject& v) {
 	layerMask = v.layerMask;
 	parent = v.parent;
 }
-game_core::GameObject::GameObject(std::string name) {
+game::core::GameObject::GameObject(std::string name) {
 	components = {};
 	transform = {};
 	transformMatrix = {};
-	state = game_core::GameObjectState::Created;
+	state = game::core::GameObjectState::Created;
 	this->name = name;
 	layerMask = 1;
 	parent = NULL;
 }
-game_core::GameObject::GameObject(std::string name, int groupMask) {
+game::core::GameObject::GameObject(std::string name, int groupMask) {
 	components = {};
 	transform = {};
 	transformMatrix = {};
-	state = game_core::GameObjectState::Created;
+	state = game::core::GameObjectState::Created;
 	this->name = name;
 	this->layerMask = groupMask;
 	parent = NULL;
 }
-game_core::GameObject::GameObject(GameObject&& v) noexcept {
+game::core::GameObject::GameObject(GameObject&& v) noexcept {
 	using std::swap;
 	components = {};
 	transform = {};
 	transformMatrix = {};
-	state = game_core::GameObjectState::Created;
+	state = game::core::GameObjectState::Created;
 	name = "";
 	layerMask = 1;
 	parent = NULL;
 	swap(*this, v);
 }
-game_core::GameObject& game_core::GameObject::operator=(const GameObject& v) {
+game::core::GameObject& game::core::GameObject::operator=(const GameObject& v) {
 	components = { v.components.size(), 0 };
 	transform = v.transform;
 	for (int i = 0; i < v.components.size(); i++) {
@@ -170,12 +170,12 @@ game_core::GameObject& game_core::GameObject::operator=(const GameObject& v) {
 	parent = v.parent;
 	return *this;
 }
-game_core::GameObject& game_core::GameObject::operator=(GameObject&& v) noexcept {
+game::core::GameObject& game::core::GameObject::operator=(GameObject&& v) noexcept {
 	using std::swap;
 	swap(*this, v);
 	return *this;
 }
-inline void game_core::swap(game_core::GameObject& a, game_core::GameObject& b) {
+inline void game::core::swap(game::core::GameObject& a, game::core::GameObject& b) {
 	using std::swap;
 	swap(a.components, b.components);
 	for (int i = 0; i < a.components.size(); i++) {
@@ -191,33 +191,33 @@ inline void game_core::swap(game_core::GameObject& a, game_core::GameObject& b) 
 	swap(a.parent, b.parent);
 	swap(a.transformMatrix, b.transformMatrix);
 }
-game_core::GameObject::~GameObject() {
+game::core::GameObject::~GameObject() {
 	for (int i = 0; i < components.size(); i++) {
 		delete components[i];
 		components[i] = 0;
 	}
 	state = GameObjectState::Destroying;
 }
-bool game_core::GameObject::exsists() {
+bool game::core::GameObject::exsists() {
 	if (this == 0) return false;
 	for (int i = 0; i < GameManager::Current()->scene->gameObjects.size(); i++) {
 		if (GameManager::Current()->scene->gameObjects[i] == this) return true;
 	}
 	return false;
 }
-gl_math::Mat4 game_core::GameObject::getTransform() {
+game::math::Mat4 game::core::GameObject::getTransform() {
 	if (parent == NULL) return transform.ToMatrix();
 	return transform.ToMatrix(); *parent->getTransform();
 }
-gl_math::Mat4 game_core::GameObject::getPrevTransform() const {
+game::math::Mat4 game::core::GameObject::getPrevTransform() const {
 	return transformMatrix;
 }
-void game_core::GameObject::Awake() {
+void game::core::GameObject::Awake() {
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->Awake();
 	}
 }
-void game_core::GameObject::Update() {
+void game::core::GameObject::Update() {
 	if (state == GameObjectState::Created) {
 		state = GameObjectState::Enabling;
 		for (int i = 0; i < components.size(); i++) {
@@ -242,62 +242,62 @@ void game_core::GameObject::Update() {
 		}
 	}
 }
-void game_core::GameObject::FixedUpdate() {
+void game::core::GameObject::FixedUpdate() {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->FixedUpdate();
 	}
 }
-void game_core::GameObject::OnRender(int phase) {
+void game::core::GameObject::OnRender(int phase) {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->OnRender(phase);
 	}
 }
-void game_core::GameObject::OnResize() {
+void game::core::GameObject::OnResize() {
 	if (state != GameObjectState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->OnResize();
 	}
 }
-void game_core::GameObject::Destroy() {
+void game::core::GameObject::Destroy() {
 	state = GameObjectState::Destroying;
 }
-void game_core::GameObject::Enable() {
-	if (state == game_core::GameObjectState::Enabled) return;
-	state = game_core::GameObjectState::Enabling;
+void game::core::GameObject::Enable() {
+	if (state == game::core::GameObjectState::Enabled) return;
+	state = game::core::GameObjectState::Enabling;
 }
-void game_core::GameObject::Disable() {
-	if (state == game_core::GameObjectState::Disabled) return;
-	state = game_core::GameObjectState::Disabling;
+void game::core::GameObject::Disable() {
+	if (state == game::core::GameObjectState::Disabled) return;
+	state = game::core::GameObjectState::Disabling;
 }
-void game_core::ControlsManager::KeyDown(char virtualKey) {
+void game::core::ControlsManager::KeyDown(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8
 	int shift = virtualKey % 8;
 	char mask = 0b1 << shift;
 	keyBits[index] |= mask;
 }
-void game_core::ControlsManager::KeyUp(char virtualKey) {
+void game::core::ControlsManager::KeyUp(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8
 	int shift = virtualKey % 8;
 	char mask = 0xFF ^ (0b1 << shift);
 	keyBits[index] &= mask;
 }
-bool game_core::ControlsManager::isKeyDown(char virtualKey) {
+bool game::core::ControlsManager::isKeyDown(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8
 	int shift = virtualKey % 8;
 	char mask = 0b1 << shift;
 	return GameManager::Current()->controls.keyBits[index] & mask;
 }
-bool game_core::ControlsManager::isKeyUp(char virtualKey) {
+bool game::core::ControlsManager::isKeyUp(char virtualKey) {
 	return !isKeyDown(virtualKey);
 }
-void game_core::GameObject::SyncUpdate()
+void game::core::GameObject::SyncUpdate()
 {
 	this->transformMatrix = getTransform();
 }
 //https://learn.microsoft.com/en-us/windows/win32/xaudio2/how-to--play-a-sound-with-xaudio2
-bool game_core::AudioManager::Initialize() {
+bool game::core::AudioManager::Initialize() {
 	HRESULT hr;
 	pXAudio2 = nullptr;
 	if (FAILED(hr = XAudio2Create(&pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
@@ -328,7 +328,7 @@ bool getChunk(long fourcc, const char(&data)[length], size_t& index, size_t& siz
 }
 
 template<size_t length>
-inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {
+inline game::core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {
 	ptr = new char[length];
 	memcpy_s(ptr.get(), length, buffer, length);
 	//little endian
@@ -356,7 +356,7 @@ inline game_core::AudioClip::AudioClip(const char(&buffer)[length]) : hBufferEnd
 	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&data)))
 		throw hr;
 }
-std::shared_ptr<char> game_core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
+std::shared_ptr<char> game::core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
 	std::fstream stream = std::fstream(path, (isBinary ? std::ios::binary: 0) | std::ios::in);
 	if (!stream) return nullptr;
 	stream.seekg(0, stream.end);
@@ -368,17 +368,17 @@ std::shared_ptr<char> game_core::readFile(const char* path, size_t* out_Size, bo
 	c[length] = 0;
 	return std::shared_ptr<char>{c};
 }
-game_core::AudioClip::~AudioClip() {
+game::core::AudioClip::~AudioClip() {
 	CloseHandle(hBufferEndEvent);
 }
-void game_core::AudioClip::OnStreamEnd() {
+void game::core::AudioClip::OnStreamEnd() {
 	SetEvent(hBufferEndEvent);
 	playing = false;
 }
-bool game_core::AudioClip::isPlaying() const {
+bool game::core::AudioClip::isPlaying() const {
 	return playing;
 }
-bool game_core::AudioClip::Play(float volume) {
+bool game::core::AudioClip::Play(float volume) {
 	playing = true;
 	HRESULT hr;
 	if (FAILED(hr = pSourceVoice->Start(0)))
@@ -386,7 +386,7 @@ bool game_core::AudioClip::Play(float volume) {
 	return false;
 }
 
-game_core::GameObject* game_core::Component::selfObject() const
+game::core::GameObject* game::core::Component::selfObject() const
 {
 	return this->gameObject;
 }

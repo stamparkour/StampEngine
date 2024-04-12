@@ -144,12 +144,12 @@
     <ClCompile Include="gamemanager.cpp" />
     <ClCompile Include="math.cpp" />
     <ClCompile Include="Render.cpp" />
+    <ClCompile Include="Resources.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="winmanager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="audio.h" />
-    <ClInclude Include="filemanager.h" />
     <ClInclude Include="gamecore.h" />
     <ClInclude Include="glmat.h" />
     <ClInclude Include="glrender.h" />
@@ -157,6 +157,7 @@
     <ClInclude Include="glmath.h" />
     <ClInclude Include="glvec.h" />
     <ClInclude Include="gl.h" />
+    <ClInclude Include="gameresources.h" />
     <ClInclude Include="wincore.h" />
     <ClInclude Include="winevent.h" />
   </ItemGroup>

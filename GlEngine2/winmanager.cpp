@@ -24,7 +24,7 @@ void InitTimer() {
 	timerStart = largeInt.QuadPart;
 }
 
-double win_event::GetTime() {
+double win::event::GetTime() {
 	LARGE_INTEGER largeInt{};
 	QueryPerformanceCounter(&largeInt);
 	return timerTickLength * (largeInt.QuadPart - timerStart);
@@ -59,7 +59,7 @@ void OnCreate(HWND hwnd) {
 	InitTimer();
 	glDrawBuffer(GL_BACK);
 
-	win_event::Start(win_event::GetTime());
+	win::event::Start(win::event::GetTime());
 }
 
 void OnPaint(HWND hwnd) {
@@ -71,7 +71,7 @@ void OnPaint(HWND hwnd) {
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	win_event::Render(win_event::GetTime());
+	win::event::Render(win::event::GetTime());
 	glFinish();
 	SwapBuffers(hdc);
 }
@@ -84,11 +84,11 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		win_input::KeyDown((int)wParam, ((int)lParam & (1 << 30)));
+		win::input::KeyDown((int)wParam, ((int)lParam & (1 << 30)));
 		break;
 	case WM_KEYUP://https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 	case WM_SYSKEYUP:
-		win_input::KeyUp((int)wParam);
+		win::input::KeyUp((int)wParam);
 		break;
 	case WM_CREATE:
 		OnCreate(hwnd);
@@ -96,7 +96,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 	case WM_PAINT:
 		break;
 	case WM_SIZE:
-		win_event::Resize(win_event::GetTime(), LOWORD(lParam), HIWORD(lParam));
+		win::event::Resize(win::event::GetTime(), LOWORD(lParam), HIWORD(lParam));
 		glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
 		break;
 	case WM_ACTIVATE:
@@ -188,19 +188,19 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 			DispatchMessage(&msg);
 		}
 
-		std::thread update{ win_event::Update, win_event::GetTime() };
+		std::thread update{ win::event::Update, win::event::GetTime() };
 		if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) OnPaint(hwnd);
 		update.join();
-		win_event::SyncUpdate(win_event::GetTime());
+		win::event::SyncUpdate(win::event::GetTime());
 
-		double time = win_event::GetTime();
+		double time = win::event::GetTime();
 		double wait = 1.0 / 60 - (time - prevTime);
 		if (wait <= 0) {
 			prevTime = time;
 		}
 		else {
 			std::this_thread::sleep_for(std::chrono::milliseconds((int)(wait * 1000)));
-			prevTime = win_event::GetTime();
+			prevTime = win::event::GetTime();
 		}
 	}
 
@@ -208,10 +208,10 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	return 0;
 }
 
-bool win_input::IsKeyDown(int virtualKey) {
+bool win::input::IsKeyDown(int virtualKey) {
 	return GetAsyncKeyState(virtualKey) < 0;
 }
 
-void win_event::TerminateWindow() {
+void win::event::TerminateWindow() {
 	DestroyWindow(windowHandle);
 }

@@ -2,7 +2,7 @@
 #include "glquat.h"
 #include "glvec.h"
 #include "glquat.h"
-using namespace gl_math;
+using namespace game::math;
 RectI::RectI() noexcept {
 	this->x = 0;
 	this->y = 0;
@@ -43,39 +43,39 @@ Vec2I::Vec2I(int x, int y) noexcept {
 	this->x = x;
 	this->y = y;
 }
-Vec2I gl_math::Vec2I::operator+(const Vec2I& b) const noexcept
+Vec2I game::math::Vec2I::operator+(const Vec2I& b) const noexcept
 {
 	return { x + b.x,y + b.y };
 }
-Vec2I gl_math::Vec2I::operator-(const Vec2I& b) const noexcept
+Vec2I game::math::Vec2I::operator-(const Vec2I& b) const noexcept
 {
 	return { x - b.x,y - b.y };
 }
-Vec2I gl_math::Vec2I::operator*(int b) const noexcept
+Vec2I game::math::Vec2I::operator*(int b) const noexcept
 {
 	return { x * b,y * b };
 }
-Vec2I gl_math::Vec2I::operator/(int b) const noexcept
+Vec2I game::math::Vec2I::operator/(int b) const noexcept
 {
 	return { x / b,y / b };
 }
-Vec2I& gl_math::Vec2I::operator+=(const Vec2I& b) noexcept
+Vec2I& game::math::Vec2I::operator+=(const Vec2I& b) noexcept
 {
 	return *this = *this + b;
 }
-Vec2I& gl_math::Vec2I::operator-=(const Vec2I& b) noexcept
+Vec2I& game::math::Vec2I::operator-=(const Vec2I& b) noexcept
 {
 	return *this = *this - b;
 }
-Vec2I& gl_math::Vec2I::operator*=(int b) noexcept
+Vec2I& game::math::Vec2I::operator*=(int b) noexcept
 {
 	return *this = *this * b;
 }
-Vec2I& gl_math::Vec2I::operator/=(int b) noexcept
+Vec2I& game::math::Vec2I::operator/=(int b) noexcept
 {
 	return *this = *this / b;
 }
-Vec2I gl_math::Vec2I::operator-() const noexcept
+Vec2I game::math::Vec2I::operator-() const noexcept
 {
 	return { -x,-y };
 }

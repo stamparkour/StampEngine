@@ -2,7 +2,7 @@
 #include <math.h>
 #include "glvec.h"
 
-namespace gl_math {
+namespace game::math {
 	struct Mat4 final {
 
 		float v1;
