@@ -7,6 +7,8 @@
 #include "audio.h"
 #include "gameresources.h"
 
+const WIN_CHAR* WIN_NAME = TEXT("my window");
+
 //mouse pos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
 //hide mouse https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
 //change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
@@ -123,11 +125,12 @@ game::core::GameManager manager{};
 game::core::Scene scene{};
 void win::event::Start(double time) {
 	game::resources::Initizialize();
+	game::resources::setLoc("en");
 
 	auto map = game::resources::font(game::resources::fontIndex("ariel_24"));
 	game::component::TextRenderer textTest = {};
 	textTest.map = map;
-	textTest.setText("THE QUICK BROWN FOX JUMPED OVER THE LAZY DOG", 0.5, 0.f);
+	textTest.setText(game::resources::loc("test_msg"), 0.5, 0.f);
 
 	std::shared_ptr<game::render::Mesh> mesh = game::resources::mesh(game::resources::meshIndex("testmesh"));
 
@@ -187,6 +190,9 @@ void win::event::Start(double time) {
 }
 
 void win::event::Update(double time) {
+	if (game::core::ControlsManager::isKeyDown(VK_F1)) {
+		game::resources::Initizialize();
+	}
 	manager.Update(time);
 }
 

@@ -10,6 +10,8 @@
 #define GLWINMODE_HOVER_CURSOR_BIT 4
 #define GLWINMODE_HIDE_CURSOR_BIT 8
 #define GLWINMODE_CONFINE_CURSOR_BIT 16
+#define GLWINMODE_DEBUG 32
+#define GLWINMODE_VSYNC 64
 long long GLWinBitMask = 0;
 
 double timerTickLength = 0;
@@ -57,7 +59,7 @@ void OnCreate(HWND hwnd) {
 	glGetIntegerv(GL_STENCIL_BITS, &value);
 
 	InitTimer();
-	glDrawBuffer(GL_BACK);
+	glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
 
 	win::event::Start(win::event::GetTime());
 }
@@ -72,8 +74,13 @@ void OnPaint(HWND hwnd) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	win::event::Render(win::event::GetTime());
-	glFinish();
-	SwapBuffers(hdc);
+	if (GLWinBitMask & GLWINMODE_VSYNC) {
+		//glFinish();
+		SwapBuffers(hdc);
+	}
+	else {
+		glFlush();
+	}
 }
 
 
@@ -81,6 +88,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 	switch (msg) {
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		FreeConsole();
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
@@ -128,8 +136,20 @@ bool ContainsCmdLineFlag(PWSTR args, WCHAR flag) {
 
 	return false;
 }
-
 int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
+
+	if (ContainsCmdLineFlag(pCmdLine, L'd')) {
+		GLWinBitMask |= GLWINMODE_DEBUG;
+		AllocConsole();
+#pragma warning(suppress : 4996)
+		freopen("CONOUT$", "w", stdout);
+#pragma warning(suppress : 4996)
+		freopen("CONIN$", "r", stdin);
+	}
+	if (ContainsCmdLineFlag(pCmdLine, L'v')) {
+		GLWinBitMask |= GLWINMODE_VSYNC;
+	}
+
 	HRESULT hr;
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
@@ -159,12 +179,12 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		int width = CW_USEDEFAULT;
 		int height = CW_USEDEFAULT;
 		GetDesktopResolution(width, height);
-		hwnd = CreateWindowEx(WS_EX_TOPMOST, TEXT("StampClass_GL"), TEXT("Test Window"), WS_POPUP,
+		hwnd = CreateWindowEx(WS_EX_TOPMOST, TEXT("StampClass_GL"), WIN_NAME, WS_POPUP,
 			0, 0, width, height, NULL, NULL, hInstance, NULL);
 		GLWinBitMask |= GLWINMODE_BORDERLESS_BIT;
 	}
 	else {
-		hwnd = CreateWindow(TEXT("StampClass_GL"), TEXT("Test Window"),
+		hwnd = CreateWindow(TEXT("StampClass_GL"), WIN_NAME,
 			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 			CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, NULL, NULL, hInstance, NULL);
 	}
@@ -180,6 +200,8 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	MSG msg;
 
 	double prevTime = 0;
+	int frames = 0;
+	float second = 1;
 	while (IsWindow(hwnd)) {
 		for (int i = 0; i < 100 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
 			if (msg.message == WM_PAINT)
@@ -188,20 +210,29 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 			DispatchMessage(&msg);
 		}
 
+		//if (GLWinBitMask & GLWINMODE_ACTIVE_BIT)
+
 		std::thread update{ win::event::Update, win::event::GetTime() };
-		if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) OnPaint(hwnd);
+		OnPaint(hwnd);
 		update.join();
 		win::event::SyncUpdate(win::event::GetTime());
 
+		frames++;
 		double time = win::event::GetTime();
-		double wait = 1.0 / 60 - (time - prevTime);
+		if (time > second) {
+			second += 1;
+			std::cout << "fps: " << frames << std::endl;
+			frames = 0;
+		}
+
+		/*double wait = 1.0 / 20 - (time - prevTime);
 		if (wait <= 0) {
 			prevTime = time;
 		}
 		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds((int)(wait * 1000)));
+			std::this_thread::sleep_for(std::chrono::microseconds((int)(wait * 1000000)));
 			prevTime = win::event::GetTime();
-		}
+		}*/
 	}
 
 	CoUninitialize();

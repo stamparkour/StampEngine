@@ -124,6 +124,8 @@ namespace game::core {
 		void AddObject(GameObject&& object);
 
 		GameObject* getGameObjectByName(std::string name);
+
+		~Scene();
 	};
 
 	struct TimeManager final {
@@ -197,7 +199,7 @@ namespace game::core {
 		TimeManager time;
 		ControlsManager controls;
 		AudioManager audio;
-		Scene* scene = 0;
+		Scene* scene = {};
 
 		static int ScreenX() { return current->screenX; }
 		static int ScreenY() { return current->screenY;  }

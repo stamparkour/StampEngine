@@ -1,3 +1,2 @@
 ;keyword:translation
-speech_john_0:To be, or not to be? That is my question.
-speech_john_1:I hope you understand.
+test_msg:MY FAVORITE COLOR IS GREEN

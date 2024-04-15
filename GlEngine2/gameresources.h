@@ -13,6 +13,8 @@ namespace game::resources {
 	std::shared_ptr<game::render::Mesh> mesh(int index);
 	int fontIndex(const char* v);
 	std::shared_ptr<game::render::FontMap> font(int index);
+	bool setLoc(const char* v);
+	char* loc(const char* v);
 	int dataIndex(const char* v);
 	std::shared_ptr<char> data(int index);
 }

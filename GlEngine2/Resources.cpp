@@ -5,6 +5,17 @@
 #include <fstream>
 #include <vector>
 
+
+struct LocKeyValue {
+	char* key;
+	char* value;
+};
+
+struct Localization {
+	char* name;
+	std::vector< LocKeyValue> loc{};
+};
+
 std::vector <char*> textureLabels{};
 std::vector <std::shared_ptr<game::render::Texture>> textures{};
 std::vector <char*> meshLabels{};
@@ -13,8 +24,39 @@ std::vector <char*> materialLabels{};
 std::vector <std::shared_ptr<game::render::Material>> materials{};
 std::vector <char*> fontlLabels{};
 std::vector <std::shared_ptr<game::render::FontMap>> fonts{};
+std::vector <Localization> localizations{};
+int localizationIndex = 0;
+
+template<class T>
+void clearVector(std::vector<T>& vec) {
+	for (T v : vec) {
+		delete v;
+	}
+	vec.clear();
+}
+template<class T>
+void clearVector(std::vector<std::shared_ptr<T>>& vec) {
+	for (auto v : vec) {
+		v.reset();
+	}
+	vec.clear();
+}
+
+void reset() {
+	clearVector(textureLabels);
+	clearVector(textures);
+	clearVector(meshLabels);
+	clearVector(meshes);
+	clearVector(materialLabels);
+	clearVector(materials);
+	clearVector(fontlLabels);
+	clearVector(fonts);
+}
 
 void game::resources::Initizialize() {
+	reset();
+
+	auto basePath = std::filesystem::current_path();
 	std::filesystem::current_path("resources\\gfx");
 	char buffer[256];
 	char label[32];
@@ -32,6 +74,7 @@ void game::resources::Initizialize() {
 			textures.push_back(game::render::Texture::BmpTexture(game::core::readFile(path, NULL, true).get()));
 		}
 	}
+
 	
 	file = std::fstream{ "meshes.txt" };
 	while (!file.eof()) {
@@ -80,6 +123,37 @@ void game::resources::Initizialize() {
 			fonts.push_back(game::render::FontMap::ParseMap(game::core::readFile(path,NULL,false).get(), game::resources::texture(game::resources::textureIndex(tex))));
 		}
 	}
+
+	std::filesystem::current_path(basePath);
+	std::filesystem::current_path("resources\\loc");
+	for (auto entry : std::filesystem::directory_iterator{ ".\\" }) {
+		if (!entry.is_directory()) continue;
+		auto path = entry.path().filename().string();
+		char* loc = new char[path.length()+1];
+		memcpy_s(loc, path.length() + 1, path.c_str(), path.length() + 1);
+		Localization l{ loc };
+		for (auto e : std::filesystem::directory_iterator{ entry.path() }) {
+			file = std::fstream{ e.path() };
+			while (file && !file.eof()) {
+				char line[2048];
+				file.getline(line, 2048);
+				if (line[0] == ';') continue;
+				int split = 0;
+				for (; line[split] && line[split] != ':'; split++);
+				if (line[split] == 0) continue;
+				split++;
+				char* key = new char[split];
+				memcpy_s(key, split, line, split);
+				key[split - 1] = 0;
+				int length = strlen(line) - split + 1;
+				char* value = new char[length];
+				memcpy_s(value, length, line + split, length);
+				l.loc.push_back({ key, value });
+			}
+		}
+		localizations.push_back(l);
+	}
+	std::filesystem::current_path(basePath);
 }
 
 int game::resources::materialIndex(const char* v) {
@@ -121,4 +195,23 @@ std::shared_ptr<game::render::Mesh> game::resources::mesh(int index) {
 std::shared_ptr<game::render::FontMap> game::resources::font(int index) {
 	if (index < 0) return 0;
 	return fonts[index];
+}
+
+char* game::resources::loc(const char* v)
+{
+	for (int i = 0; i < localizations[localizationIndex].loc.size(); i++) {
+		if (!strcmp(v, localizations[localizationIndex].loc[i].key)) {
+			return localizations[localizationIndex].loc[i].value;
+		}
+	}
+	return 0;
+}
+bool game::resources::setLoc(const char* v) {
+	for (int i = 0; i < localizations.size(); i++) {
+		if (!strcmp(v, localizations[i].name)) {
+			localizationIndex = i;
+			return true;
+		}
+	}
+	return false;
 }

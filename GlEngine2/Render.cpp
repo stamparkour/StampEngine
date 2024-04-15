@@ -47,6 +47,7 @@ std::shared_ptr<game::render::FontMap> game::render::FontMap::ParseMap(const cha
 	return std::shared_ptr<game::render::FontMap>{new game::render::FontMap{ v, 256, ref }};
 }
 void game::component::TextRenderer::setText(const char* txt, float scale, float horizGap, float vertGap, game::render::TextAlignment alignment) {
+	if (!txt) return;
 	std::vector<game::math::Rect> rects{};
 	float sx = scale / map.get()->positions.get()['M'].w;
 	float sy = scale / map.get()->positions.get()['M'].h;

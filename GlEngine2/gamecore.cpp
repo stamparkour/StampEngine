@@ -103,6 +103,13 @@ game::core::GameObject* game::core::Scene::getGameObjectByName(std::string name)
 	}
 	return NULL;
 }
+game::core::Scene::~Scene()
+{
+	for (int i = 0; i < gameObjects.size(); i++) {
+		delete gameObjects[i];
+	}
+	gameObjects.clear();
+}
 game::core::GameObject::GameObject() {
 	components = {};
 	transform = {};
