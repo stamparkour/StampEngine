@@ -142,6 +142,7 @@
     <ClCompile Include="Audio.cpp" />
     <ClCompile Include="gamecore.cpp" />
     <ClCompile Include="gamemanager.cpp" />
+    <ClCompile Include="gl.cpp" />
     <ClCompile Include="math.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Resources.cpp" />
@@ -158,14 +159,13 @@
     <ClInclude Include="glvec.h" />
     <ClInclude Include="gl.h" />
     <ClInclude Include="gameresources.h" />
+    <ClInclude Include="glext.h" />
+    <ClInclude Include="khrplatform.h" />
     <ClInclude Include="wincore.h" />
     <ClInclude Include="winevent.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="wininput.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="F:\OneDrive\Music\My Recordings\TEST.wav" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -112,8 +112,16 @@ namespace game::render {
 		static std::shared_ptr<FontMap> ParseMap(const char* txt, std::shared_ptr<game::render::TextureBase> ref);
 	};
 
-	enum struct TextAlignment {
-		TopLeft,
+	enum struct RectAlignment {//vert_horiz
+		TopLeft = 0b0000,
+		Top = 0b0001,
+		TopRight = 0b0010,
+		Left = 0b0100,
+		Center = 0b0101,
+		Right = 0b0110,
+		BottomLeft = 0b1000,
+		Bottom = 0b1001,
+		BottomRight = 0b1010,
 	};
 }
 namespace game::component {
@@ -124,33 +132,38 @@ namespace game::component {
 		std::shared_ptr<game::render::Material> material{};
 		void OnRender(int phase) override;
 	};
-	class TextRenderer final : public game::core::Component {
+	class TextRenderer : public game::core::Component {
 		Component_Requirements(TextRenderer)
+	protected:
 		std::shared_ptr<game::math::Vec3> vert_positions{};
 		std::shared_ptr<game::math::Vec3> vert_normals{};
 		std::shared_ptr<game::math::Vec2> vert_uvs{};
 		size_t vertices_length = 0;
-		game::render::Material material = game::render::Material::fontMaterial;
+		static game::render::Material material;
 	public:
-		std::shared_ptr<game::render::FontMap> map;
 		TextRenderer() : game::core::Component() {}
-		void setText(const char* txt, float scale = 1, float horizGap = 0, float vertGap = 2, game::render::TextAlignment alignment = game::render::TextAlignment::TopLeft);
+		std::shared_ptr<game::render::FontMap> map;
+		float horizGap = 0;
+		float vertGap = 0.1;
+		float scale = 1;
+		game::render::RectAlignment alignment;
+		void setText(const char* txt);
 		void OnRender(int phase) override;
 	};
-	struct UIRenderer final : game::core::Component {
-		Component_Requirements(UIRenderer)
-			UIRenderer() : game::core::Component() {}
-		bool applyShadow{};
-		std::shared_ptr<game::render::MeshBase> mesh{};
-		game::render::Material material{};
+	class TextRendererUI final : public TextRenderer {
+		Component_Requirements(TextRendererUI)
+	public:
+		TextRendererUI() : TextRenderer() {}
 		void OnRender(int phase) override;
 	};
 	struct RectTransform final : game::core::Component {
 		Component_Requirements(RectTransform)
 	public:
-		game::math::Vec2 alignment;
-		float left;
-		float right;
+		game::render::RectAlignment alignment;
+		game::math::Vec2 position;
+		game::math::Vec2 scale;
+		RectTransform();
+		RectTransform(game::render::RectAlignment alignment, game::math::Vec2 position, game::math::Vec2 scale) : alignment(alignment), position(position), scale(scale) {}
 		void Update() override;
 	};
 

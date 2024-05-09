@@ -67,6 +67,7 @@ void game::core::GameManager::SyncUpdate() {
 			}
 		}
 	}
+	controls.Update();
 }
 void game::core::TimeManager::NextTimestep(double time) {
 	deltaTime = time - this->time;
@@ -88,6 +89,23 @@ double game::core::TimeManager::FixedTime() {
 double game::core::TimeManager::FixedDeltaTime() { 
 	return game::core::GameManager::Current()->time.fixedDeltaTime;
 }
+game::core::Scene::Scene(Scene& other) {
+	for (int i = 0; i < other.gameObjects.size(); i++) {
+		AddObject(*other.gameObjects[i]);
+	}
+}
+game::core::Scene& game::core::Scene::operator=(game::core::Scene& other) {
+	for (int i = 0; i < other.gameObjects.size(); i++) {
+		GameObject* v = gameObjects[i];
+		gameObjects[i] = 0;
+		delete v;
+	}
+	gameObjects = {};
+	for (int i = 0; i < other.gameObjects.size(); i++) {
+		AddObject(*other.gameObjects[i]);
+	}
+	return *this;
+}
 game::core::GameObject& game::core::Scene::AddObject(const game::core::GameObject& object) {
 	game::core::GameObject* o = new game::core::GameObject(object);
 	gameObjects.push_back(o);
@@ -106,7 +124,9 @@ game::core::GameObject* game::core::Scene::getGameObjectByName(std::string name)
 game::core::Scene::~Scene()
 {
 	for (int i = 0; i < gameObjects.size(); i++) {
-		delete gameObjects[i];
+		GameObject* v = gameObjects[i];
+		gameObjects[i] = 0;
+		delete v;
 	}
 	gameObjects.clear();
 }
@@ -287,8 +307,19 @@ void game::core::ControlsManager::KeyDown(char virtualKey) {
 void game::core::ControlsManager::KeyUp(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8
 	int shift = virtualKey % 8;
-	char mask = 0xFF ^ (0b1 << shift);
+	char mask = ~(0b1 << shift);
 	keyBits[index] &= mask;
+}
+void game::core::ControlsManager::Update() {
+	for (int i = 0; i < sizeof(keyBits); i++) {
+		repeatKeyBits[i] = keyBits[i];
+	}
+}
+bool game::core::ControlsManager::isKeyPressed(char virtualKey) {
+	int index = virtualKey >> 3;// divide by 8
+	int shift = virtualKey % 8;
+	char mask = 0b1 << shift;
+	return (GameManager::Current()->controls.keyBits[index] & mask) && !(GameManager::Current()->controls.repeatKeyBits[index] & mask);
 }
 bool game::core::ControlsManager::isKeyDown(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8

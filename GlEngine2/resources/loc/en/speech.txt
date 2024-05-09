@@ -1,2 +1,2 @@
 ;keyword:translation
-test_msg:MY FAVORITE COLOR IS GREEN
+test_msg:test message 123!! \nmulti line\n gmgrio gnneoignNGOINIWEN\n\nfreoekjqe

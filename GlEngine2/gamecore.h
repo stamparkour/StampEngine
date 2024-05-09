@@ -118,8 +118,11 @@ namespace game::core {
 		friend struct GameManager;
 		friend struct GameObject;
 	private:
-		std::vector<GameObject*> gameObjects;
+		std::vector<GameObject*> gameObjects{};
 	public:
+		Scene() {}
+		Scene(Scene& other);
+		Scene& operator =(Scene& other);
 		GameObject& AddObject(const GameObject& object);
 		void AddObject(GameObject&& object);
 
@@ -148,11 +151,14 @@ namespace game::core {
 	struct ControlsManager final {
 		friend struct GameManager;
 	private:
-		char keyBits[256 / 8];
+		char keyBits[256 / 8]{};
+		char repeatKeyBits[256 / 8]{};
 		void KeyDown(char virtualKey);
 		void KeyUp(char virtualKey);
+		void Update();
 	public:
 		static bool isKeyDown(char virtualKey);
+		static bool isKeyPressed(char virtualKey);
 		static bool isKeyUp(char virtualKey);
 	}; 
 

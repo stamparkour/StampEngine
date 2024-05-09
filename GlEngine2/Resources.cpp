@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <iostream>
 
 
 struct LocKeyValue {
@@ -84,6 +85,7 @@ void game::resources::Initizialize() {
 		v = sscanf_s(buffer, " %s %s", label, 32, path, 256);
 		if (label[0] == ';') continue;
 		if (v == 2) {
+			std::cout << "mesh: " << label << std::endl;
 			size_t length = strlen(label) + 1;
 			char* l = new char[length];
 			memcpy_s(l, length, label, length);

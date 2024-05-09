@@ -4,6 +4,8 @@
 #include <bit>
 #include <fstream>
 #include "gameresources.h"
+#include "gameresources.h"
+#include <iostream>
 int currentLightIndex = 0;
 
 const char* nextLine(const char* v) {
@@ -13,9 +15,18 @@ const char* nextLine(const char* v) {
 	} while (v[-1] != '\n');
 	return v;
 }
-
 void game::component::RectTransform::Update() {
-
+	game::math::Vec3 coord = game::math::Vec3{ (float)game::core::GameManager::ScreenX()/2,(float)game::core::GameManager::ScreenY()/2,0};
+	switch (alignment) {
+	case(game::render::RectAlignment::Bottom): {
+		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,-coord.y + position.y,0 };
+		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	case(game::render::RectAlignment::Top): {
+		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,coord.y + -position.y,0 };
+		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	}
 }
 std::shared_ptr<game::render::FontMap> game::render::FontMap::ParseMap(const char* txt, std::shared_ptr<game::render::TextureBase> ref) {
 	std::shared_ptr<game::math::Rect> v = std::shared_ptr<game::math::Rect>{ new game::math::Rect[256] };
@@ -46,75 +57,143 @@ std::shared_ptr<game::render::FontMap> game::render::FontMap::ParseMap(const cha
 	}
 	return std::shared_ptr<game::render::FontMap>{new game::render::FontMap{ v, 256, ref }};
 }
-void game::component::TextRenderer::setText(const char* txt, float scale, float horizGap, float vertGap, game::render::TextAlignment alignment) {
+game::render::Material game::component::TextRenderer::material = game::render::Material::fontMaterial;
+void game::component::TextRenderer::setText(const char* txt) {
 	if (!txt) return;
 	std::vector<game::math::Rect> rects{};
 	float sx = scale / map.get()->positions.get()['M'].w;
 	float sy = scale / map.get()->positions.get()['M'].h;
+	float gy = scale*map.get()->positions.get()['|'].h/ map.get()->positions.get()['M'].h;
 	for (const char* t = txt; *t; t++) {
 		if (*t >= map.get()->length) continue;
-		auto v = map.get()->positions.get()[*t];
+		game::math::Rect v;
+		if (*t == '\\') {
+			t++;
+			if (*t == 'n') {
+				v = game::math::Rect{ 0,0,0,-1 };
+			}
+			else {
+				v = map.get()->positions.get()[*t];
+			}
+		}
+		else {
+			v = map.get()->positions.get()[*t];
+		}
 		rects.push_back(v);
 	}
-	game::math::Vec3 v{0,0,0};
+	game::math::Vec3 v{0,-scale,0};
 
 	vertices_length = rects.size() * 6;
-	vert_positions = std::shared_ptr<game::math::Vec3>{ new game::math::Vec3[rects.size() * 6] };
-	vert_uvs = std::shared_ptr<game::math::Vec2>{ new game::math::Vec2[rects.size() * 6] };
-	vert_normals = std::shared_ptr<game::math::Vec3>{ new game::math::Vec3[rects.size() * 6] };
+	vert_positions = std::shared_ptr<game::math::Vec3>{ new game::math::Vec3[vertices_length] };
+	vert_uvs = std::shared_ptr<game::math::Vec2>{ new game::math::Vec2[vertices_length] };
+	vert_normals = std::shared_ptr<game::math::Vec3>{ new game::math::Vec3[vertices_length] };
 	for (int i = 0; i < rects.size(); i++) {
-		float w = rects[i].w*sx;
-		float h = rects[i].h*sy;
-		float x = rects[i].x;
-		float y = rects[i].y;
-		float oy = rects[i].oy * sy;
-		vert_positions.get()[i * 6 + 0] = v + game::math::Vec3{ 0,-oy,0};
-		vert_positions.get()[i * 6 + 1] = v + game::math::Vec3{ w,-oy,0 };
-		vert_positions.get()[i * 6 + 2] = v + game::math::Vec3{w,h-oy,0};
-		vert_positions.get()[i * 6 + 3] = v + game::math::Vec3{ 0,-oy,0 };
-		vert_positions.get()[i * 6 + 4] = v + game::math::Vec3{ w,h - oy,0 };
-		vert_positions.get()[i * 6 + 5] = v + game::math::Vec3{ 0,h - oy,0 };
-		vert_normals.get()[i * 6 + 0] = { 0,1,0 };
-		vert_normals.get()[i * 6 + 1] = { 0,1,0 };
-		vert_normals.get()[i * 6 + 2] = { 0,1,0 };
-		vert_normals.get()[i * 6 + 3] = { 0,1,0 };
-		vert_normals.get()[i * 6 + 4] = { 0,1,0 };
-		vert_normals.get()[i * 6 + 5] = { 0,1,0 };
-		vert_uvs.get()[i * 6 + 0] = { x,y };
-		vert_uvs.get()[i * 6 + 1] = { x + rects[i].w,y };
-		vert_uvs.get()[i * 6 + 2] = { x + rects[i].w,y + rects[i].h };
-		vert_uvs.get()[i * 6 + 3] = { x,y };
-		vert_uvs.get()[i * 6 + 4] = { x + rects[i].w,y + rects[i].h };
-		vert_uvs.get()[i * 6 + 5] = { x,y + rects[i].h };
-		v += {w+ horizGap, 0, 0};
+		int j = i;
+		for (; i < rects.size() && rects[i].h >= 0; i++) {
+			float w = rects[i].w * sx;
+			float h = rects[i].h * sy;
+			float x = rects[i].x;
+			float y = rects[i].y;
+			float oy = rects[i].oy * sy;
+			vert_positions.get()[i * 6 + 0] = v + game::math::Vec3{ 0,-oy,0 };
+			vert_positions.get()[i * 6 + 1] = v + game::math::Vec3{ w,-oy,0 };
+			vert_positions.get()[i * 6 + 2] = v + game::math::Vec3{ w,h - oy,0 };
+			vert_positions.get()[i * 6 + 3] = v + game::math::Vec3{ 0,-oy,0 };
+			vert_positions.get()[i * 6 + 4] = v + game::math::Vec3{ w,h - oy,0 };
+			vert_positions.get()[i * 6 + 5] = v + game::math::Vec3{ 0,h - oy,0 };
+			vert_normals.get()[i * 6 + 0] = { 0,1,0 };
+			vert_normals.get()[i * 6 + 1] = { 0,1,0 };
+			vert_normals.get()[i * 6 + 2] = { 0,1,0 };
+			vert_normals.get()[i * 6 + 3] = { 0,1,0 };
+			vert_normals.get()[i * 6 + 4] = { 0,1,0 };
+			vert_normals.get()[i * 6 + 5] = { 0,1,0 };
+			vert_uvs.get()[i * 6 + 0] = { x,y };
+			vert_uvs.get()[i * 6 + 1] = { x + rects[i].w,y };
+			vert_uvs.get()[i * 6 + 2] = { x + rects[i].w,y + rects[i].h };
+			vert_uvs.get()[i * 6 + 3] = { x,y };
+			vert_uvs.get()[i * 6 + 4] = { x + rects[i].w,y + rects[i].h };
+			vert_uvs.get()[i * 6 + 5] = { x,y + rects[i].h };
+			v += {w + horizGap, 0, 0};
+		}
+		float o = 0;
+		switch ((int)alignment & 0b11) {
+		case 0: o = 0; break;
+		case 1: o = -v.x/2; break;
+		case 2: o = -v.x; break;
+		}
+		for (j *= 6; j < i*6; j++) {
+			vert_positions.get()[j].x += o;
+		}
+		if (i >= rects.size()) break;
+		if (rects[i].h == -1) {
+			v.x = 0;
+			v.y -= vertGap + gy;
+			continue;
+		}
+	}
+	float o = 0;
+	switch ((int)alignment >> 2) {
+	case 0: o = 0; break;
+	case 1: o = -v.y / 2; break;
+	case 2: o = -v.y; break;
+	}
+	for (int i = 0; i < vertices_length; i++) {
+		vert_positions.get()[i].y += o;
 	}
 }
 void game::component::TextRenderer::OnRender(int phase) {
-	if (phase == 1 || phase == 7 && material.applyShadow || phase == 9 && !material.applyShadow) {
-		material.Bind();
+	if (!(phase == 1 || phase == 7 && material.applyShadow || phase == 9 && !material.applyShadow)) return;
 
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(selfObject()->getPrevTransform());
-		if (vert_positions) {
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glVertexPointer(3, GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_positions.get());
-		}
-		else glDisableClientState(GL_VERTEX_ARRAY);
-		if (vert_normals) {
-			glEnableClientState(GL_NORMAL_ARRAY);
-			glNormalPointer(GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_normals.get());
-		}
-		else glDisableClientState(GL_NORMAL_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-		if (vert_uvs) {
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-			glTexCoordPointer(2, GL_FLOAT, sizeof(game::math::Vec2), (const void*)vert_uvs.get());
-		}
-		else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		map.get()->textures.get()->Bind();
-		glEnable(GL_TEXTURE_2D);
-		glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
+	material.Bind();
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(selfObject()->getPrevTransform());
+	if (vert_positions) {
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_positions.get());
 	}
+	else glDisableClientState(GL_VERTEX_ARRAY);
+	if (vert_normals) {
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glNormalPointer(GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_normals.get());
+	}
+	else glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	if (vert_uvs) {
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(game::math::Vec2), (const void*)vert_uvs.get());
+	}
+	else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	map.get()->textures.get()->Bind();
+	glEnable(GL_TEXTURE_2D);
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
+}
+void game::component::TextRendererUI::OnRender(int phase) {
+	if (!(phase == 11)) return;
+
+	material.Bind();
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(selfObject()->getPrevTransform());
+	if (vert_positions) {
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_positions.get());
+	}
+	else glDisableClientState(GL_VERTEX_ARRAY);
+	if (vert_normals) {
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glNormalPointer(GL_FLOAT, sizeof(game::math::Vec3), (const void*)vert_normals.get());
+	}
+	else glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	if (vert_uvs) {
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(game::math::Vec2), (const void*)vert_uvs.get());
+	}
+	else glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	if(map.get()->textures.get()) map.get()->textures.get()->Bind();
+	glEnable(GL_TEXTURE_2D);
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
 }
 game::render::Texture::Texture() {
 	this->width = 0;
@@ -369,6 +448,8 @@ std::shared_ptr<game::render::Mesh> game::render::Mesh::ObjMesh(const char* data
 	std::vector<game::math::Vec3> normal{};
 	std::vector<game::math::Vec4> vert_colors{};
 	std::vector<game::math::Vec2> uv{};
+	std::cout << "v";
+	bool k = false;
 	for (const char* d = data; *d; d = nextLine(d)) {
 		float x;
 		float y;
@@ -379,28 +460,38 @@ std::shared_ptr<game::render::Mesh> game::render::Mesh::ObjMesh(const char* data
 		float b;
 		int i = sscanf_s(d, "v %f %f %f %f %f %f %f", &x, &y, &z, &w, &r, &g, &b);
 		if (i >= 3) {
+			k = true;
 			pos.push_back({ x,y,z });
 			if (i == 7)
 				vert_colors.push_back({ r,g,b,1 });
 			else
 				vert_colors.push_back({ 1,1,1,1 });
 		}
+		else if (k) break;
 
 	}
+	k = false;
+	std::cout << "t";
 	for (const char* d = data; *d; d = nextLine(d)) {
 		float x;
 		float y;
 		if (sscanf_s(d, "vt %f %f", &x, &y) == 2) {
+			k = true;
 			uv.push_back({ x,y });
 		}
+		else if (k) break;
 	}
+	k = false;
+	std::cout << "n";
 	for (const char* d = data; *d; d = nextLine(d)) {
 		float x;
 		float y;
 		float z;
 		if (sscanf_s(d, "vn %f %f %f", &x, &y, &z) == 3) {
+			k = true;
 			normal.push_back({ x,y,z });
 		}
+		else if (k) break;
 	}
 	std::vector<game::math::Vec3> posArr{};
 	std::vector<game::math::Vec3> normalArr{};
@@ -409,6 +500,7 @@ std::shared_ptr<game::render::Mesh> game::render::Mesh::ObjMesh(const char* data
 	std::vector<int> posI{};
 	std::vector<int> normalI{};
 	std::vector<int> uvI{};
+	std::cout << "f";
 	for (const char* d = data; *d; d = nextLine(d)) {
 		if (*d == 'f') {
 			d++;
@@ -468,6 +560,7 @@ std::shared_ptr<game::render::Mesh> game::render::Mesh::ObjMesh(const char* data
 	std::copy(vert_colorsArr.begin(), vert_colorsArr.end(), (game::math::Vec4*)xcolor.get());
 	std::shared_ptr<game::math::Vec2> xuv = std::shared_ptr<game::math::Vec2>{ new game::math::Vec2[posArr.size()] };
 	std::copy(uvArr.begin(), uvArr.end(), (game::math::Vec2*)xuv.get());
+	std::cout << std::endl;
 	return std::shared_ptr<game::render::Mesh>{ new game::render::Mesh{ xpos, xnorm, xcolor, xuv, posArr.size()} };
 }
 #define cube_vertices (sizeof(cube_positions)/sizeof(cube_positions[0]))
@@ -521,6 +614,8 @@ game::render::Material game::render::Material::defaultMaterial = { false, true, 
 game::render::Material game::render::Material::shadowMaterial = { false, false, false, false, {}, {}, {}, 0, {} };
 game::render::Material game::render::Material::fontMaterial = { false, true, false, false, {},{0,0,0,1}, {}, 0, {1,1,1,1}, {} };
 void game::component::MeshRenderer::OnRender(int phase) {
+	if (!(phase == 1 || phase == 7 && material.get()->applyShadow || phase == 9 && !material.get()->applyShadow)) return;
+	
 	if (phase == 1 || phase == 7 && material.get()->applyShadow || phase == 9 && !material.get()->applyShadow) {
 		material.get()->Bind();
 		mesh->Render(selfObject()->getPrevTransform());
@@ -583,8 +678,8 @@ void game::component::Camera::OnRender(int phase) {
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
 		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(game::math::Mat4::Orthographic(game::core::GameManager::ScreenX(), 
-			(float)game::core::GameManager::ScreenY() / game::core::GameManager::ScreenX(), 0, 100));
+		glLoadMatrixf(game::math::Mat4::Orthographic(game::core::GameManager::ScreenX()/2, 
+			(float)game::core::GameManager::ScreenX() / game::core::GameManager::ScreenY(), 0, 100));
 	}
 }
 game::component::SunLight::SunLight() {

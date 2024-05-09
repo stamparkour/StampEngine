@@ -63,6 +63,9 @@
     <ClCompile Include="Resources.cpp">
       <Filter>Source Files\manager</Filter>
     </ClCompile>
+    <ClCompile Include="gl.cpp">
+      <Filter>Source Files\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="winevent.h">
@@ -89,13 +92,19 @@
     <ClInclude Include="gl.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
-    <ClInclude Include="audio.h">
-      <Filter>Header Files\windows</Filter>
-    </ClInclude>
     <ClInclude Include="glmath.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>
     <ClInclude Include="gameresources.h">
+      <Filter>Header Files\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="glext.h">
+      <Filter>Header Files\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="khrplatform.h">
+      <Filter>Header Files\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="audio.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
   </ItemGroup>
@@ -103,10 +112,5 @@
     <None Include="wininput.h">
       <Filter>Header Files\windows</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="F:\OneDrive\Music\My Recordings\TEST.wav">
-      <Filter>Header Files\manager</Filter>
-    </Media>
   </ItemGroup>
 </Project>

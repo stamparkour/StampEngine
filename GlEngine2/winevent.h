@@ -1,6 +1,12 @@
 #pragma once
 
 namespace win::event {
+
+	enum struct WindowStyle {
+		Normal,
+		Borderless,
+	};
+
 	void Start(double time);
 	void Update(double time);
 	void SyncUpdate(double time);
@@ -9,4 +15,8 @@ namespace win::event {
 
 	void TerminateWindow();
 	double GetTime();
+	bool isWindowActive();
+	void SetWindowState(WindowStyle style, unsigned int width, unsigned int height);
+	bool vSync();
+	void vSync(bool enable);
 }

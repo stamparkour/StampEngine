@@ -6,6 +6,7 @@
 #include "glrender.h"
 #include "audio.h"
 #include "gameresources.h"
+#include <iostream>
 
 const WIN_CHAR* WIN_NAME = TEXT("my window");
 
@@ -47,68 +48,7 @@ public:
 	}
 };
 
-#define GRAV_MASS 1.f
-#define GRAV_RADIUS 2.0f
-class Gravity;
-std::vector<Gravity*>* gravity;
-class Gravity final : public game::core::Component {
-	Component_Requirements(Gravity)
-private:
 
-	size_t index = -1;
-	game::math::Vec3 pos = {};
-	game::math::Vec3 ppos = {};
-	game::math::Vec3 vel = {};
-	float temp = 0;
-	game::component::MeshRenderer* renderer;
-public:
-	game::math::Vec3 orig;
-	void Start() override {
-		if (!gravity) gravity = new std::vector<Gravity*>();
-		index = gravity->size();
-		gravity->push_back(this);
-		float range = 200;
-		pos = orig + game::math::Vec3{ ((float)rand() / RAND_MAX) * range - range / 2,((float)rand() / RAND_MAX) * range - range / 2, 0};
-		renderer = selfObject()->GetComponent<game::component::MeshRenderer>();
-
-	}
-	void Update() override {
-		if (index == 0) {
-			for (size_t i = 0; i < gravity->size(); i++) {
-				(*gravity)[i]->pos += (*gravity)[i]->vel * game::core::TimeManager::DeltaTime();
-				//(*gravity)[i]->ppos = (*gravity)[i]->pos + (*gravity)[i]->vel * game::core::TimeManager::DeltaTime();
-			}
-		}
-
-		for (size_t i = 0; i < index; i++) {
-			game::math::Vec3 offset = (*gravity)[i]->pos - pos;
-			float distSqrd = offset.MagnitudeSquared();
-			if (distSqrd == 0) continue;
-			float d = sqrt(distSqrd);
-			game::math::Vec3 norm = offset / d;
-			float f = 0;
-			game::math::Vec3 force = { 0,0,0 };
-			if (d < GRAV_RADIUS) {
-				float t = (temp + (*gravity)[i]->temp) / 2;
-				f = GRAV_MASS * 10 * t / distSqrd * (d / GRAV_RADIUS - 1);
-				game::math::Vec3 v = (*gravity)[i]->vel - vel;
-				force += v * 0.2f * game::core::TimeManager::DeltaTime();
-				temp += 1 / distSqrd * 0.02;
-				(*gravity)[i]->temp += 1 / distSqrd * 0.02;
-			}
-			else {
-				f = GRAV_MASS / distSqrd;
-			}
-			force += norm * f * game::core::TimeManager::DeltaTime();
-			vel += force;
-			(*gravity)[i]->vel -= force;
-		}
-
-		selfObject()->transform.position = pos;
-		temp *= 1 - 0.02 * game::core::TimeManager::DeltaTime();
-		renderer->material.get()->diffuseColor = game::math::Vec4{1,1,1,0} *min(1, temp / 40);
-	}
-};
 
 class LightingTest final : public game::core::Component {
 	Component_Requirements(LightingTest)
@@ -120,6 +60,16 @@ public:
 	}
 };
 
+class TextTest final : public game::core::Component {
+	Component_Requirements(TextTest)
+private:
+public:
+	void Update() override {
+		game::component::RectTransform* rect = selfObject()->GetComponent<game::component::RectTransform>();
+		if(rect->position.y < 200) rect->position.y += 1;
+	}
+};
+
 
 game::core::GameManager manager{};
 game::core::Scene scene{};
@@ -128,11 +78,15 @@ void win::event::Start(double time) {
 	game::resources::setLoc("en");
 
 	auto map = game::resources::font(game::resources::fontIndex("ariel_24"));
-	game::component::TextRenderer textTest = {};
+	game::component::TextRendererUI textTest = {};
 	textTest.map = map;
-	textTest.setText(game::resources::loc("test_msg"), 0.5, 0.f);
+	textTest.scale = 48;
+	textTest.vertGap = 0;
+	textTest.alignment = game::render::RectAlignment::Right;
+	textTest.setText(game::resources::loc("test_msg"));
 
-	std::shared_ptr<game::render::Mesh> mesh = game::resources::mesh(game::resources::meshIndex("testmesh"));
+	std::shared_ptr<game::render::Mesh> mesh = game::resources::mesh(game::resources::meshIndex("sphere"));
+	std::shared_ptr<game::render::Mesh> mesh2 = game::resources::mesh(game::resources::meshIndex("testmesh"));
 
 	game::core::GameObject cam{};
 	cam.AddComponent(game::component::Camera{});
@@ -146,6 +100,20 @@ void win::event::Start(double time) {
 	meshRenderer.material = game::resources::material(game::resources::materialIndex("sky"));
 	monke.AddComponent(meshRenderer);
 	scene.AddObject(monke);
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			for (int j = 0; j < 10; j++) {
+				scene.AddObject(monke);
+				monke.transform.position.z += 3;
+			}
+			monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh;
+			monke.transform.position.z = 0;
+			monke.transform.position.y += 3;
+		}
+		monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh2;
+		monke.transform.position.y = 0;
+		monke.transform.position.x += 3;
+	}
 
 	game::core::GameObject cube{};
 	game::component::MeshRenderer meshRenderer1 = {};
@@ -157,7 +125,9 @@ void win::event::Start(double time) {
 
 	game::core::GameObject textObj{};
 	textObj.AddComponent(textTest);
-	textObj.transform.position = { 5,0,0 };
+	textObj.AddComponent(TextTest{});
+	textObj.AddComponent(game::component::RectTransform{ game::render::RectAlignment::Top,{0.5,5},{1,1} });
+	textObj.transform.position = { 0,0,0 };
 	scene.AddObject(textObj);
 
 	game::core::GameObject sun{};
@@ -167,8 +137,6 @@ void win::event::Start(double time) {
 	sun.AddComponent(sunlight);
 	sun.AddComponent(LightingTest{});
 	scene.AddObject(sun);
-
-	manager.scene = &scene;
 
 	glClearColor(0.1f, 0.3f, 0.4f, 1.f);
 	glClearStencil(0);
@@ -186,17 +154,27 @@ void win::event::Start(double time) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+
+	manager.scene = new game::core::Scene{ scene };
 	manager.Initialize();
 }
 
 void win::event::Update(double time) {
-	if (game::core::ControlsManager::isKeyDown(VK_F1)) {
-		game::resources::Initizialize();
-	}
 	manager.Update(time);
+
+	if (game::core::ControlsManager::isKeyPressed('K')) {
+		win::event::vSync(!win::event::vSync());
+		//win::event::SetWindowState(win::event::WindowStyle::Borderless,500,400);
+	}
 }
 
 void win::event::SyncUpdate(double time) {
+	if (game::core::ControlsManager::isKeyPressed(VK_F1)) {
+		std::cout << "reset" << std::endl;
+		delete manager.scene;
+		manager.scene = new game::core::Scene{ scene };
+		game::resources::Initizialize();
+	}
 	manager.SyncUpdate();
 }
 
@@ -207,6 +185,7 @@ void win::event::Resize(double time, int width, int height) {
 void win::event::Render(double time) {
 	manager.Render();
 }
+
 
 void win::input::KeyDown(int keyCode, bool isRepeat) {//https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 	manager.KeyDown(keyCode);

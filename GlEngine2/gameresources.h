@@ -5,6 +5,7 @@
 namespace game::resources {
 	void Initizialize();
 
+
 	int materialIndex(const char* v);
 	std::shared_ptr<game::render::Material> material(int index);
 	int textureIndex(const char* v);

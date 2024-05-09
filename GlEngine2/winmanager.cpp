@@ -16,7 +16,12 @@ long long GLWinBitMask = 0;
 
 double timerTickLength = 0;
 long long timerStart = 0;
+long long pauseTime = 0;
 HWND windowHandle;
+unsigned int defaultWidth = 640;
+unsigned int defaultHeight = 480;
+
+bool updateGraphics = false;
 
 void InitTimer() {
 	LARGE_INTEGER largeInt{};
@@ -26,10 +31,22 @@ void InitTimer() {
 	timerStart = largeInt.QuadPart;
 }
 
-double win::event::GetTime() {
+double GetTimeRaw() {
 	LARGE_INTEGER largeInt{};
 	QueryPerformanceCounter(&largeInt);
-	return timerTickLength * (largeInt.QuadPart - timerStart);
+	return largeInt.QuadPart;
+}
+
+double win::event::GetTime() {
+	return timerTickLength * (GetTimeRaw() - timerStart);
+}
+
+void PauseTimer() {
+	long long t = GetTimeRaw();
+	if (pauseTime != 0) {
+		timerStart += t - pauseTime;
+	}
+	pauseTime = t;
 }
 
 void GetDesktopResolution(int& horizontal, int& vertical)
@@ -52,7 +69,7 @@ void OnCreate(HWND hwnd) {
 	DescribePixelFormat(displayContext, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 	if (SetPixelFormat(displayContext, iPixelFormat, &pfd) == FALSE)
 		return;
-	HGLRC glContext = wglCreateContext(displayContext);
+	HGLRC glContext = exglCreateContext(displayContext);
 	if (wglMakeCurrent(displayContext, glContext) == FALSE)
 		return;
 	int value;
@@ -103,9 +120,13 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 		break;
 	case WM_PAINT:
 		break;
+	case WM_MOVE:
+		PauseTimer();
+		break;
 	case WM_SIZE:
 		win::event::Resize(win::event::GetTime(), LOWORD(lParam), HIWORD(lParam));
 		glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
+		PauseTimer();
 		break;
 	case WM_ACTIVATE:
 		if (wParam == WA_INACTIVE) {
@@ -186,7 +207,7 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	else {
 		hwnd = CreateWindow(TEXT("StampClass_GL"), WIN_NAME,
 			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-			CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, NULL, NULL, hInstance, NULL);
+			CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, NULL, NULL, hInstance, NULL);
 	}
 
 	if (hwnd == NULL) {
@@ -203,6 +224,7 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	int frames = 0;
 	float second = 1;
 	while (IsWindow(hwnd)) {
+		pauseTime = 0;
 		for (int i = 0; i < 100 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
 			if (msg.message == WM_PAINT)
 				break;
@@ -225,6 +247,22 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 			frames = 0;
 		}
 
+		if (updateGraphics) {
+			glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
+			if (GLWinBitMask & GLWINMODE_BORDERLESS_BIT) {
+				int width = CW_USEDEFAULT;
+				int height = CW_USEDEFAULT;
+				GetDesktopResolution(width, height);
+				SetWindowPos(windowHandle, HWND_TOPMOST, 0, 0, width, height, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW);
+				SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_POPUP);
+			}
+			else {
+				SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_EX_APPWINDOW);
+				SetWindowPos(windowHandle, HWND_TOP, CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW | SWP_NOMOVE);
+			}
+			updateGraphics = false;
+		}
+
 		/*double wait = 1.0 / 20 - (time - prevTime);
 		if (wait <= 0) {
 			prevTime = time;
@@ -245,4 +283,38 @@ bool win::input::IsKeyDown(int virtualKey) {
 
 void win::event::TerminateWindow() {
 	DestroyWindow(windowHandle);
+}
+
+bool win::event::isWindowActive() {
+	return GLWinBitMask & GLWINMODE_BORDERLESS_BIT;
+}
+
+void win::event::SetWindowState(WindowStyle style, unsigned int width, unsigned int height) {
+	switch (style) {
+	case(win::event::WindowStyle::Normal): {
+		if (width != 0) {
+			defaultWidth = width;
+			defaultHeight = height;
+		}
+		GLWinBitMask &= ~GLWINMODE_BORDERLESS_BIT;
+	} break;	
+	case(win::event::WindowStyle::Borderless): {
+		GLWinBitMask |= GLWINMODE_BORDERLESS_BIT;
+	} break;
+	}
+	updateGraphics = true;
+}
+
+void win::event::vSync(bool enable) {
+	if (enable) {
+		GLWinBitMask |= GLWINMODE_VSYNC;
+	}
+	else {
+		GLWinBitMask &= ~GLWINMODE_VSYNC;
+	}
+	updateGraphics = true;
+}
+
+bool win::event::vSync() {
+	return GLWinBitMask & GLWINMODE_VSYNC;
 }
