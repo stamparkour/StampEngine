@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glrender.h"
+#include "gamerender.h"
 
 namespace game::resources {
 	void Initizialize();

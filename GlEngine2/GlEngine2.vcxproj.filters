@@ -37,6 +37,9 @@
     <Filter Include="Source Files\gl">
       <UniqueIdentifier>{d17328bb-979c-4d7c-bf95-c5592d10f0a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\serialize">
+      <UniqueIdentifier>{da428c37-f23d-40f4-a7e7-93ea6d69fad8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="winmanager.cpp">
@@ -86,7 +89,7 @@
     <ClInclude Include="glquat.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>
-    <ClInclude Include="glrender.h">
+    <ClInclude Include="gamerender.h">
       <Filter>Header Files\manager</Filter>
     </ClInclude>
     <ClInclude Include="gl.h">
@@ -106,6 +109,9 @@
     </ClInclude>
     <ClInclude Include="audio.h">
       <Filter>Header Files\manager</Filter>
+    </ClInclude>
+    <ClInclude Include="serialize.h">
+      <Filter>Header Files\serialize</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

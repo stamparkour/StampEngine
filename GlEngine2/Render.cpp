@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "glrender.h"
+#include "gamerender.h"
 #include <memory>
 #include <bit>
 #include <fstream>
@@ -19,11 +19,11 @@ void game::component::RectTransform::Update() {
 	game::math::Vec3 coord = game::math::Vec3{ (float)game::core::GameManager::ScreenX()/2,(float)game::core::GameManager::ScreenY()/2,0};
 	switch (alignment) {
 	case(game::render::RectAlignment::Bottom): {
-		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,-coord.y + position.y,0 };
+		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,-coord.y + position.y,-depth };
 		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
 	} break;
 	case(game::render::RectAlignment::Top): {
-		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,coord.y + -position.y,0 };
+		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,coord.y + -position.y,-depth };
 		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
 	} break;
 	}

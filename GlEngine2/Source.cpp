@@ -3,7 +3,7 @@
 #include "gl.h"
 #include "wincore.h"
 #include "gamecore.h"
-#include "glrender.h"
+#include "gamerender.h"
 #include "audio.h"
 #include "gameresources.h"
 #include <iostream>
@@ -66,7 +66,7 @@ private:
 public:
 	void Update() override {
 		game::component::RectTransform* rect = selfObject()->GetComponent<game::component::RectTransform>();
-		if(rect->position.y < 200) rect->position.y += 1;
+		if(rect->position.y < 400) rect->position.y += 1;
 	}
 };
 
@@ -82,7 +82,7 @@ void win::event::Start(double time) {
 	textTest.map = map;
 	textTest.scale = 48;
 	textTest.vertGap = 0;
-	textTest.alignment = game::render::RectAlignment::Right;
+	textTest.alignment = game::render::RectAlignment::BottomRight;
 	textTest.setText(game::resources::loc("test_msg"));
 
 	std::shared_ptr<game::render::Mesh> mesh = game::resources::mesh(game::resources::meshIndex("sphere"));
@@ -126,7 +126,7 @@ void win::event::Start(double time) {
 	game::core::GameObject textObj{};
 	textObj.AddComponent(textTest);
 	textObj.AddComponent(TextTest{});
-	textObj.AddComponent(game::component::RectTransform{ game::render::RectAlignment::Top,{0.5,5},{1,1} });
+	textObj.AddComponent(game::component::RectTransform{ game::render::RectAlignment::Top,{0.5,5},5, {1,1} });
 	textObj.transform.position = { 0,0,0 };
 	scene.AddObject(textObj);
 

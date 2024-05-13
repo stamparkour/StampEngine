@@ -162,8 +162,9 @@ namespace game::component {
 		game::render::RectAlignment alignment;
 		game::math::Vec2 position;
 		game::math::Vec2 scale;
-		RectTransform();
-		RectTransform(game::render::RectAlignment alignment, game::math::Vec2 position, game::math::Vec2 scale) : alignment(alignment), position(position), scale(scale) {}
+		float depth = 0;
+		RectTransform() {}
+		RectTransform(game::render::RectAlignment alignment, game::math::Vec2 position, float depth = 1, game::math::Vec2 scale = {1,1}) : alignment(alignment), position(position), depth(depth), scale(scale) {}
 		void Update() override;
 	};
 
