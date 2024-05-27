@@ -1,18 +1,41 @@
 #pragma once
 #include <Windows.h>
-#include "gamecore.h"
+#include <memory>
+#include <xaudio2.h>
+#include <x3daudio.h>
 
-namespace game::component {
-	struct AudioSource final : game::core::Component {
-		Component_Requirements(AudioSource)
+
+namespace game::audio {
+	struct AudioClip final : IXAudio2VoiceCallback {
+	private:
+		WAVEFORMATEXTENSIBLE  fmt{};
+		XAUDIO2_BUFFER data{};
+		IXAudio2SourceVoice* pSourceVoice = nullptr;
+		std::shared_ptr<char> ptr = nullptr;
+		HANDLE hBufferEndEvent;
+		bool playing = false;
 	public:
-		std::shared_ptr<game::core::AudioClip> clip = nullptr;
-		bool autoDelete = false;
-		AudioSource() noexcept;
-		AudioSource(std::shared_ptr<game::core::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
-		void Update() override;
-		bool isPlaying();
+		AudioClip() : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {}
+		AudioClip(const char* buffer, size_t length);
+		~AudioClip();
+		bool Play(float volume);
+		void OnStreamEnd();
+		void OnVoiceProcessingPassEnd() { }
+		void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
+		void OnBufferEnd(void* pBufferContext) { }
+		void OnBufferStart(void* pBufferContext) {    }
+		void OnLoopEnd(void* pBufferContext) {    }
+		void OnVoiceError(void* pBufferContext, HRESULT Error) { }
+		bool isPlaying() const;
+	};
 
-		static void PlayClip(std::shared_ptr<game::core::AudioClip> clip);
+	struct AudioManager final {
+		friend struct AudioClip;
+	private:
+		IXAudio2* pXAudio2;
+		X3DAUDIO_HANDLE XAudio3d;
+		IXAudio2MasteringVoice* pMasterVoice;
+	public:
+		bool Initialize();
 	};
 }

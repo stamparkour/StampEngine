@@ -26,6 +26,8 @@ std::vector <std::shared_ptr<game::render::Material>> materials{};
 std::vector <char*> fontlLabels{};
 std::vector <std::shared_ptr<game::render::FontMap>> fonts{};
 std::vector <Localization> localizations{};
+std::vector <std::shared_ptr<game::audio::AudioClip>> audioClips{};
+std::vector <char*> audioLabels{};
 int localizationIndex = 0;
 
 template<class T>
@@ -52,6 +54,8 @@ void reset() {
 	clearVector(materials);
 	clearVector(fontlLabels);
 	clearVector(fonts);
+	clearVector(audioClips);
+	clearVector(audioLabels);
 }
 
 void game::resources::Initizialize() {
@@ -59,12 +63,12 @@ void game::resources::Initizialize() {
 
 	auto basePath = std::filesystem::current_path();
 	std::filesystem::current_path("resources\\gfx");
-	char buffer[256];
+	char buffer[512];
 	char label[32];
 	auto file = std::fstream{ "textures.txt" };
 	while (!file.eof()) {
 		char path[256];
-		file.getline(buffer, 256);
+		file.getline(buffer, sizeof(buffer));
 		int v;
 		v = sscanf_s(buffer, " %s %s", label, 32, path, 256);
 		if (v == 2) {
@@ -80,7 +84,7 @@ void game::resources::Initizialize() {
 	file = std::fstream{ "meshes.txt" };
 	while (!file.eof()) {
 		char path[256];
-		file.getline(buffer, 256);
+		file.getline(buffer, sizeof(buffer));
 		int v;
 		v = sscanf_s(buffer, " %s %s", label, 32, path, 256);
 		if (label[0] == ';') continue;
@@ -96,7 +100,7 @@ void game::resources::Initizialize() {
 
 	file = std::fstream{ "materials.txt" };
 	while (!file.eof()) {
-		file.getline(buffer, 256);
+		file.getline(buffer, sizeof(buffer));
 		int v;
 		v = sscanf_s(buffer, " %s", label, 32);
 		if (label[0] == ';') continue;
@@ -113,7 +117,7 @@ void game::resources::Initizialize() {
 	while (!file.eof()) {
 		char path[256];
 		char tex[32];
-		file.getline(buffer, 256);
+		file.getline(buffer, sizeof(buffer));
 		int v;
 		v = sscanf_s(buffer, " %s %s %s", label, 32, tex, 32, path, 256);
 		if (label[0] == ';') continue;
@@ -123,6 +127,24 @@ void game::resources::Initizialize() {
 			memcpy_s(l, length, label, length);
 			fontlLabels.push_back(l);
 			fonts.push_back(game::render::FontMap::ParseMap(game::core::readFile(path,NULL,false).get(), game::resources::texture(game::resources::textureIndex(tex))));
+		}
+	}
+	file = std::fstream{ "audio.txt" };
+	while (!file.eof()) {
+		char path[256];
+		file.getline(buffer, sizeof(buffer));
+		int v;
+		v = sscanf_s(buffer, " %s %s", label, 32, path, 256);
+		if (label[0] == ';') continue;
+		if (v == 2) {
+			std::cout << "mesh: " << label << std::endl;
+			size_t length = strlen(label) + 1;
+			char* l = new char[length];
+			memcpy_s(l, length, label, length);
+			audioLabels.push_back(l);
+			size_t size = 0;
+			auto k = game::core::readFile(path, &size, true);
+			audioClips.push_back(std::shared_ptr<game::audio::AudioClip>{new game::audio::AudioClip(k.get(), size)});
 		}
 	}
 
@@ -182,6 +204,12 @@ int game::resources::fontIndex(const char* v) {
 	}
 	return -1;
 }
+int game::resources::audioIndex(const char* v) {
+	for (int i = 0; i < audioLabels.size(); i++) {
+		if (!strcmp(v, audioLabels[i])) return i;
+	}
+	return -1;
+}
 std::shared_ptr<game::render::Material> game::resources::material(int index) {
 	if (index < 0) return 0;
 	return materials[index];
@@ -197,6 +225,10 @@ std::shared_ptr<game::render::Mesh> game::resources::mesh(int index) {
 std::shared_ptr<game::render::FontMap> game::resources::font(int index) {
 	if (index < 0) return 0;
 	return fonts[index];
+}
+std::shared_ptr<game::audio::AudioClip> game::resources::audio(int index) {
+	if (index < 0) return 0;
+	return audioClips[index];
 }
 
 char* game::resources::loc(const char* v)

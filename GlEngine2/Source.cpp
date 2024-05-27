@@ -35,14 +35,9 @@ public:
 			selfObject()->transform.position += game::math::Vec3{ 0,1,0 } *mag;
 		if (game::core::ControlsManager::isKeyDown('F'))
 			selfObject()->transform.position += game::math::Vec3{ 0,-1,0 } *mag;
-		if (game::core::ControlsManager::isKeyDown(VK_UP))
-			ry += rag;
-		if (game::core::ControlsManager::isKeyDown(VK_DOWN))
-			ry -= rag;
-		if (game::core::ControlsManager::isKeyDown(VK_RIGHT))
-			rx += rag;
-		if (game::core::ControlsManager::isKeyDown(VK_LEFT))
-			rx -= rag;
+
+		ry += -win::input::GetCursorDeltaY() / 600.0f;
+		rx += win::input::GetCursorDeltaX() / 600.0f;
 
 		selfObject()->transform.rotation = game::math::Quat::RotationZYX(-ry, rx, 0);
 	}
@@ -74,8 +69,14 @@ public:
 game::core::GameManager manager{};
 game::core::Scene scene{};
 void win::event::Start(double time) {
+	manager.Initialize();
 	game::resources::Initizialize();
 	game::resources::setLoc("en");
+
+	win::input::CursorVisibility(false);
+	win::input::CursorConstraint(win::input::CursorConstraintState::Frozen);
+
+	scene.AddObject(game::component::AudioSource::PlayClip(game::resources::audio(game::resources::audioIndex("mySong"))));
 
 	auto map = game::resources::font(game::resources::fontIndex("ariel_24"));
 	game::component::TextRendererUI textTest = {};
@@ -96,21 +97,21 @@ void win::event::Start(double time) {
 
 	game::core::GameObject monke{};
 	game::component::MeshRenderer meshRenderer = {};
-	meshRenderer.mesh = mesh;
+	meshRenderer.mesh = mesh2;
 	meshRenderer.material = game::resources::material(game::resources::materialIndex("sky"));
 	monke.AddComponent(meshRenderer);
 	scene.AddObject(monke);
 	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 10; j++) {
-			for (int j = 0; j < 10; j++) {
+		for (int j = 0; j < 2; j++) {
+			for (int k = 0; k < 2; k++) {
 				scene.AddObject(monke);
 				monke.transform.position.z += 3;
 			}
-			monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh;
+			//monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh;
 			monke.transform.position.z = 0;
 			monke.transform.position.y += 3;
 		}
-		monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh2;
+		//monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh2;
 		monke.transform.position.y = 0;
 		monke.transform.position.x += 3;
 	}
@@ -156,12 +157,10 @@ void win::event::Start(double time) {
 
 
 	manager.scene = new game::core::Scene{ scene };
-	manager.Initialize();
 }
 
 void win::event::Update(double time) {
 	manager.Update(time);
-
 	if (game::core::ControlsManager::isKeyPressed('K')) {
 		win::event::vSync(!win::event::vSync());
 		//win::event::SetWindowState(win::event::WindowStyle::Borderless,500,400);

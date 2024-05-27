@@ -16,6 +16,8 @@ namespace game::resources {
 	std::shared_ptr<game::render::FontMap> font(int index);
 	bool setLoc(const char* v);
 	char* loc(const char* v);
+	int audioIndex(const char* v);
+	std::shared_ptr<game::audio::AudioClip> audio(int index);
 	int dataIndex(const char* v);
 	std::shared_ptr<char> data(int index);
 }

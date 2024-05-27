@@ -2,14 +2,15 @@
 #include <chrono>
 #include <thread>
 #include <Windows.h>
+#include <hidusage.h>
 #include "gl.h"
 #include "wincore.h"
+#pragma comment(lib,"xaudio2.lib")
 
 #define GLWINMODE_ACTIVE_BIT 1
 #define GLWINMODE_BORDERLESS_BIT 2
 #define GLWINMODE_HOVER_CURSOR_BIT 4
-#define GLWINMODE_HIDE_CURSOR_BIT 8
-#define GLWINMODE_CONFINE_CURSOR_BIT 16
+#define GLWINMODE_INITIALIZE_BIT 8
 #define GLWINMODE_DEBUG 32
 #define GLWINMODE_VSYNC 64
 long long GLWinBitMask = 0;
@@ -21,7 +22,55 @@ HWND windowHandle;
 unsigned int defaultWidth = 640;
 unsigned int defaultHeight = 480;
 
+unsigned int width = 0;
+unsigned int height = 0;
+unsigned int top = 0;
+unsigned int left = 0;
+
+int cursorDeltaX = 0;
+int cursorDeltaY = 0;
+
+win::input::CursorConstraintState cursorConstraint = win::input::CursorConstraintState::Free;
+
+
 bool updateGraphics = false;
+bool cursorVisible = true;
+bool currentCursorVisible = true;
+
+int getTitlebarHeight() {
+	return GetSystemMetrics(SM_CYCAPTION);
+}
+
+bool InternalCursorConstraint(win::input::CursorConstraintState constraint) {
+	RECT rect;
+	switch (constraint) {
+	case(win::input::CursorConstraintState::Free):
+		return ClipCursor(NULL);
+	case(win::input::CursorConstraintState::Confined):
+		rect.left = left;
+		rect.top = top;
+		rect.bottom = top + height;
+		rect.right = left + width;
+		return ClipCursor(&rect);
+	case(win::input::CursorConstraintState::Frozen):
+		rect.left = left + width / 2;
+		rect.top = top + height / 2;
+		rect.right = left + width / 2 + 1;
+		rect.bottom = top + height / 2 + 1;
+		return ClipCursor(&rect);
+	}
+}
+
+bool InternalShowCursor(bool visible) {
+	if (currentCursorVisible && !visible) {
+		currentCursorVisible = false;
+		return ShowCursor(false);
+	}
+	else if(!currentCursorVisible && visible) {
+		currentCursorVisible = true;
+		return ShowCursor(true);
+	}
+}
 
 void InitTimer() {
 	LARGE_INTEGER largeInt{};
@@ -75,10 +124,14 @@ void OnCreate(HWND hwnd) {
 	int value;
 	glGetIntegerv(GL_STENCIL_BITS, &value);
 
-	InitTimer();
 	glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
 
-	win::event::Start(win::event::GetTime());
+	RAWINPUTDEVICE Rid[1];
+	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	Rid[0].dwFlags = RIDEV_INPUTSINK;
+	Rid[0].hwndTarget = hwnd;
+	RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
 }
 
 void OnPaint(HWND hwnd) {
@@ -102,6 +155,7 @@ void OnPaint(HWND hwnd) {
 
 
 LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
+	//std::cout << msg << std::endl;
 	switch (msg) {
 	case WM_DESTROY:
 		PostQuitMessage(0);
@@ -120,23 +174,60 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 		break;
 	case WM_PAINT:
 		break;
-	case WM_MOVE:
+	case WM_WINDOWPOSCHANGED: {
+		WINDOWPOS* winpos = (WINDOWPOS*)lParam;
+		width = winpos->cx;
+		height = winpos->cy;
+		left = winpos->x;
+		top = winpos->y;
+		if ((GLWinBitMask & GLWINMODE_ACTIVE_BIT) || !(GLWinBitMask & GLWINMODE_INITIALIZE_BIT)) {
+			InternalCursorConstraint(cursorConstraint);
+			InternalShowCursor(cursorVisible);
+			GLWinBitMask |= GLWINMODE_ACTIVE_BIT;
+		}
+		if (!(GLWinBitMask & GLWINMODE_INITIALIZE_BIT)) {
+			GLWinBitMask |= GLWINMODE_INITIALIZE_BIT;
+		}
+		win::event::Resize(win::event::GetTime(), width, height);
+		glViewport(0, 0, width, height);
 		PauseTimer();
-		break;
-	case WM_SIZE:
-		win::event::Resize(win::event::GetTime(), LOWORD(lParam), HIWORD(lParam));
-		glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
-		PauseTimer();
-		break;
+	} break;
 	case WM_ACTIVATE:
 		if (wParam == WA_INACTIVE) {
-			GLWinBitMask &= 0xFFFFFFFF ^ GLWINMODE_ACTIVE_BIT;
+			GLWinBitMask &= ~GLWINMODE_ACTIVE_BIT;
+			InternalShowCursor(true);
+			InternalCursorConstraint(win::input::CursorConstraintState::Free);
 			if (GLWinBitMask & GLWINMODE_BORDERLESS_BIT) {
 				ShowWindow(hwnd, SW_MINIMIZE);
 			}
 		}
-		else {
+		else if (GLWinBitMask & GLWINMODE_BORDERLESS_BIT) {
+			InternalShowCursor(cursorVisible);
+			InternalCursorConstraint(cursorConstraint);
+			GLWinBitMask |= GLWINMODE_ACTIVE_BIT; 
+		}
+		break;
+	case WM_LBUTTONDOWN:
+		if (!(GLWinBitMask & GLWINMODE_ACTIVE_BIT)) {
+			InternalShowCursor(cursorVisible);
+			InternalCursorConstraint(cursorConstraint);
 			GLWinBitMask |= GLWINMODE_ACTIVE_BIT;
+		}
+		break;
+	case WM_INPUT: 
+		if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) {
+			UINT dwSize = sizeof(RAWINPUT);
+			static BYTE lpb[sizeof(RAWINPUT)];
+
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
+
+			RAWINPUT* raw = (RAWINPUT*)lpb;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE)
+			{
+				cursorDeltaX += raw->data.mouse.lLastX;
+				cursorDeltaY += raw->data.mouse.lLastY;
+			}
 		}
 		break;
 	default:
@@ -218,59 +309,73 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	windowHandle = hwnd;
 	ShowWindow(hwnd, nCmdShow);
 
+
 	MSG msg;
 
 	double prevTime = 0;
 	int frames = 0;
 	float second = 1;
-	while (IsWindow(hwnd)) {
-		pauseTime = 0;
-		for (int i = 0; i < 100 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
-			if (msg.message == WM_PAINT)
-				break;
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
 
-		//if (GLWinBitMask & GLWINMODE_ACTIVE_BIT)
+	InitTimer();
 
-		std::thread update{ win::event::Update, win::event::GetTime() };
-		OnPaint(hwnd);
-		update.join();
-		win::event::SyncUpdate(win::event::GetTime());
+	try {
+		win::event::Start(win::event::GetTime());
 
-		frames++;
-		double time = win::event::GetTime();
-		if (time > second) {
-			second += 1;
-			std::cout << "fps: " << frames << std::endl;
-			frames = 0;
-		}
+		while (IsWindow(hwnd)) {
+			pauseTime = 0;
+			for (int i = 0; i < 500 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
+				if (msg.message == WM_PAINT)
+					break;
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 
-		if (updateGraphics) {
-			glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
-			if (GLWinBitMask & GLWINMODE_BORDERLESS_BIT) {
-				int width = CW_USEDEFAULT;
-				int height = CW_USEDEFAULT;
-				GetDesktopResolution(width, height);
-				SetWindowPos(windowHandle, HWND_TOPMOST, 0, 0, width, height, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW);
-				SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_POPUP);
+			//if (GLWinBitMask & GLWINMODE_ACTIVE_BIT)
+
+			std::thread update{ win::event::Update, win::event::GetTime() };
+			OnPaint(hwnd);
+			update.join();
+			win::event::SyncUpdate(win::event::GetTime());
+
+			frames++;
+			double time = win::event::GetTime();
+			if (time > second) {
+				second += 1;
+				std::cout << "fps: " << frames << std::endl;
+				frames = 0;
+			}
+
+			cursorDeltaX = 0;
+			cursorDeltaY = 0;
+
+			if (updateGraphics) {
+				glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
+				if (GLWinBitMask & GLWINMODE_BORDERLESS_BIT) {
+					int width = CW_USEDEFAULT;
+					int height = CW_USEDEFAULT;
+					GetDesktopResolution(width, height);
+					SetWindowPos(windowHandle, HWND_TOPMOST, 0, 0, width, height, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW);
+					SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_POPUP);
+				}
+				else {
+					SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_EX_APPWINDOW);
+					SetWindowPos(windowHandle, HWND_TOP, CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW | SWP_NOMOVE);
+				}
+				updateGraphics = false;
+			}
+
+			/*double wait = 1.0 / 20 - (time - prevTime);
+			if (wait <= 0) {
+				prevTime = time;
 			}
 			else {
-				SetWindowLongPtrA(windowHandle, GWL_EXSTYLE, WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_EX_APPWINDOW);
-				SetWindowPos(windowHandle, HWND_TOP, CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW | SWP_NOMOVE);
-			}
-			updateGraphics = false;
+				std::this_thread::sleep_for(std::chrono::microseconds((int)(wait * 1000000)));
+				prevTime = win::event::GetTime();
+			}*/
 		}
-
-		/*double wait = 1.0 / 20 - (time - prevTime);
-		if (wait <= 0) {
-			prevTime = time;
-		}
-		else {
-			std::this_thread::sleep_for(std::chrono::microseconds((int)(wait * 1000000)));
-			prevTime = win::event::GetTime();
-		}*/
+	}
+	catch (std::exception e){
+		std::cout << "ERROR : " << e.what() << std::endl;
 	}
 
 	CoUninitialize();
@@ -317,4 +422,25 @@ void win::event::vSync(bool enable) {
 
 bool win::event::vSync() {
 	return GLWinBitMask & GLWINMODE_VSYNC;
+}
+
+void win::input::CursorVisibility(bool visible) {
+	cursorVisible = visible;
+	if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) {
+		InternalShowCursor(cursorVisible);
+	}
+}
+
+void win::input::CursorConstraint(win::input::CursorConstraintState constraint) {
+	cursorConstraint = constraint;
+	if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) {
+		InternalCursorConstraint(constraint);
+	}
+}
+
+int win::input::GetCursorDeltaX() {
+	return cursorDeltaX;
+}
+int win::input::GetCursorDeltaY() {
+	return cursorDeltaY;
 }

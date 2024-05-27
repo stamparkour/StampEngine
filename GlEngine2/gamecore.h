@@ -1,4 +1,5 @@
 #pragma once
+#include "audio.h"
 #include <vector>
 #include <string>
 #include <xaudio2.h>
@@ -28,6 +29,7 @@ namespace game::core {
 
 	enum struct GameObjectState {
 		Created,
+		Initialized,
 		Enabling,
 		Enabled,
 		Disabling,
@@ -160,39 +162,6 @@ namespace game::core {
 		static bool isKeyDown(char virtualKey);
 		static bool isKeyPressed(char virtualKey);
 		static bool isKeyUp(char virtualKey);
-	}; 
-
-	struct AudioClip final : IXAudio2VoiceCallback {
-	private:
-		WAVEFORMATEX fmt{};
-		XAUDIO2_BUFFER data{};
-		std::shared_ptr<IXAudio2SourceVoice> pSourceVoice = nullptr;
-		std::shared_ptr<char> ptr = nullptr;
-		HANDLE hBufferEndEvent;
-		bool playing = false;
-	public:
-		AudioClip() : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {}
-		template<size_t length>
-		AudioClip(const char (&buffer)[length]);
-		~AudioClip();
-		bool Play(float volume);
-		void OnStreamEnd();
-		void OnVoiceProcessingPassEnd() { }
-		void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
-		void OnBufferEnd(void* pBufferContext) { }
-		void OnBufferStart(void* pBufferContext) {    }
-		void OnLoopEnd(void* pBufferContext) {    }
-		void OnVoiceError(void* pBufferContext, HRESULT Error) { }
-		bool isPlaying() const;
-	};
-
-	struct AudioManager final {
-		friend struct GameManager;
-		friend struct AudioClip;
-	private:
-		bool Initialize();
-		IXAudio2* pXAudio2;
-	public:
 	};
 
 	struct GameManager final {
@@ -204,7 +173,7 @@ namespace game::core {
 	public:
 		TimeManager time;
 		ControlsManager controls;
-		AudioManager audio;
+		game::audio::AudioManager audio;
 		Scene* scene = {};
 
 		static int ScreenX() { return current->screenX; }
@@ -220,6 +189,21 @@ namespace game::core {
 		void KeyUp(char virtualKey);
 
 		static GameManager* Current() noexcept;
+	};
+}
+
+namespace game::component {
+	struct AudioSource final : game::core::Component {
+		Component_Requirements(AudioSource)
+	public:
+		std::shared_ptr<game::audio::AudioClip> clip = nullptr;
+		bool autoDelete = false;
+		AudioSource() noexcept;
+		AudioSource(std::shared_ptr<game::audio::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
+		void Update() override;
+		bool isPlaying();
+
+		static game::core::GameObject PlayClip(std::shared_ptr<game::audio::AudioClip> clip);
 	};
 }
 

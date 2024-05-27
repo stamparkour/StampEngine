@@ -71,9 +71,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="winevent.h">
-      <Filter>Header Files\windows</Filter>
-    </ClInclude>
     <ClInclude Include="wincore.h">
       <Filter>Header Files\windows</Filter>
     </ClInclude>
@@ -115,8 +112,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="wininput.h">
-      <Filter>Header Files\windows</Filter>
-    </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
