@@ -196,7 +196,7 @@ namespace game::component {
 	struct AudioSource final : game::core::Component {
 		Component_Requirements(AudioSource)
 	public:
-		std::shared_ptr<game::audio::AudioClip> clip = nullptr;
+		game::audio::AudioPlayback clip{};
 		bool autoDelete = false;
 		AudioSource() noexcept;
 		AudioSource(std::shared_ptr<game::audio::AudioClip> clip, bool autoDelete = true, bool startPlaying = true) noexcept;
@@ -204,6 +204,14 @@ namespace game::component {
 		bool isPlaying();
 
 		static game::core::GameObject PlayClip(std::shared_ptr<game::audio::AudioClip> clip);
+	};
+
+	struct AudioListener final : game::core::Component {
+		Component_Requirements(AudioListener)
+	public:
+		std::shared_ptr<game::audio::AudioClip> clip = nullptr;
+		AudioListener() noexcept;
+		void Update() override;
 	};
 }
 

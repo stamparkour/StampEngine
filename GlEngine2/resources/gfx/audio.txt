@@ -1,2 +1,2 @@
-gravity audioClips\gravityFalls.wav
-mySong audioClips\mySong.wav
+gravity sound\gravityFalls.wav
+mySong sound\mySong.wav

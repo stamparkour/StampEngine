@@ -1,0 +1,2 @@
+;name texture fontpath
+ariel_24 ariel_24 fonts\font.txt

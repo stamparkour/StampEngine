@@ -137,14 +137,14 @@ void game::resources::Initizialize() {
 		v = sscanf_s(buffer, " %s %s", label, 32, path, 256);
 		if (label[0] == ';') continue;
 		if (v == 2) {
-			std::cout << "mesh: " << label << std::endl;
+			std::cout << "audio: " << label << std::endl;
 			size_t length = strlen(label) + 1;
 			char* l = new char[length];
 			memcpy_s(l, length, label, length);
 			audioLabels.push_back(l);
 			size_t size = 0;
 			auto k = game::core::readFile(path, &size, true);
-			audioClips.push_back(std::shared_ptr<game::audio::AudioClip>{new game::audio::AudioClip(k.get(), size)});
+			audioClips.push_back(std::shared_ptr<game::audio::AudioClip>{new game::audio::AudioClip(k, size)});
 		}
 	}
 

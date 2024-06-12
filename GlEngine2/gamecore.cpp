@@ -4,6 +4,18 @@
 #include <memory>
 game::core::GameManager* game::core::GameManager::current = NULL;
 
+std::shared_ptr<char> game::core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
+	std::fstream stream = std::fstream(path, (isBinary ? std::ios::binary : 0) | std::ios::in);
+	if (!stream) return nullptr;
+	stream.seekg(0, stream.end);
+	size_t length = stream.tellg();
+	stream.seekg(0, stream.beg);
+	if (out_Size) *out_Size = length;
+	char* c = new char[length + 1];
+	stream.read(c, length);
+	c[length] = 0;
+	return std::shared_ptr<char>{c};
+}
 void game::core::GameManager::Initialize() {
 	if (audio.Initialize())
 		throw 1;

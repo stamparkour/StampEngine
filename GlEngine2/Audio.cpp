@@ -5,6 +5,10 @@
 #include <xaudio2fx.h>
 #include <x3daudio.h>
 
+void game::audio::AudioManager::OnCriticalError(HRESULT Error) {
+	std::cout << "AUDIO ENGINE CRITICAL ERROR : " << std::hex << Error << std::endl;
+}
+
 //https://learn.microsoft.com/en-us/windows/win32/xaudio2/how-to--play-a-sound-with-xaudio2
 bool game::audio::AudioManager::Initialize() {
 	HRESULT hr;
@@ -22,14 +26,25 @@ bool game::audio::AudioManager::Initialize() {
 
 	pXAudio2->SetDebugConfiguration(&debug);
 
-	hr = pXAudio2->CreateMasteringVoice(&pMasterVoice, 2, XAUDIO2_DEFAULT_SAMPLERATE, 0, NULL, NULL, AudioCategory_GameEffects);
+	pXAudio2->RegisterForCallbacks(this);
+
+	hr = pXAudio2->CreateMasteringVoice(&pMasterVoice, XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_SAMPLERATE, 0, NULL, NULL, AudioCategory_GameEffects);
 	if (FAILED(hr))
 		return true;
+
 	DWORD dwChannelMask;
 	pMasterVoice->GetChannelMask(&dwChannelMask);
 	X3DAudioInitialize(dwChannelMask, X3DAUDIO_SPEED_OF_SOUND, XAudio3d);
 
 	return false;
+}
+
+IXAudio2SourceVoice* game::audio::AudioManager::NewSourceVoice(const WAVEFORMATEX* format, IXAudio2VoiceCallback* callback)
+{
+	IXAudio2SourceVoice* voice;
+	pXAudio2->CreateSourceVoice(&voice, format, 0, 2, callback);
+	sourceVoices.push_back(voice);
+	return voice;
 }
 bool getChunk(long fourcc,const char* data, size_t length, size_t& index, size_t& size) {
 	for (size_t i = 12; i < length;) {
@@ -49,91 +64,98 @@ bool getChunk(long fourcc,const char* data, size_t length, size_t& index, size_t
 	return false;
 }
 
-game::audio::AudioClip::AudioClip(const char *buffer, size_t length) : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {
+game::audio::AudioClip::AudioClip(std::shared_ptr<char> buf, size_t length) {
 	HRESULT hr;
 	auto pXAudio2 = game::core::GameManager::Current()->audio.pXAudio2;
-	ptr = std::shared_ptr<char>{ new char[length] };
-	memcpy_s(ptr.get(), length, buffer, length);
+	ptr = buf;
+	clip = {};
 	//little endian
-	if (*(long*)(buffer + 0) != 'FFIR') return;
-	long fileSize = *(long*)(buffer + 4) + 8;
-	if (*(long*)(buffer + 8) != 'EVAW') return;
+	if (*(long*)(ptr.get() + 0) != 'FFIR') return;
+	long fileSize = *(long*)(ptr.get() + 4) + 8;
+	if (*(long*)(ptr.get() + 8) != 'EVAW') return;
 	size_t fmtIndex = 0;
 	size_t fmtLength = 0;
 	if (!getChunk(' tmf', ptr.get(), length, fmtIndex, fmtLength)) return;
 	size_t dataIndex = 0;
 	size_t dataSize = 0;
 	if (!getChunk('atad', ptr.get(), length, dataIndex, dataSize)) return;
-	memcpy_s(&fmt, sizeof(WAVEFORMATEXTENSIBLE), (char*)ptr.get() + fmtIndex, fmtLength);
-	data.pAudioData = (const BYTE*)(ptr.get() + dataIndex);
-	data.AudioBytes = dataSize;
-	data.PlayBegin = 0;
-	data.PlayLength = 0;
-	data.Flags = XAUDIO2_END_OF_STREAM;
-	data.pContext = this;
+	memcpy_s(&fmt, sizeof(WAVEFORMATEX), (char*)ptr.get() + fmtIndex, fmtLength);
+	size_t channelSize = dataSize / fmt.Format.nChannels;
+	size_t unitSize = fmt.Format.nBlockAlign / fmt.Format.nChannels;
 
-	XAUDIO2_SEND_DESCRIPTOR sendDesc[] = {
-		{0, game::core::GameManager::Current()->audio.pMasterVoice}
-	};
-	XAUDIO2_VOICE_SENDS sends{};
-	sends.SendCount = sizeof(sendDesc)/sizeof(sendDesc[0]);
-	sends.pSends = sendDesc;
-	//fmt.Format.nChannels = 1;
-	//fmt.Format.nBlockAlign = 4;
-	hr = pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&fmt, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this, &sends, NULL);
-	if (FAILED(hr))
-		std::cout << "XAUDIO ERROR : AUDIOCLIP CONSTRUCTOR : " << std::hex << hr << std::endl;
-	hr = pSourceVoice->SubmitSourceBuffer(&data);
-	if (FAILED(hr))
-		std::cout << "XAUDIO ERROR : AUDIOCLIP CONSTRUCTOR : " << std::hex << hr << std::endl;
+	for (int i = 0; i < fmt.Format.nChannels; i++) {
+		char* buf = new char[channelSize];
+		
+		char* d = ptr.get() + dataIndex + unitSize * i;
+		char* b = buf;
+		size_t cs = channelSize;
+		while (cs > 0) {
+			memcpy_s(b, cs, d, unitSize);
+			b += unitSize;
+			d += fmt.Format.nBlockAlign;
+			cs -= unitSize;
+		}
+		clip.push_back(std::shared_ptr<char>(buf));
+	}
+	buffer.AudioBytes = channelSize;
+	fmt.Format.nBlockAlign = unitSize;
+	fmt.Format.nChannels = 1;
 }
-std::shared_ptr<char> game::core::readFile(const char* path, size_t* out_Size, bool isBinary = false) {
-	std::fstream stream = std::fstream(path, (isBinary ? std::ios::binary : 0) | std::ios::in);
-	if (!stream) return nullptr;
-	stream.seekg(0, stream.end);
-	size_t length = stream.tellg();
-	stream.seekg(0, stream.beg);
-	if (out_Size) *out_Size = length;
-	char* c = new char[length + 1];
-	stream.read(c, length);
-	c[length] = 0;
-	return std::shared_ptr<char>{c};
+game::audio::AudioPlayback game::audio::AudioClip::init() {
+	return AudioPlayback(clip, &fmt, &buffer);
 }
+game::audio::AudioPlayback game::audio::AudioClip::play() {
+	auto v = init();
+	v.play();
+	return v;
+}
+
 game::audio::AudioClip::~AudioClip() {
-	CloseHandle(hBufferEndEvent);
+
 }
-void game::audio::AudioClip::OnStreamEnd() {
+game::audio::AudioPlayback::AudioPlayback(std::vector<std::shared_ptr<char>> clip, WAVEFORMATEXTENSIBLE* format, XAUDIO2_BUFFER* buffer) {
+	data = std::vector< AudioData>(clip.size());
+	for (int i = 0; i < clip.size(); i++) {
+		data[i].clip = clip[i];
+		data[i].source = game::core::GameManager::Current()->audio.NewSourceVoice((WAVEFORMATEX*)format, NULL);
+		buffer->pAudioData = (const BYTE*)clip[i].get();
+		data[i].source->SubmitSourceBuffer(buffer);
+		data[i].source->SetVolume(1.0 / clip.size());
+	}
+}
+void game::audio::AudioPlayback::play() {
+	for (int i = 0; i < data.size(); i++) {
+		data[i].source->Start();
+	}
+}
+game::audio::AudioPlayback::~AudioPlayback() {
+	//CloseHandle(hBufferEndEvent);
+}
+void game::audio::AudioPlayback::OnStreamEnd() {
 	SetEvent(hBufferEndEvent);
 	playing = false;
 }
-bool game::audio::AudioClip::isPlaying() const {
+bool game::audio::AudioPlayback::isPlaying() const {
 	return playing;
-}
-bool game::audio::AudioClip::Play(float volume) {
-	playing = true;
-	HRESULT hr = pSourceVoice->Start(0);
-	if (FAILED(hr))
-		return true;
-	return false;
 }
 
 game::component::AudioSource::AudioSource() noexcept {
 	
 }
 void game::component::AudioSource::Update() {
-	if (autoDelete && clip && !isPlaying())selfObject()->Destroy();
+	if (autoDelete && !isPlaying()) selfObject()->Destroy();
 }
 
 bool game::component::AudioSource::isPlaying() {
-	return clip && clip->isPlaying();
+	return clip.isPlaying();
 }
 game::component::AudioSource::AudioSource(std::shared_ptr<game::audio::AudioClip> clip, bool autoDelete, bool startPlaying) noexcept {
-	this->clip = clip;
+	this->clip = clip.get()->init();
 	this->autoDelete = autoDelete;
-	if(startPlaying) this->clip->Play(1);
 }
 game::core::GameObject game::component::AudioSource::PlayClip(std::shared_ptr<game::audio::AudioClip> clip) {
 	game::core::GameObject obj{};
 	obj.AddComponent(AudioSource(clip));
+	clip.get()->play();
 	return obj;
 }

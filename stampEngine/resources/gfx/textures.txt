@@ -1,0 +1,2 @@
+test_texture textures\test.bmp
+ariel_24 textures\ariel_24.bmp

@@ -68,6 +68,7 @@ public:
 
 game::core::GameManager manager{};
 game::core::Scene scene{};
+game::audio::AudioPlayback playback;
 void win::event::Start(double time) {
 	manager.Initialize();
 	game::resources::Initizialize();
@@ -75,14 +76,15 @@ void win::event::Start(double time) {
 
 	win::input::CursorVisibility(false);
 	win::input::CursorConstraint(win::input::CursorConstraintState::Frozen);
-
-	scene.AddObject(game::component::AudioSource::PlayClip(game::resources::audio(game::resources::audioIndex("mySong"))));
+	playback = game::resources::audio(game::resources::audioIndex("mySong")).get()->play();
+	//scene.AddObject(game::component::AudioSource::PlayClip());
 
 	auto map = game::resources::font(game::resources::fontIndex("ariel_24"));
 	game::component::TextRendererUI textTest = {};
 	textTest.map = map;
-	textTest.scale = 48;
+	textTest.scale = 10;
 	textTest.vertGap = 0;
+	textTest.horizGap = 2;
 	textTest.alignment = game::render::RectAlignment::BottomRight;
 	textTest.setText(game::resources::loc("test_msg"));
 
