@@ -220,6 +220,9 @@ void game::render::Texture::setPixels(int elementSize, GLenum type, const void* 
 	Bind();
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, v[elementSize - 1], type, pixels);
 }
+void game::render::Texture::setPixels(int x, int y, int w, int h, int elementSize, GLenum type, const void* pixels)
+{
+}
 static long SwapBigEndian(long v) {
 	if (std::endian::native == std::endian::big) {//big endian
 		return v;

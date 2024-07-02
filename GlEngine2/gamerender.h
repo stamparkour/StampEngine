@@ -41,6 +41,7 @@ namespace game::render {
 		size_t Height() const override;
 		void Bind() const override;
 		void setPixels(int elementSize, GLenum type, const void* pixels);
+		void setPixels(int x, int y, int w, int h, int elementSize, GLenum type, const void* pixels);
 		static std::shared_ptr <Texture> BmpTexture(const char* data);
 		~Texture() override;
 	};

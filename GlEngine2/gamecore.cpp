@@ -44,6 +44,9 @@ void game::core::GameManager::KeyUp(char virtualKey) {
 void game::core::GameManager::Update(double time) {
 	this->time.NextTimestep(time);
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->Awake();
+	}
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
 		scene->gameObjects[i]->Update();
 	}
 	if (resized) {
@@ -249,17 +252,14 @@ game::math::Mat4 game::core::GameObject::getPrevTransform() const {
 	return transformMatrix;
 }
 void game::core::GameObject::Awake() {
-	for (int i = 0; i < components.size(); i++) {
-		components[i]->Awake();
-	}
-}
-void game::core::GameObject::Update() {
 	if (state == GameObjectState::Created) {
 		state = GameObjectState::Initialized;
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->Awake();
 		}
 	}
+}
+void game::core::GameObject::Update() {
 	if (state == GameObjectState::Initialized) {
 		state = GameObjectState::Enabling;
 		for (int i = 0; i < components.size(); i++) {

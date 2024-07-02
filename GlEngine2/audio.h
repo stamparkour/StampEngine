@@ -13,7 +13,6 @@ namespace game::audio {
 			IXAudio2SourceVoice* source;
 		};
 		std::vector<AudioData> data;
-		HANDLE hBufferEndEvent;
 		bool playing = false;
 
 		void OnStreamEnd();
@@ -26,7 +25,7 @@ namespace game::audio {
 		bool isPlaying() const;
 		void play();
 
-		AudioPlayback() : hBufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL)) {}
+		AudioPlayback() {}
 		AudioPlayback(std::vector<std::shared_ptr<char>> clip, WAVEFORMATEXTENSIBLE* format, XAUDIO2_BUFFER* buffer);
 		~AudioPlayback();
 	};

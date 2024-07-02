@@ -140,11 +140,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AI.cpp" />
     <ClCompile Include="Audio.cpp" />
     <ClCompile Include="gamecore.cpp" />
     <ClCompile Include="gamemanager.cpp" />
     <ClCompile Include="gl.cpp" />
     <ClCompile Include="math.cpp" />
+    <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="Source.cpp" />

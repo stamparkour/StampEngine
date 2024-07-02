@@ -132,7 +132,6 @@ game::audio::AudioPlayback::~AudioPlayback() {
 	//CloseHandle(hBufferEndEvent);
 }
 void game::audio::AudioPlayback::OnStreamEnd() {
-	SetEvent(hBufferEndEvent);
 	playing = false;
 }
 bool game::audio::AudioPlayback::isPlaying() const {

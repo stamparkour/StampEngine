@@ -18,6 +18,11 @@ namespace win::input {
 
 	int GetCursorDeltaX();
 	int GetCursorDeltaY();
+	int GetCursorAbsoluteX();
+	int GetCursorAbsoluteY();
+	int GetCursorX();
+	int GetCursorY();
+	int GetCursorDeltaScroll();
 }
 
 namespace win::event {

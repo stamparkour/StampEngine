@@ -2,6 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <Windows.h>
+#include <windowsx.h>
 #include <hidusage.h>
 #include "gl.h"
 #include "wincore.h"
@@ -29,6 +30,9 @@ unsigned int left = 0;
 
 int cursorDeltaX = 0;
 int cursorDeltaY = 0;
+int scrollDelta = 0;
+int cursorX = 0;
+int cursorY = 0;
 
 win::input::CursorConstraintState cursorConstraint = win::input::CursorConstraintState::Free;
 
@@ -214,7 +218,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 			GLWinBitMask |= GLWINMODE_ACTIVE_BIT;
 		}
 		break;
-	case WM_INPUT: 
+	case WM_INPUT:
 		if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) {
 			UINT dwSize = sizeof(RAWINPUT);
 			static BYTE lpb[sizeof(RAWINPUT)];
@@ -228,6 +232,14 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 				cursorDeltaX += raw->data.mouse.lLastX;
 				cursorDeltaY += raw->data.mouse.lLastY;
 			}
+		}
+		break;
+	case WM_MOUSEWHEEL:
+		if (GLWinBitMask & GLWINMODE_ACTIVE_BIT) {
+
+			scrollDelta += GET_WHEEL_DELTA_WPARAM(wParam);
+			cursorX = GET_X_LPARAM(lParam);
+			cursorY = GET_Y_LPARAM(lParam);
 		}
 		break;
 	default:
@@ -347,6 +359,7 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 			cursorDeltaX = 0;
 			cursorDeltaY = 0;
+			scrollDelta = 0;
 
 			if (updateGraphics) {
 				glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
@@ -443,4 +456,19 @@ int win::input::GetCursorDeltaX() {
 }
 int win::input::GetCursorDeltaY() {
 	return cursorDeltaY;
+}
+int win::input::GetCursorDeltaScroll() {
+	return scrollDelta;
+}
+int win::input::GetCursorAbsoluteX() {
+	return cursorX;
+}
+int win::input::GetCursorAbsoluteY() {
+	return cursorY;
+}
+int win::input::GetCursorX() {
+	return cursorX - left;
+}
+int win::input::GetCursorY() {
+	return cursorY - top;
 }

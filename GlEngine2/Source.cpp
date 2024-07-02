@@ -7,13 +7,12 @@
 #include "audio.h"
 #include "gameresources.h"
 #include <iostream>
-
+#define RandRange(min,max) ((float)rand()/RAND_MAX*((max)-(min))+(min))
 const WIN_CHAR* WIN_NAME = TEXT("my window");
 
 //mouse pos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
 //hide mouse https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
 //change cursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursor
-#define AngleToRad 0.0174532925199f
 
 class CameraController final : public game::core::Component {
 	Component_Requirements(CameraController)
@@ -66,6 +65,8 @@ public:
 };
 
 
+
+
 game::core::GameManager manager{};
 game::core::Scene scene{};
 game::audio::AudioPlayback playback;
@@ -76,7 +77,7 @@ void win::event::Start(double time) {
 
 	win::input::CursorVisibility(false);
 	win::input::CursorConstraint(win::input::CursorConstraintState::Frozen);
-	playback = game::resources::audio(game::resources::audioIndex("mySong")).get()->play();
+	//playback = game::resources::audio(game::resources::audioIndex("mySong")).get()->play();
 	//scene.AddObject(game::component::AudioSource::PlayClip());
 
 	auto map = game::resources::font(game::resources::fontIndex("ariel_24"));
@@ -103,28 +104,6 @@ void win::event::Start(double time) {
 	meshRenderer.material = game::resources::material(game::resources::materialIndex("sky"));
 	monke.AddComponent(meshRenderer);
 	scene.AddObject(monke);
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 2; j++) {
-			for (int k = 0; k < 2; k++) {
-				scene.AddObject(monke);
-				monke.transform.position.z += 3;
-			}
-			//monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh;
-			monke.transform.position.z = 0;
-			monke.transform.position.y += 3;
-		}
-		//monke.GetComponent<game::component::MeshRenderer>()->mesh = mesh2;
-		monke.transform.position.y = 0;
-		monke.transform.position.x += 3;
-	}
-
-	game::core::GameObject cube{};
-	game::component::MeshRenderer meshRenderer1 = {};
-	meshRenderer1.mesh = game::render::Mesh::cubePrimative;
-	meshRenderer1.material = game::resources::material(game::resources::materialIndex("ocean"));
-	cube.transform.position = { -5,0,0 };
-	cube.AddComponent(meshRenderer1);
-	scene.AddObject(cube);
 
 	game::core::GameObject textObj{};
 	textObj.AddComponent(textTest);
