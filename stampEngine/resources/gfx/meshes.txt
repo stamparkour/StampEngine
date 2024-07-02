@@ -1,3 +1,0 @@
-testmesh meshes\mesh.mesh
-sphere meshes\sphere.mesh
-sphere2 meshes\sphere2.mesh

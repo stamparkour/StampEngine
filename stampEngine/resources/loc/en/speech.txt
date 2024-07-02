@@ -1,2 +1,0 @@
-;keyword:translation
-test_msg:test message 123!! \nmulti line\n gmgrio gnneoignNGOINIWEN\n\nfreoekjqe
