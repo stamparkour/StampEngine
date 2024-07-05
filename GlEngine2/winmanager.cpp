@@ -149,7 +149,7 @@ void OnPaint(HWND hwnd) {
 
 	win::event::Render(win::event::GetTime());
 	if (GLWinBitMask & GLWINMODE_VSYNC) {
-		//glFinish();
+		glFinish();
 		SwapBuffers(hdc);
 	}
 	else {

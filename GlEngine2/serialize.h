@@ -70,7 +70,7 @@ public:
 		return v;
 	}
 	std::shared_ptr<char> String() {
-		uint32_t l = Uint32();
+		uint32_t l = Uint16();
 		char* v = new char[l];
 		for (int i = 0; i < l; i++) {
 			v[i] = Char();
@@ -123,7 +123,7 @@ public:
 		data.insert(data.end(), sizeof(double), v);
 	}
 	void String(const char* v) {
-		Uint32(strlen(v));
+		Uint16(strlen(v));
 		while (*v) {
 			data.push_back(*v);
 		}

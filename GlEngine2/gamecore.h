@@ -29,12 +29,15 @@ namespace game::core {
 
 	enum struct GameObjectState {
 		Created,
+		Initializing,
 		Initialized,
+		Destroying,
+	};
+	enum struct GameObjectEnableState {
 		Enabling,
 		Enabled,
 		Disabling,
 		Disabled,
-		Destroying,
 	};
 	enum struct ComponentState {
 		Created,
@@ -52,12 +55,14 @@ namespace game::core {
 	private:
 		std::vector<Component*> components;
 		GameObjectState state;
+		GameObjectEnableState enableState = GameObjectEnableState::Enabling;
 		game::math::Mat4 transformMatrix;
+		GameObject* parent;
+		std::vector<GameObject*> children;
 	public:
 		game::core::Transform transform;
 		std::string name;
 		int layerMask;
-		GameObject* parent;
 
 		GameObject();
 		GameObject(std::string name);
@@ -68,6 +73,7 @@ namespace game::core {
 		GameObject& operator =(GameObject&& v) noexcept;
 		~GameObject();
 		friend void swap(GameObject& a, GameObject& b);
+		//destroys this and all child objects.
 		void Destroy();
 
 		bool exsists();
@@ -84,6 +90,11 @@ namespace game::core {
 		bool RemoveComponent();
 		void Disable();
 		void Enable();
+		void AddChild(GameObject* obj);
+		bool RemoveChild(GameObject* obj);
+		GameObject* Parent() { return parent; }
+		const std::vector<GameObject*> Children() const { return children; }
+		GameObject* getChildByName(std::string name);
 	protected:
 		void Awake();
 		void Update();
@@ -109,6 +120,7 @@ namespace game::core {
 		virtual void OnDestroy() {}
 		virtual void Update() {}
 		virtual void FixedUpdate() {}
+		virtual void SyncUpdate() {}
 		virtual void OnRender(int phase) {}
 		virtual void OnResize() {}
 		virtual size_t Size() = 0;
@@ -125,9 +137,12 @@ namespace game::core {
 		Scene() {}
 		Scene(Scene& other);
 		Scene& operator =(Scene& other);
-		GameObject& AddObject(const GameObject& object);
-		void AddObject(GameObject&& object);
+		GameObject& AddObject(const GameObject& object, std::string name = "");
+		void AddObject(GameObject&& object, std::string name = "");
 
+		//returns the first gameobject with name and without a parent, else
+		//returns the first gameobject with name, else
+		//returns NULL
 		GameObject* getGameObjectByName(std::string name);
 
 		~Scene();

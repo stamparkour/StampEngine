@@ -118,19 +118,32 @@ game::core::Scene& game::core::Scene::operator=(game::core::Scene& other) {
 	}
 	return *this;
 }
-game::core::GameObject& game::core::Scene::AddObject(const game::core::GameObject& object) {
+game::core::GameObject& game::core::Scene::AddObject(const game::core::GameObject& object, std::string name) {
 	game::core::GameObject* o = new game::core::GameObject(object);
 	gameObjects.push_back(o);
+	for (int i = 0; i < o->children.size(); i++) {
+		gameObjects.push_back(o->children[i]);
+	}
+	if (name.length() != 0) o->name = name;
 	return *o;
 }
-void game::core::Scene::AddObject(game::core::GameObject&& object) {
+void game::core::Scene::AddObject(game::core::GameObject&& object, std::string name) {
 	game::core::GameObject* o = new game::core::GameObject(object);
+	for (int i = 0; i < o->children.size(); i++) {
+		gameObjects.push_back(o->children[i]);
+	}
+	if (name.length() != 0) o->name = name;
 	gameObjects.push_back(o);
 }
 game::core::GameObject* game::core::Scene::getGameObjectByName(std::string name) {
+	int j = -1;
 	for (int i = 0; i < gameObjects.size(); i++) {
-		if (!gameObjects[i]->name.compare(name)) return gameObjects[i];
+		if (!gameObjects[i]->name.compare(name)) {
+			if (!gameObjects[i]->parent) return gameObjects[i];
+			else if(j != -1) j = i;
+		}
 	}
+	if (j != -1) return gameObjects[j];
 	return NULL;
 }
 game::core::Scene::~Scene()
@@ -162,6 +175,9 @@ game::core::GameObject::GameObject(const game::core::GameObject& v) {
 		components[i]->AssignSelf(*v.components[i]);
 		components[i]->gameObject = this;
 	}
+	for (int i = 0; i < v.children.size(); i++) {
+		children.push_back(new GameObject(*children[i]));
+	}
 	state = v.state;
 	name = v.name;
 	layerMask = v.layerMask;
@@ -186,27 +202,19 @@ game::core::GameObject::GameObject(std::string name, int groupMask) {
 	parent = NULL;
 }
 game::core::GameObject::GameObject(GameObject&& v) noexcept {
-	using std::swap;
 	components = {};
+	children = {};
 	transform = {};
 	transformMatrix = {};
 	state = game::core::GameObjectState::Created;
 	name = "";
 	layerMask = 1;
 	parent = NULL;
+	using std::swap;
 	swap(*this, v);
 }
 game::core::GameObject& game::core::GameObject::operator=(const GameObject& v) {
-	components = { v.components.size(), 0 };
-	transform = v.transform;
-	for (int i = 0; i < v.components.size(); i++) {
-		components[i] = (Component*)malloc(v.components[i]->Size());
-		memcpy(components[i], v.components[i], v.components[i]->Size());
-	}
-	state = v.state;
-	name = v.name;
-	layerMask = v.layerMask;
-	parent = v.parent;
+	*this = GameObject(v);
 	return *this;
 }
 game::core::GameObject& game::core::GameObject::operator=(GameObject&& v) noexcept {
@@ -260,58 +268,90 @@ void game::core::GameObject::Awake() {
 	}
 }
 void game::core::GameObject::Update() {
-	if (state == GameObjectState::Initialized) {
-		state = GameObjectState::Enabling;
+	if (state == GameObjectState::Created) return;
+	if (state == GameObjectState::Initializing) {
+		state = GameObjectState::Initialized;
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->Start();
 		}
 	}
-	if (state == GameObjectState::Enabling) {
-		state = GameObjectState::Enabled;
+	if (enableState == GameObjectEnableState::Enabling) {
+		enableState = GameObjectEnableState::Enabled;
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->OnEnabled();
 		}
 	}
-	if (state == GameObjectState::Enabled) {
+	if (enableState == GameObjectEnableState::Enabled) {
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->Update();
 		}
 	}
-	if (state == GameObjectState::Disabling) {
-		state = GameObjectState::Disabled;
+	if (enableState == GameObjectEnableState::Disabling) {
+		enableState = GameObjectEnableState::Disabled;
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->OnDisabled();
 		}
 	}
 }
 void game::core::GameObject::FixedUpdate() {
-	if (state != GameObjectState::Enabled) return;
+	if (enableState != GameObjectEnableState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->FixedUpdate();
 	}
 }
 void game::core::GameObject::OnRender(int phase) {
-	if (state != GameObjectState::Enabled) return;
+	if (enableState != GameObjectEnableState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->OnRender(phase);
 	}
 }
 void game::core::GameObject::OnResize() {
-	if (state != GameObjectState::Enabled) return;
+	if (enableState != GameObjectEnableState::Enabled) return;
 	for (int i = 0; i < components.size(); i++) {
 		components[i]->OnResize();
 	}
 }
 void game::core::GameObject::Destroy() {
 	state = GameObjectState::Destroying;
+	for (int i = 0; i < children.size(); i++) {
+		children[i]->state = GameObjectState::Destroying;
+	}
 }
 void game::core::GameObject::Enable() {
-	if (state == game::core::GameObjectState::Enabled) return;
-	state = game::core::GameObjectState::Enabling;
+	if (enableState == GameObjectEnableState::Enabled) return;
+	enableState = game::core::GameObjectEnableState::Enabling;
 }
 void game::core::GameObject::Disable() {
-	if (state == game::core::GameObjectState::Disabled) return;
-	state = game::core::GameObjectState::Disabling;
+	if (enableState == GameObjectEnableState::Enabled) return;
+	enableState = game::core::GameObjectEnableState::Disabling;
+}
+void game::core::GameObject::AddChild(GameObject* obj) {
+	if (!obj) return;
+	for (auto& c : children) {
+		if (c == obj) return;
+	}
+	if (obj->parent)obj->parent->RemoveChild(obj);
+	obj->parent = this;
+	children.push_back(obj);
+}
+bool game::core::GameObject::RemoveChild(GameObject* obj) {
+	if (!obj || !obj->parent) return false;
+	for (int i = 0; i < children.size(); i++) {
+		if (children[i] == obj) {
+			children.erase(children.begin()+i);
+			obj->parent = NULL;
+			return true;
+		}
+	}
+	return false;
+}
+game::core::GameObject* game::core::GameObject::getChildByName(std::string name) {
+	for (int i = 0; i < children.size(); i++) {
+		if (children[i]->name == name) {
+			return children[i];
+		}
+	}
+	return NULL;
 }
 void game::core::ControlsManager::KeyDown(char virtualKey) {
 	int index = virtualKey >> 3;// divide by 8
@@ -345,13 +385,16 @@ bool game::core::ControlsManager::isKeyDown(char virtualKey) {
 bool game::core::ControlsManager::isKeyUp(char virtualKey) {
 	return !isKeyDown(virtualKey);
 }
-void game::core::GameObject::SyncUpdate()
-{
+void game::core::GameObject::SyncUpdate() {
+	if (enableState != GameObjectEnableState::Enabled) {
+		for (int i = 0; i < components.size(); i++) {
+			components[i]->SyncUpdate();
+		}
+	}
 	this->transformMatrix = getTransform();
 }
 
 
-game::core::GameObject* game::core::Component::selfObject() const
-{
+game::core::GameObject* game::core::Component::selfObject() const {
 	return this->gameObject;
 }

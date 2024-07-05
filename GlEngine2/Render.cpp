@@ -2,9 +2,9 @@
 #include "gamerender.h"
 #include <memory>
 #include <bit>
+#include "gameresources.h"
+#include "gameui.h"
 #include <fstream>
-#include "gameresources.h"
-#include "gameresources.h"
 #include <iostream>
 int currentLightIndex = 0;
 

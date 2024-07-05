@@ -4,6 +4,7 @@
 #include "wincore.h"
 #include "gamecore.h"
 #include "gamerender.h"
+#include "gameui.h"
 #include "audio.h"
 #include "gameresources.h"
 #include <iostream>

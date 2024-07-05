@@ -116,8 +116,14 @@
     <ClInclude Include="serialize.h">
       <Filter>Header Files\serialize</Filter>
     </ClInclude>
+    <ClInclude Include="gameui.h">
+      <Filter>Header Files\manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="GameObjectLifespan.webp">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

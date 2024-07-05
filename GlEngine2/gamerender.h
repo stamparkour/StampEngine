@@ -117,12 +117,19 @@ namespace game::render {
 		TopLeft = 0b0000,
 		Top = 0b0001,
 		TopRight = 0b0010,
+		TopFit = 0b0011,
 		Left = 0b0100,
 		Center = 0b0101,
 		Right = 0b0110,
+		HorizFit = 0b0111,
 		BottomLeft = 0b1000,
 		Bottom = 0b1001,
 		BottomRight = 0b1010,
+		BottomFit = 0b1011,
+		FitLeft = 0b1100,
+		VertFIt = 0b1101,
+		FitRight = 0b1110,
+		Fit = 0b1111,
 	};
 }
 namespace game::component {
@@ -150,23 +157,6 @@ namespace game::component {
 		game::render::RectAlignment alignment;
 		void setText(const char* txt);
 		void OnRender(int phase) override;
-	};
-	class TextRendererUI final : public TextRenderer {
-		Component_Requirements(TextRendererUI)
-	public:
-		TextRendererUI() : TextRenderer() {}
-		void OnRender(int phase) override;
-	};
-	struct RectTransform final : game::core::Component {
-		Component_Requirements(RectTransform)
-	public:
-		game::render::RectAlignment alignment;
-		game::math::Vec2 position;
-		game::math::Vec2 scale;
-		float depth = 0;
-		RectTransform() {}
-		RectTransform(game::render::RectAlignment alignment, game::math::Vec2 position, float depth = 1, game::math::Vec2 scale = {1,1}) : alignment(alignment), position(position), depth(depth), scale(scale) {}
-		void Update() override;
 	};
 
 	struct ShadowRenderer final : game::core::Component {

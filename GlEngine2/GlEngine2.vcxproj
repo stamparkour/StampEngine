@@ -165,9 +165,11 @@
     <ClInclude Include="glext.h" />
     <ClInclude Include="khrplatform.h" />
     <ClInclude Include="serialize.h" />
+    <ClInclude Include="gameui.h" />
     <ClInclude Include="wincore.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="GameObjectLifespan.webp" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
