@@ -26,17 +26,18 @@ namespace win::input {
 }
 
 namespace win::event {
-
+	void Start(double time);
+	void Update(double time);
+	void SyncUpdate(double time);
+	void FixedUpdate(double time);
+	void Resize(double time, int width, int height);
+	void Render(double time);
+}
+namespace win::state {
 	enum struct WindowStyle {
 		Normal,
 		Borderless,
 	};
-
-	void Start(double time);
-	void Update(double time);
-	void SyncUpdate(double time);
-	void Resize(double time, int width, int height);
-	void Render(double time);
 
 	void TerminateWindow();
 	double GetTime();
@@ -44,7 +45,9 @@ namespace win::event {
 	void SetWindowState(WindowStyle style, unsigned int width, unsigned int height);
 	bool vSync();
 	void vSync(bool enable);
-
+	void ProcessWinEvents();
+	double FixedUpdateInverval();
+	void FixedUpdateInverval(double seconds);
 }
 
 #ifdef UNICODE

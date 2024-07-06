@@ -34,6 +34,8 @@ int scrollDelta = 0;
 int cursorX = 0;
 int cursorY = 0;
 
+double fixedUpdateInverval = 0.04;
+
 win::input::CursorConstraintState cursorConstraint = win::input::CursorConstraintState::Free;
 
 
@@ -90,7 +92,7 @@ double GetTimeRaw() {
 	return largeInt.QuadPart;
 }
 
-double win::event::GetTime() {
+double win::state::GetTime() {
 	return timerTickLength * (GetTimeRaw() - timerStart);
 }
 
@@ -123,11 +125,9 @@ void OnCreate(HWND hwnd) {
 	if (SetPixelFormat(displayContext, iPixelFormat, &pfd) == FALSE)
 		return;
 	HGLRC glContext = exglCreateContext(displayContext);
-	if (wglMakeCurrent(displayContext, glContext) == FALSE)
-		return;
 	int value;
 	glGetIntegerv(GL_STENCIL_BITS, &value);
-
+	wglSwapIntervalEXT(1);
 	glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
 
 	RAWINPUTDEVICE Rid[1];
@@ -147,7 +147,7 @@ void OnPaint(HWND hwnd) {
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	win::event::Render(win::event::GetTime());
+	win::event::Render(win::state::GetTime());
 	if (GLWinBitMask & GLWINMODE_VSYNC) {
 		glFinish();
 		SwapBuffers(hdc);
@@ -192,7 +192,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {//WM_CLOSE
 		if (!(GLWinBitMask & GLWINMODE_INITIALIZE_BIT)) {
 			GLWinBitMask |= GLWINMODE_INITIALIZE_BIT;
 		}
-		win::event::Resize(win::event::GetTime(), width, height);
+		win::event::Resize(win::state::GetTime(), width, height);
 		glViewport(0, 0, width, height);
 		PauseTimer();
 	} break;
@@ -260,6 +260,24 @@ bool ContainsCmdLineFlag(PWSTR args, WCHAR flag) {
 
 	return false;
 }
+
+std::atomic_bool fixedUpdateControl = true;
+void FixedUpdate() {
+	static double time = win::state::GetTime();
+	static double prevTime = time;
+	while (true) {
+		while (fixedUpdateInverval - (win::state::GetTime() - prevTime) > 0) {
+			std::this_thread::sleep_for(std::chrono::microseconds(1000));
+			if(!fixedUpdateControl)return;
+		}
+		prevTime = time;
+		time = win::state::GetTime();
+		win::event::FixedUpdate(time);
+		if (!fixedUpdateControl)return;
+		
+	}
+}
+
 int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
 
 	if (ContainsCmdLineFlag(pCmdLine, L'd')) {
@@ -322,7 +340,6 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	ShowWindow(hwnd, nCmdShow);
 
 
-	MSG msg;
 
 	double prevTime = 0;
 	int frames = 0;
@@ -331,11 +348,12 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	InitTimer();
 
 	try {
-		win::event::Start(win::event::GetTime());
-
+		win::event::Start(win::state::GetTime());
+		std::thread* fixed{};
+		MSG msg;
 		while (IsWindow(hwnd)) {
 			pauseTime = 0;
-			for (int i = 0; i < 500 && PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE) > 0; i++) {
+			for (int i = 0; i < 500 && PeekMessage(&msg, windowHandle, 0, 0, PM_REMOVE) > 0; i++) {
 				if (msg.message == WM_PAINT)
 					break;
 				TranslateMessage(&msg);
@@ -344,13 +362,20 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 			//if (GLWinBitMask & GLWINMODE_ACTIVE_BIT)
 
-			std::thread update{ win::event::Update, win::event::GetTime() };
+			std::thread update{ win::event::Update, win::state::GetTime() };
 			OnPaint(hwnd);
 			update.join();
-			win::event::SyncUpdate(win::event::GetTime());
+			if (fixed) {
+				fixedUpdateControl = false;
+				fixed->join();
+				delete fixed;
+				fixedUpdateControl = true;
+			}
+			win::event::SyncUpdate(win::state::GetTime());
+			//fixed = new std::thread{ FixedUpdate };
 
 			frames++;
-			double time = win::event::GetTime();
+			double time = win::state::GetTime();
 			if (time > second) {
 				second += 1;
 				std::cout << "fps: " << frames << std::endl;
@@ -399,31 +424,31 @@ bool win::input::IsKeyDown(int virtualKey) {
 	return GetAsyncKeyState(virtualKey) < 0;
 }
 
-void win::event::TerminateWindow() {
+void win::state::TerminateWindow() {
 	DestroyWindow(windowHandle);
 }
 
-bool win::event::isWindowActive() {
+bool win::state::isWindowActive() {
 	return GLWinBitMask & GLWINMODE_BORDERLESS_BIT;
 }
 
-void win::event::SetWindowState(WindowStyle style, unsigned int width, unsigned int height) {
+void win::state::SetWindowState(WindowStyle style, unsigned int width, unsigned int height) {
 	switch (style) {
-	case(win::event::WindowStyle::Normal): {
+	case(win::state::WindowStyle::Normal): {
 		if (width != 0) {
 			defaultWidth = width;
 			defaultHeight = height;
 		}
 		GLWinBitMask &= ~GLWINMODE_BORDERLESS_BIT;
 	} break;	
-	case(win::event::WindowStyle::Borderless): {
+	case(win::state::WindowStyle::Borderless): {
 		GLWinBitMask |= GLWINMODE_BORDERLESS_BIT;
 	} break;
 	}
 	updateGraphics = true;
 }
 
-void win::event::vSync(bool enable) {
+void win::state::vSync(bool enable) {
 	if (enable) {
 		GLWinBitMask |= GLWINMODE_VSYNC;
 	}
@@ -433,7 +458,7 @@ void win::event::vSync(bool enable) {
 	updateGraphics = true;
 }
 
-bool win::event::vSync() {
+bool win::state::vSync() {
 	return GLWinBitMask & GLWINMODE_VSYNC;
 }
 
@@ -471,4 +496,14 @@ int win::input::GetCursorX() {
 }
 int win::input::GetCursorY() {
 	return cursorY - top;
+}
+
+void win::state::ProcessWinEvents() {
+	MSG msg;
+	while(PeekMessage(&msg, windowHandle, 0, 0, PM_REMOVE) > 0) {
+		if (msg.message == WM_PAINT)
+			break;
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 }

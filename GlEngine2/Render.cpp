@@ -23,10 +23,33 @@ void game::component::RectTransform::Update() {
 		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
 	} break;
 	case(game::render::RectAlignment::Top): {
-		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,coord.y + -position.y,-depth };
+		this->selfObject()->transform.position = game::math::Vec3{ position.x * coord.x,coord.y - position.y,-depth };
+		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	case(game::render::RectAlignment::Center): {
+		this->selfObject()->transform.position = game::math::Vec3{ coord.x + position.x,coord.y + position.y,-depth };
 		this->selfObject()->transform.scale = game::math::Vec3{ scale.x,scale.y,0 };
 	} break;
 	}
+}
+game::math::Mat4 game::component::RectTransform::getMatrix() const {
+	game::math::Vec3 coord = game::math::Vec3{ (float)game::core::GameManager::ScreenX() / 2,(float)game::core::GameManager::ScreenY() / 2,0 };
+	game::core::Transform trans{};
+	switch (alignment) {
+	case(game::render::RectAlignment::Bottom): {
+		trans.position = game::math::Vec3{ position.x * coord.x,-coord.y + position.y,-depth };
+		trans.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	case(game::render::RectAlignment::Top): {
+		trans.position = game::math::Vec3{ position.x * coord.x,coord.y - position.y,-depth };
+		trans.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	case(game::render::RectAlignment::Center): {
+		trans.position = game::math::Vec3{ position.x,position.y,-depth };
+		trans.scale = game::math::Vec3{ scale.x,scale.y,0 };
+	} break;
+	}
+	return trans.ToMatrix();
 }
 std::shared_ptr<game::render::FontMap> game::render::FontMap::ParseMap(const char* txt, std::shared_ptr<game::render::TextureBase> ref) {
 	std::shared_ptr<game::math::Rect> v = std::shared_ptr<game::math::Rect>{ new game::math::Rect[256] };
@@ -194,6 +217,11 @@ void game::component::TextRendererUI::OnRender(int phase) {
 	if(map.get()->textures.get()) map.get()->textures.get()->Bind();
 	glEnable(GL_TEXTURE_2D);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices_length);
+}
+void game::component::MeshRendererUI::OnRender(int phase) {
+	if (!(phase == 11)) return;
+	material.get()->Bind();
+	mesh->Render(selfObject()->getPrevTransform());
 }
 game::render::Texture::Texture() {
 	this->width = 0;
@@ -611,18 +639,39 @@ game::math::Vec2 cube_uv[] = {
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1},
 };
-std::shared_ptr< game::render::Mesh> game::render::Mesh::cubePrimative = std::shared_ptr< game::render::Mesh>{ new game::render::Mesh{ std::shared_ptr<game::math::Vec3>{cube_positions},std::shared_ptr<game::math::Vec3>{cube_normals},
-std::shared_ptr<game::math::Vec4>{cube_color},std::shared_ptr<game::math::Vec2>{cube_uv},cube_vertices } };
+game::math::Vec3 plain_positions[] = {
+	{1,-1,0},{-1,-1,0},{-1,1,0},
+	{1,-1,0},{-1,1,0 },{1,1,0},
+};
+game::math::Vec3 plain_normals[] = {
+	{0,0,1},{0,0,1},{0,0,1},{0,0,1},{0,0,1},{0,0,1}
+};
+game::math::Vec4 plain_color[] = {
+	{1,1,1,1},{1,1,1,1},{1,1,1,1}, {1,1,1,1},{1,1,1,1},{1,1,1,1}
+};
+game::math::Vec2 plain_uv[] = {
+	{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}
+};
+std::shared_ptr< game::render::Mesh> game::render::Mesh::cubePrimative = std::shared_ptr< game::render::Mesh>{ new game::render::Mesh{
+	std::shared_ptr<game::math::Vec3>{cube_positions},
+	std::shared_ptr<game::math::Vec3>{cube_normals},
+	std::shared_ptr<game::math::Vec4>{cube_color},
+	std::shared_ptr<game::math::Vec2>{cube_uv},cube_vertices }
+, [](auto* v) {} };
+std::shared_ptr< game::render::Mesh> game::render::Mesh::plainPrimative = std::shared_ptr< game::render::Mesh>{ new game::render::Mesh{
+	std::shared_ptr<game::math::Vec3>{plain_positions}, 
+	std::shared_ptr<game::math::Vec3>{plain_normals},
+	std::shared_ptr<game::math::Vec4>{plain_color},
+	std::shared_ptr<game::math::Vec2>{plain_uv},6 }
+, [](auto* v) {} };
 game::render::Material game::render::Material::defaultMaterial = { false, true, false, false, {0.7f,0.85f,0.85f,1},{0.85f,0.85f,0.85f,1}, {0.9f,0.9f,0.9f,1}, 1, {0,0,0,1}, {} };
 game::render::Material game::render::Material::shadowMaterial = { false, false, false, false, {}, {}, {}, 0, {} };
 game::render::Material game::render::Material::fontMaterial = { false, true, false, false, {},{0,0,0,1}, {}, 0, {1,1,1,1}, {} };
 void game::component::MeshRenderer::OnRender(int phase) {
 	if (!(phase == 1 || phase == 7 && material.get()->applyShadow || phase == 9 && !material.get()->applyShadow)) return;
 	
-	if (phase == 1 || phase == 7 && material.get()->applyShadow || phase == 9 && !material.get()->applyShadow) {
-		material.get()->Bind();
-		mesh->Render(selfObject()->getPrevTransform());
-	}
+	material.get()->Bind();
+	mesh->Render(selfObject()->getPrevTransform());
 }
 void game::component::ShadowRenderer::OnRender(int phase) {
 	if (phase == 3 || phase == 5) {
@@ -646,11 +695,22 @@ void game::component::Camera::OnResize() {
 	float ratio = (float)game::core::GameManager::Current()->ScreenX() / game::core::GameManager::Current()->ScreenY();
 	camera = game::math::Mat4::Perspective(fovy, ratio, nearPlane, farPlane);
 }
+void game::component::Camera::SyncUpdate() {
+	inverseTrans = game::math::Mat4_Identity;
+	game::math::Vec3 scale = { 1,1,1 };
+	game::core::GameObject* p = selfObject();
+	do {
+		scale = { scale.x * p->transform.scale.x,scale.y * p->transform.scale.y,scale.z * p->transform.scale.z };
+		inverseTrans = inverseTrans * p->transform.ToMatrixInverse();
+		p = p->Parent();
+	} while (p != NULL);
+	//auto i = inverseTrans * game::math::Mat4::Scale(scale.x, scale.y, scale.z);
+}
 void game::component::Camera::OnRender(int phase) {
 	if (phase == 0) {//no light render
 		glEnable(GL_LIGHTING);
 		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(camera * selfObject()->transform.ToMatrixInverse());
+		glLoadMatrixf(camera * inverseTrans);
 		glCullFace(GL_BACK);
 		glStencilMask(GL_FALSE);
 		glDepthMask(GL_TRUE);

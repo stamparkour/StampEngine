@@ -1,4 +1,7 @@
 #include "gamecore.h"
+#include "gamerender.h"
+#include "gameui.h"
+#include "wincore.h"
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -41,6 +44,42 @@ void game::core::GameManager::KeyDown(char virtualKey) {
 void game::core::GameManager::KeyUp(char virtualKey) {
 	controls.KeyUp(virtualKey);
 }
+void game::core::GameManager::BlankScreen(game::render::Texture* texture, float scale, game::math::Vec3 color) {
+	glClearColor(color.x, color.y, color.z, 1);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glDisable(GL_LIGHTING);
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(game::math::Mat4::Orthographic(game::core::GameManager::ScreenX() / 2,
+		(float)game::core::GameManager::ScreenX() / game::core::GameManager::ScreenY(), 0, 100));
+	if (texture) {
+		std::shared_ptr<game::render::Mesh> mesh = game::render::Mesh::plainPrimative;
+		game::component::RectTransform trans{};
+		trans.alignment = game::render::RectAlignment::Center;
+		trans.scale = game::math::Vec2{ texture->Width() / 2.0f, texture->Height() / 2.0f } *scale;
+		game::render::Material mat{};
+		mat.diffuseColor = { 1,1,1,1 };
+		mat.texture = std::shared_ptr<game::render::TextureBase>{ texture,  [](auto* v) {} };
+		mat.useTexture = true;
+		mat.Bind();
+		mesh.get()->Render(trans.getMatrix());
+	}
+
+	HDC hdc = wglGetCurrentDC();
+	if (win::state::vSync()) {
+		glFinish();
+		SwapBuffers(hdc);
+	}
+	else {
+		glFlush();
+	}
+
+	win::state::ProcessWinEvents();
+	glClearColor(this->clearColor.x, this->clearColor.y, this->clearColor.z, 0);
+}
+void game::core::GameManager::ClearColor(game::math::Vec3 color) {
+	clearColor = color;
+	glClearColor(color.x, color.y, color.z, 0);
+}
 void game::core::GameManager::Update(double time) {
 	this->time.NextTimestep(time);
 	for (int i = 0; i < scene->gameObjects.size(); i++) {
@@ -53,6 +92,13 @@ void game::core::GameManager::Update(double time) {
 		for (int i = 0; i < scene->gameObjects.size(); i++) {
 			scene->gameObjects[i]->OnResize();
 		}
+	}
+}
+void game::core::GameManager::FixedUpdate(double time)
+{
+	this->time.NextFixedTimestep(time);
+	for (int i = 0; i < scene->gameObjects.size(); i++) {
+		scene->gameObjects[i]->FixedUpdate();
 	}
 }
 void game::core::GameManager::SyncUpdate() {
@@ -82,11 +128,11 @@ void game::core::GameManager::SyncUpdate() {
 	controls.Update();
 }
 void game::core::TimeManager::NextTimestep(double time) {
-	deltaTime = time - this->time;
+	if(this->time != -1) deltaTime = time - this->time;
 	this->time = time;
 }
 void game::core::TimeManager::NextFixedTimestep(double time) {
-	fixedDeltaTime = time - this->fixedTime;
+	if (this->fixedTime != -1) fixedDeltaTime = time - this->fixedTime;
 	this->fixedTime = time;
 }
 double game::core::TimeManager::Time() {
@@ -103,7 +149,7 @@ double game::core::TimeManager::FixedDeltaTime() {
 }
 game::core::Scene::Scene(Scene& other) {
 	for (int i = 0; i < other.gameObjects.size(); i++) {
-		AddObject(*other.gameObjects[i]);
+		if(other.gameObjects[i]->parent == NULL) AddObject(*other.gameObjects[i]);
 	}
 }
 game::core::Scene& game::core::Scene::operator=(game::core::Scene& other) {
@@ -118,22 +164,23 @@ game::core::Scene& game::core::Scene::operator=(game::core::Scene& other) {
 	}
 	return *this;
 }
+void game::core::__AddObject_children(game::core::Scene& scene, game::core::GameObject& obj) {
+	scene.gameObjects.push_back(&obj);
+	for (int i = 0; i < obj.children.size(); i++) {
+		__AddObject_children(scene, *obj.children[i]);
+	}
+}
 game::core::GameObject& game::core::Scene::AddObject(const game::core::GameObject& object, std::string name) {
 	game::core::GameObject* o = new game::core::GameObject(object);
-	gameObjects.push_back(o);
-	for (int i = 0; i < o->children.size(); i++) {
-		gameObjects.push_back(o->children[i]);
-	}
+	__AddObject_children(*this, *o);
 	if (name.length() != 0) o->name = name;
 	return *o;
 }
-void game::core::Scene::AddObject(game::core::GameObject&& object, std::string name) {
+game::core::GameObject& game::core::Scene::AddObject(game::core::GameObject&& object, std::string name) {
 	game::core::GameObject* o = new game::core::GameObject(object);
-	for (int i = 0; i < o->children.size(); i++) {
-		gameObjects.push_back(o->children[i]);
-	}
+	__AddObject_children(*this, *o);
 	if (name.length() != 0) o->name = name;
-	gameObjects.push_back(o);
+	return *o;
 }
 game::core::GameObject* game::core::Scene::getGameObjectByName(std::string name) {
 	int j = -1;
@@ -176,12 +223,12 @@ game::core::GameObject::GameObject(const game::core::GameObject& v) {
 		components[i]->gameObject = this;
 	}
 	for (int i = 0; i < v.children.size(); i++) {
-		children.push_back(new GameObject(*children[i]));
+		AddChild(new GameObject(*v.children[i]));
 	}
 	state = v.state;
 	name = v.name;
 	layerMask = v.layerMask;
-	parent = v.parent;
+	parent = NULL;
 }
 game::core::GameObject::GameObject(std::string name) {
 	components = {};
@@ -214,7 +261,7 @@ game::core::GameObject::GameObject(GameObject&& v) noexcept {
 	swap(*this, v);
 }
 game::core::GameObject& game::core::GameObject::operator=(const GameObject& v) {
-	*this = GameObject(v);
+	new(this)GameObject(v);
 	return *this;
 }
 game::core::GameObject& game::core::GameObject::operator=(GameObject&& v) noexcept {
@@ -254,7 +301,7 @@ bool game::core::GameObject::exsists() {
 }
 game::math::Mat4 game::core::GameObject::getTransform() {
 	if (parent == NULL) return transform.ToMatrix();
-	return transform.ToMatrix(); *parent->getTransform();
+	return parent->getTransform() * transform.ToMatrix();
 }
 game::math::Mat4 game::core::GameObject::getPrevTransform() const {
 	return transformMatrix;
@@ -386,7 +433,7 @@ bool game::core::ControlsManager::isKeyUp(char virtualKey) {
 	return !isKeyDown(virtualKey);
 }
 void game::core::GameObject::SyncUpdate() {
-	if (enableState != GameObjectEnableState::Enabled) {
+	if (enableState == GameObjectEnableState::Enabled) {
 		for (int i = 0; i < components.size(); i++) {
 			components[i]->SyncUpdate();
 		}

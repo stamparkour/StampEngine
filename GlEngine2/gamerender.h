@@ -1,10 +1,9 @@
 #pragma once
 #include <Windows.h>
 #include "gl.h"
-#include "glvec.h"
-#include "glmat.h"
-#include "glquat.h"
+#include "glmath.h"
 #include "gamecore.h"
+#include "gametexture.h"
 #include <memory>
 
 namespace game::component {
@@ -14,53 +13,6 @@ namespace game::component {
 }
 
 namespace game::render {
-
-	struct Material;
-
-	struct TextureBase {
-	private:
-		friend Material;
-		virtual GLuint Id() const = 0;
-	public:
-		friend Material;
-		virtual void Bind() const = 0;
-		virtual size_t Width() const = 0;
-		virtual size_t Height() const = 0;
-		virtual ~TextureBase() {}
-	};
-
-	class Texture final : public TextureBase {
-		size_t width;
-		size_t height;
-		GLuint id;
-		GLuint Id() const override;
-	public:
-		Texture();
-		Texture(size_t width, size_t height, int elementSize, GLenum type, const void* pixels);
-		size_t Width() const override;
-		size_t Height() const override;
-		void Bind() const override;
-		void setPixels(int elementSize, GLenum type, const void* pixels);
-		void setPixels(int x, int y, int w, int h, int elementSize, GLenum type, const void* pixels);
-		static std::shared_ptr <Texture> BmpTexture(const char* data);
-		~Texture() override;
-	};
-
-	class AnimatedTexture final : public TextureBase {
-		size_t width;
-		size_t height;
-		int frames;
-		double delay;
-		std::unique_ptr<GLuint> id;
-		void Bind() const override;
-		GLuint Id() const override;
-	public:
-		AnimatedTexture();
-		size_t Width() const override;
-		size_t Height() const override;
-		void setPixels(int elementSize, GLenum type, const void* pixels);
-		static std::shared_ptr <Texture> BmpTexture(const char* data);
-	};
 
 	struct Material final {
 		bool useVertexColor;
@@ -73,6 +25,7 @@ namespace game::render {
 		float specularHighlight;
 		game::math::Vec4 emissiveColor;
 		std::shared_ptr<TextureBase> texture;
+
 		static Material defaultMaterial;
 		static Material shadowMaterial;
 		static Material fontMaterial;
@@ -90,6 +43,7 @@ namespace game::render {
 	struct Mesh final : MeshBase {
 		friend struct game::component::MeshRenderer;
 		friend struct game::component::ShadowRenderer;
+		friend struct game::component::ShadowRenderer;
 		std::shared_ptr<game::math::Vec3> vert_positions{};
 		std::shared_ptr<game::math::Vec3> vert_normals{};
 		std::shared_ptr<game::math::Vec4> vert_colors{};
@@ -100,9 +54,11 @@ namespace game::render {
 			vert_positions(vert_positions), vert_normals(vert_normals), vert_colors(vert_colors), vert_uvs(vert_uvs), vertices_length(vertices_length)
 		{}
 		void GenNormals();
+
 		static std::shared_ptr< game::render::Mesh> cubePrimative;
+		static std::shared_ptr< game::render::Mesh> plainPrimative;
+
 		static std::shared_ptr<game::render::Mesh> ObjMesh(const char* data);
-	private:
 		void Render(const game::math::Mat4& transform) const override;
 	};
 	struct FontMap {
@@ -173,6 +129,7 @@ namespace game::component {
 		Component_Requirements(Camera)
 	private:
 		game::math::Mat4 camera;
+		game::math::Mat4 inverseTrans;
 	public:
 		float fovy;
 		float nearPlane;
@@ -180,6 +137,7 @@ namespace game::component {
 		Camera() noexcept;
 		Camera(float fovy, float nearPlane, float farPlane) noexcept;
 		void OnResize() override;
+		void SyncUpdate() override;
 		void OnRender(int phase) override;
 	};
 

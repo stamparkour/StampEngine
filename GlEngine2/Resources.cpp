@@ -1,5 +1,6 @@
 #include "gameresources.h"
 #include "gamecore.h"
+#include "wincore.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -60,7 +61,6 @@ void reset() {
 
 void game::resources::Initizialize() {
 	reset();
-
 	auto basePath = std::filesystem::current_path();
 	std::filesystem::current_path("resources\\gfx");
 	char buffer[512];
@@ -79,6 +79,7 @@ void game::resources::Initizialize() {
 			textures.push_back(game::render::Texture::BmpTexture(game::core::readFile(path, NULL, true).get()));
 		}
 	}
+	win::state::ProcessWinEvents();
 
 	
 	file = std::fstream{ "meshes.txt" };
@@ -97,6 +98,7 @@ void game::resources::Initizialize() {
 			meshes.push_back(game::render::Mesh::ObjMesh(game::core::readFile(path, NULL, true).get()));
 		}
 	}
+	win::state::ProcessWinEvents();
 
 	file = std::fstream{ "materials.txt" };
 	while (!file.eof()) {
@@ -112,6 +114,7 @@ void game::resources::Initizialize() {
 			materials.push_back(game::render::Material::ParseMaterial(file));
 		}
 	}
+	win::state::ProcessWinEvents();
 
 	file = std::fstream{ "fonts.txt" };
 	while (!file.eof()) {
@@ -129,6 +132,8 @@ void game::resources::Initizialize() {
 			fonts.push_back(game::render::FontMap::ParseMap(game::core::readFile(path,NULL,false).get(), game::resources::texture(game::resources::textureIndex(tex))));
 		}
 	}
+	win::state::ProcessWinEvents();
+
 	file = std::fstream{ "audio.txt" };
 	while (!file.eof()) {
 		char path[256];
@@ -147,6 +152,7 @@ void game::resources::Initizialize() {
 			audioClips.push_back(std::shared_ptr<game::audio::AudioClip>{new game::audio::AudioClip(k, size)});
 		}
 	}
+	win::state::ProcessWinEvents();
 
 	std::filesystem::current_path(basePath);
 	std::filesystem::current_path("resources\\loc");
@@ -177,6 +183,8 @@ void game::resources::Initizialize() {
 		}
 		localizations.push_back(l);
 	}
+	win::state::ProcessWinEvents();
+
 	std::filesystem::current_path(basePath);
 }
 

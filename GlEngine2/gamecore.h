@@ -1,5 +1,6 @@
 #pragma once
 #include "audio.h"
+#include "gametexture.h"
 #include <vector>
 #include <string>
 #include <xaudio2.h>
@@ -52,6 +53,7 @@ namespace game::core {
 		friend struct Component;
 		friend struct Scene;
 		friend struct GameManager;
+		friend void __AddObject_children(game::core::Scene& scene, game::core::GameObject& obj);
 	private:
 		std::vector<Component*> components;
 		GameObjectState state;
@@ -108,9 +110,9 @@ namespace game::core {
 		friend struct GameObject;
 		friend struct GameManager;
 		friend void game::core::swap(game::core::GameObject& a, game::core::GameObject& b);
-		ComponentState state { ComponentState::Created};
 		Component() {}
 	private:
+		ComponentState state{ ComponentState::Created };
 		GameObject* gameObject{};
 	protected:
 		virtual void Awake() {}
@@ -131,6 +133,7 @@ namespace game::core {
 	struct Scene final {
 		friend struct GameManager;
 		friend struct GameObject;
+		friend void __AddObject_children(game::core::Scene& scene, game::core::GameObject& obj);
 	private:
 		std::vector<GameObject*> gameObjects{};
 	public:
@@ -138,7 +141,7 @@ namespace game::core {
 		Scene(Scene& other);
 		Scene& operator =(Scene& other);
 		GameObject& AddObject(const GameObject& object, std::string name = "");
-		void AddObject(GameObject&& object, std::string name = "");
+		GameObject& AddObject(GameObject&& object, std::string name = "");
 
 		//returns the first gameobject with name and without a parent, else
 		//returns the first gameobject with name, else
@@ -152,9 +155,9 @@ namespace game::core {
 		friend struct GameManager;
 	private:
 		double deltaTime;
-		double time;
+		double time = -1;
 		double fixedDeltaTime;
-		double fixedTime;
+		double fixedTime = -1;
 
 		void NextTimestep(double time);
 		void NextFixedTimestep(double time);
@@ -184,6 +187,7 @@ namespace game::core {
 		int screenX;
 		int screenY;
 		bool resized;
+		game::math::Vec3 clearColor;
 		static GameManager* current;
 	public:
 		TimeManager time;
@@ -202,7 +206,8 @@ namespace game::core {
 		void Render();
 		void KeyDown(char virtualKey);
 		void KeyUp(char virtualKey);
-
+		void BlankScreen(game::render::Texture* texture, float scale, game::math::Vec3 color);
+		void ClearColor(game::math::Vec3 color);
 		static GameManager* Current() noexcept;
 	};
 }
@@ -265,3 +270,5 @@ bool game::core::GameObject::RemoveComponent() {
 	}
 	return false;
 }
+
+extern void game::core::__AddObject_children(game::core::Scene& scene, game::core::GameObject& obj);
