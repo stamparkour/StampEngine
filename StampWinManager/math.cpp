@@ -170,6 +170,24 @@ float math::Dot(const Vec4& a, const Vec4& b) noexcept {
 Mat4::Mat4(float(&v)[16]) {
 	memcpy_s(this, sizeof(Mat4), v, sizeof(float)*16);
 }
+math::Mat4::Mat4(Vec4& v1, Vec4& v2, Vec4& v3, Vec4& v4) {
+	this->v1 = v1.x;
+	this->v2 = v1.y;
+	this->v3 = v1.z;
+	this->v4 = v1.w;
+	this->v5 = v2.x;
+	this->v6 = v2.y;
+	this->v7 = v2.z;
+	this->v8 = v2.w;
+	this->v9 = v3.x;
+	this->v10 = v3.y;
+	this->v11 = v3.z;
+	this->v12 = v3.w;
+	this->v13 = v4.x;
+	this->v14 = v4.y;
+	this->v15 = v4.z;
+	this->v16 = v4.w;
+}
 Mat4::Mat4(float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15, float v16) {
 	this->v1 = v1;
 	this->v2 = v2;

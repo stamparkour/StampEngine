@@ -4,7 +4,7 @@ namespace math {
 	struct Vec3;
 	struct Vec4;
 
-	struct Vec2 {
+	struct Vec2 final {
 		float x = 0;
 		float y = 0;
 
@@ -29,7 +29,7 @@ namespace math {
 		float Magnitude() const noexcept;
 		Vec2 Normal() const noexcept;
 	};
-	struct Vec3 {
+	struct Vec3 final {
 		float x = 0;
 		float y = 0;
 		float z = 0;
@@ -54,7 +54,7 @@ namespace math {
 		float Magnitude() const noexcept;
 		Vec3 Normal() const noexcept;
 	};
-	struct Vec4 {
+	struct Vec4 final {
 		float x = 0;
 		float y = 0;
 		float z = 0;
@@ -86,6 +86,7 @@ namespace math {
 	Vec3 Cross(const Vec3& A, const Vec3& B) noexcept;
 	float Dot(const Vec4& A, const Vec4& B) noexcept;
 
+	//colum-major
 	struct Mat4 final {
 		float v1 = 0;
 		float v2 = 0;
