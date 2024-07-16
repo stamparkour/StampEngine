@@ -104,14 +104,14 @@ public:
 			auto vec = particles[i]->selfObject()->transform.position - selfObject()->transform.position;
 			float mag = vec.Magnitude();
 			auto norm = vec / mag;
-			if (mag > 0.1 && mag < 2) {
-				float dist = (2 - mag) / 2;
+			if (mag > 0.1 && mag < 1) {
+				float dist = (1 - mag) / 2;
 				particles[i]->selfObject()->transform.position += vec * dist;
 				selfObject()->transform.position -= vec * dist;
 				auto ine = (velocity + particles[i]->velocity) / 2;
 				auto velo = particles[i]->velocity - velocity;
 				auto ela = norm * game::math::Vec3::Dot(norm, velo);
-				float elastisity = 0.9;
+				float elastisity = 0.96;
 				velocity = ine + (ela + velocity - ine) * elastisity;
 				particles[i]->velocity = ine + (-ela + particles[i]->velocity - ine) * elastisity;
 				particles[i]->charge = particles[i]->charge + game::core::TimeManager::DeltaTime() * ((particles[i]->charge + charge) / 2 - particles[i]->charge);
@@ -127,13 +127,13 @@ public:
 		float dist = pos.Magnitude();
 		if (dist < 0.1) return {};
 		float c = -charge / (4 * PI * vacuumPermittivity);
-		float d3 = pow(dist, 3);
-		float d5 = pow(dist, 5);
-		float d7 = pow(dist, 7);
-		auto A = pos / d3;
-		auto B = (game::math::Vec3{ 1 / d3 - 3 * (float)pow(pos.x,2) / d5, 1 / d3 - 3 * (float)pow(pos.y,2) / d5, 1 / d3 - 3 * (float)pow(pos.z,2) / d5 }) * dist / SpeedOfLight;
-		auto C = (game::math::Vec3{ 3 * pos.x * (5 * (float)pow(pos.x,2) / d7 - 3 / d5),3 * pos.y * (5 * (float)pow(pos.y,2) / d7 - 3 / d5),3 * pos.z * (5 * (float)pow(pos.z,2) / d7 - 3 / d5) }) * dist / SpeedOfLight;
-		return (A + B + C) * c;
+		float d3 = 1 / pow(dist, 3);
+		float d5 = 1 / pow(dist, 5);
+		float d7 = 1 / pow(dist, 7);
+		auto A = pos * d3;
+		auto B = (game::math::Vec3{ d3 - 3 * (float)pow(pos.x,2) * d5, d3 - 3 * (float)pow(pos.y,2) * d5, d3 - 3 * (float)pow(pos.z,2) * d5 });
+		auto C = (game::math::Vec3{ 3 * pos.x * (5 * (float)pow(pos.x,2) * d7 - 3 * d5),3 * pos.y * (5 * (float)pow(pos.y,2) * d7 - 3 * d5),3 * pos.z * (5 * (float)pow(pos.z,2) * d7 - 3 * d5) });
+		return (A + (B + C) * dist / SpeedOfLight) * c;
 	}
 	game::math::Vec3 ElectricToMagnetic(game::math::Vec3 elec, game::math::Vec3 pos) {
 		pos = selfObject()->transform.position - pos;

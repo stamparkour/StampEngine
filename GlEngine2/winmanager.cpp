@@ -129,7 +129,7 @@ void OnCreate(HWND hwnd) {
 	glGetIntegerv(GL_STENCIL_BITS, &value);
 	wglSwapIntervalEXT(1);
 	glDrawBuffer(GLWinBitMask & GLWINMODE_VSYNC ? GL_BACK : GL_FRONT);
-
+	
 	RAWINPUTDEVICE Rid[1];
 	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
 	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
@@ -141,7 +141,6 @@ void OnCreate(HWND hwnd) {
 void OnPaint(HWND hwnd) {
 	HDC hdc = wglGetCurrentDC();
 	HGLRC glc = wglGetCurrentContext();
-
 	glStencilMask(0xFF);
 	glDepthMask(GL_TRUE);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
