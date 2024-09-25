@@ -1,13 +1,10 @@
 #pragma once
-#include <Windows.h>
-
-#ifdef STAMPWINMANAGER_EXPORTS
-#define __declspec(dllexport)
-#else
-#define __declspec(dllimport)
-#endif
+#include "GLM/glm.h"
+#include <vector>
 
 #define SWM_WRONG_THREAD 0x1A0000
+#define SWM_GL_FAIL_CREATION 0x1A0001
+#define SWM_WINDOW_FAIL_CREATION 0x1A0002
 
 namespace swm {
 	struct VertKey {
@@ -114,7 +111,7 @@ namespace swm {
 			OEM_Comma = 0xbc,
 			OEM_Period = 0xbe,
 		};
-		int value;
+		int _value;
 	};
 	struct WinPos {
 		int width;
@@ -127,12 +124,12 @@ namespace swm {
 		Confined,
 		Frozen,
 	};
-	struct winevent {
+	struct winEvent {
 		void (*Start_proc)(double time);
 		void (*Update_proc)(double time);
 		void (*SyncUpdate_proc)(double time);
-		void (*Resize_proc)(double time, long width, long height);
 		void (*Render_proc)(double time);
+		void (*Resize_proc)(double time, long width, long height);
 		void (*Keydown_proc)(VertKey key);
 		void (*Keyup_proc)(VertKey key);
 	};
@@ -155,24 +152,24 @@ namespace swm {
 			ThrowExceptions = 1024,
 			DynamicAttributes = 2048,
 		};
-		unsigned int value;
+		unsigned int _value;
 	};
 	//stamp window initialization flag
 	struct SWIF {
 		enum {
 			Debug = 1,
 		};
-		unsigned int value;
+		unsigned int _value;
 	};
 	struct StampWindowDesc {
 		const wchar_t* name = 0;
 		//swdf flags
-		unsigned long flags = 0;
+		SWDF flags{};
 		//set to 0 for default
 		unsigned long width = 0;
 		//set to 0 for default
 		unsigned long height = 0;
-		winevent winevent;
+		winEvent winevent;
 	};
 	struct SWHWND {
 		struct SWHWND_d* data;
@@ -208,22 +205,6 @@ namespace swm {
 	void getDesktopResolution(int& horizontal, int& vertical);
 
 	void initializeSWM(HINSTANCE hInstance, SWIF flags);
-}
 
 
-#ifdef STAMPWINMANAGER_SAFE
-namespace win::event {
-	void Start(double time);
-	void Update(double time);
-	void SyncUpdate(double time);
-	void Resize(double time);
-	void Render(double time);
-	stamp::win::StampWindowDesc WIN_DESC;
 }
-int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
-	auto w = stamp::win::registerWindow(&win::event::WIN_DESC);
-	WIN_DESC.
-	stamp::win::sleepUntilWindowTerminate(w);
-}
-#endif
-

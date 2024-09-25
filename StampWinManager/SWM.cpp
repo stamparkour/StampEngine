@@ -1,6 +1,11 @@
 #include "SWM.hpp"
 #include <thread>
+#include <hidusage.h>
 #include <windowsx.h>
+#include "eventlistener.hpp"
+#include "EL_list.hpp"
+
+EventListener<swm::SWHWND*> EL_WinCreateGLInit;
 
 struct UpdateWin {
 	enum {
@@ -8,31 +13,31 @@ struct UpdateWin {
 		vSync = 2,
 		WindowMode = 4,
 	};
-	unsigned int value;
+	unsigned int _value;
 };
 
 struct swm::SWHWND_d {
-	std::thread managementThread;
-	HWND winHandle;
-	swm::StampWindowDesc desc;
-	bool initialized;
-	bool active;
-	bool vSync;
-	bool currentCursorVisible;
-	bool cursorVisble;
-	bool borderless;
-	swm::CursorConstraintState cursorContraint;
-	bool canUpdateWin;
-	UpdateWin updateWinAttrib;
-	int deltaMouseX;
-	int deltaMouseY;
-	int cursorX;
-	int cursorY;
-	int deltaScroll;
-	long long pauseTime;
-	long long startTime;
-	swm::WinPos winPos;
-	HINSTANCE hInstance;
+	std::thread managementThread{};
+	HWND winHandle = 0;
+	swm::StampWindowDesc desc{};
+	bool initialized = false;
+	bool active = false;
+	bool vSync = false;
+	bool currentCursorVisible = false;
+	bool cursorVisble = false;
+	bool borderless = false;
+	swm::CursorConstraintState cursorContraint{};
+	bool canUpdateWin = false;
+	UpdateWin updateWinAttrib{};
+	int deltaMouseX = 0;
+	int deltaMouseY = 0;
+	int cursorX = 0;
+	int cursorY = 0;
+	int deltaScroll = 0;
+	long long pauseTime = 0;
+	long long startTime = 0;
+	swm::WinPos winPos{};
+	HINSTANCE hInstance = 0;
 };
 //timer management
 double tickTimeLength = []() -> double {
@@ -91,6 +96,7 @@ bool InternalCursorConstraint(swm::SWHWND* win, swm::CursorConstraintState const
 		return ClipCursor(&rect);
 	}
 	}
+	return false;
 }
 bool InternalShowCursor(swm::SWHWND* win, bool visible) {
 	if (win->data->currentCursorVisible && !visible) {
@@ -101,10 +107,11 @@ bool InternalShowCursor(swm::SWHWND* win, bool visible) {
 		win->data->currentCursorVisible = true;
 		return ShowCursor(true);
 	}
+	return 0;
 }
 
 bool swm::isKeyDown(VertKey key) {
-	return GetAsyncKeyState(key.value) < 0;
+	return GetAsyncKeyState(key._value) < 0;
 }
 bool swm::isKeyUp(VertKey key) {
 	return !swm::isKeyDown(key);
@@ -113,7 +120,7 @@ bool swm::isKeyUp(VertKey key) {
 void swm::SWHWND::setVsync(bool v) {
 	if (!data->canUpdateWin) throw - 1;
 	data->vSync = v;
-	data->updateWinAttrib.value |= UpdateWin::vSync;
+	data->updateWinAttrib._value |= UpdateWin::vSync;
 }
 bool swm::SWHWND::getVsync() const {
 	return data->vSync;
@@ -121,7 +128,7 @@ bool swm::SWHWND::getVsync() const {
 void swm::SWHWND::setBorderless(bool v) {
 	if (!data->canUpdateWin) throw - 1;
 	data->borderless = v;
-	data->updateWinAttrib.value |= UpdateWin::WindowMode;
+	data->updateWinAttrib._value |= UpdateWin::WindowMode;
 }
 bool swm::SWHWND::getBorderless() const {
 	return data->borderless;
@@ -143,14 +150,14 @@ long swm::SWHWND::getCursorY() const {
 }
 void swm::SWHWND::setCursorVisibility(bool visible) {
 	data->cursorVisble = visible;
-	data->updateWinAttrib.value |= UpdateWin::Cursor;
+	data->updateWinAttrib._value |= UpdateWin::Cursor;
 }
 bool swm::SWHWND::getCursorVisibility() const {
 	return data->cursorVisble;
 }
 void swm::SWHWND::setCursorConstraint(swm::CursorConstraintState state) {
 	data->cursorContraint = state;
-	data->updateWinAttrib.value |= UpdateWin::Cursor;
+	data->updateWinAttrib._value |= UpdateWin::Cursor;
 }
 swm::CursorConstraintState swm::SWHWND::getCursorConstraint() {
 	return data->cursorContraint;
@@ -181,8 +188,42 @@ void swm::SWHWND::processWinEvents() {
 	}
 }
 
+void OnCreate(HWND hwnd, CREATESTRUCT* create) {
+	swm::SWHWND* ptr = (swm::SWHWND*)create->lpCreateParams;
+	ptr->data->winHandle = hwnd;
+	SetWindowLongPtr(hwnd, 0, (LONG_PTR)ptr);
+	HDC displayContext = GetDC(hwnd);
+	PIXELFORMATDESCRIPTOR pfd = {
+		sizeof(PIXELFORMATDESCRIPTOR), 1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+		PFD_TYPE_RGBA, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 8, PFD_MAIN_PLANE, 0, 0, 0, 0
+	};
+	int iPixelFormat = ChoosePixelFormat(displayContext, &pfd);
+	DescribePixelFormat(displayContext, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+	if (SetPixelFormat(displayContext, iPixelFormat, &pfd) == FALSE)
+		return;
+	HGLRC glContext = wglCreateContext(displayContext);
+	if (wglMakeCurrent(displayContext, glContext) == FALSE) throw SWM_GL_FAIL_CREATION;
+	glmInit();
+	EL_WinCreateGLInit(ptr);
+	int value;
+	glGetIntegerv(GL_STENCIL_BITS, &value);
+	wglSwapIntervalEXT(1);
+	glDrawBuffer(ptr->data->vSync ? GL_BACK : GL_FRONT);
+
+	RAWINPUTDEVICE Rid[1];
+	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	Rid[0].dwFlags = RIDEV_INPUTSINK;
+	Rid[0].hwndTarget = hwnd;
+	RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
+	ReleaseDC(hwnd, displayContext);
+}
+
 LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	swm::SWHWND* ptr = (swm::SWHWND*)GetWindowLongPtrW(hwnd, 0);
+	swm::SWHWND_d* data = 0;
+	if (ptr != NULL) data = ptr->data;
 	switch (msg) {
 	case WM_DESTROY:
 		PostQuitMessage(0);
@@ -190,59 +231,59 @@ LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		ptr->data->desc.winevent.Keydown_proc(swm::VertKey{ (int)wParam });
+		if(data && data->desc.winevent.Keydown_proc) data->desc.winevent.Keydown_proc(swm::VertKey{ (int)wParam });
 		break;
 	case WM_KEYUP://https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 	case WM_SYSKEYUP:
-		ptr->data->desc.winevent.Keyup_proc(swm::VertKey{ (int)wParam });
+		data->desc.winevent.Keyup_proc(swm::VertKey{ (int)wParam });
 		break;
 	case WM_CREATE:
-		OnCreate(hwnd);
+		OnCreate(hwnd, (CREATESTRUCT*)lParam);
 		break;
 	case WM_PAINT:
 		break;
 	case WM_WINDOWPOSCHANGED: {
 		WINDOWPOS* winpos = (WINDOWPOS*)lParam;
-		ptr->data->winPos.width = winpos->cx;
-		ptr->data->winPos.height = winpos->cy;
-		ptr->data->winPos.left = winpos->x;
-		ptr->data->winPos.top = winpos->y;
-		if (ptr->data->active || !ptr->data->initialized) {
-			InternalCursorConstraint(ptr, ptr->data->cursorContraint);
-			InternalShowCursor(ptr, ptr->data->cursorVisble);
-			ptr->data->active = true;
+		data->winPos.width = winpos->cx;
+		data->winPos.height = winpos->cy;
+		data->winPos.left = winpos->x;
+		data->winPos.top = winpos->y;
+		if (data->active || !data->initialized) {
+			InternalCursorConstraint(ptr, data->cursorContraint);
+			InternalShowCursor(ptr, data->cursorVisble);
+			data->active = true;
 		}
-		if (!ptr->data->initialized) {
-			ptr->data->initialized = true;
+		if (!data->initialized) {
+			data->initialized = true;
 		}
-		ptr->data->desc.winevent.Resize_proc(ptr->getTime(), winpos->cx, winpos->cy);
+		if (data && data->desc.winevent.Resize_proc) data->desc.winevent.Resize_proc(ptr->getTime(), winpos->cx, winpos->cy);
 		glViewport(0, 0, winpos->cx, winpos->cy);
 		PauseTimer(ptr);
 	} break;
 	case WM_ACTIVATE:
 		if (wParam == WA_INACTIVE) {
-			ptr->data->active = false;
+			data->active = false;
 			InternalShowCursor(ptr,true);
 			InternalCursorConstraint(ptr, swm::CursorConstraintState::Free);
-			if (ptr->data->borderless) {
+			if (data->borderless) {
 				ShowWindow(hwnd, SW_MINIMIZE);
 			}
 		}
-		else if (ptr->data->borderless) {
-			InternalCursorConstraint(ptr, ptr->data->cursorContraint);
-			InternalShowCursor(ptr, ptr->data->cursorVisble);
-			ptr->data->active = true;
+		else if (data->borderless) {
+			InternalCursorConstraint(ptr, data->cursorContraint);
+			InternalShowCursor(ptr, data->cursorVisble);
+			data->active = true;
 		}
 		break;
 	case WM_LBUTTONDOWN:
-		if (!ptr->data->active) {
-			InternalCursorConstraint(ptr, ptr->data->cursorContraint);
-			InternalShowCursor(ptr, ptr->data->cursorVisble);
-			ptr->data->active = true;
+		if (!data->active) {
+			InternalCursorConstraint(ptr, data->cursorContraint);
+			InternalShowCursor(ptr, data->cursorVisble);
+			data->active = true;
 		}
 		break;
 	case WM_INPUT:
-		if (ptr->data->active) {
+		if (data->active) {
 			UINT dwSize = sizeof(RAWINPUT);
 			static thread_local BYTE lpb[sizeof(RAWINPUT)];
 
@@ -252,22 +293,22 @@ LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 			if (raw->header.dwType == RIM_TYPEMOUSE)
 			{
-				ptr->data->deltaMouseX += raw->data.mouse.lLastX;
-				ptr->data->deltaMouseY += raw->data.mouse.lLastY;
+				data->deltaMouseX += raw->data.mouse.lLastX;
+				data->deltaMouseY += raw->data.mouse.lLastY;
 			}
 		}
 		break;
 	case WM_MOUSEMOVE:
-		if (ptr->data->active) {
-			ptr->data->cursorX = GET_X_LPARAM(lParam);
-			ptr->data->cursorY = GET_Y_LPARAM(lParam);
+		if (data->active) {
+			data->cursorX = GET_X_LPARAM(lParam);
+			data->cursorY = GET_Y_LPARAM(lParam);
 		}
 		break;
 	case WM_MOUSEWHEEL:
-		if (ptr->data->active) {
-			ptr->data->deltaScroll += GET_WHEEL_DELTA_WPARAM(wParam);
-			ptr->data->cursorX = GET_X_LPARAM(lParam);
-			ptr->data->cursorY = GET_Y_LPARAM(lParam);
+		if (data->active) {
+			data->deltaScroll += GET_WHEEL_DELTA_WPARAM(wParam);
+			data->cursorX = GET_X_LPARAM(lParam);
+			data->cursorY = GET_Y_LPARAM(lParam);
 		}
 		break;
 	default:
@@ -277,7 +318,77 @@ LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 void ManageWindow(swm::SWHWND* ptr) {
+	auto* data = ptr->data;
+	if (data->borderless) {
+		int width = CW_USEDEFAULT;
+		int height = CW_USEDEFAULT;
+		swm::getDesktopResolution(width, height);
+		data->winHandle = CreateWindowExW(WS_EX_TOPMOST, L"StampWinManager_CLASS", data->desc.name, WS_POPUP,
+			0, 0, width, height, NULL, NULL, data->hInstance, ptr);
+	}
+	else {
+		int defaultWidth = data->desc.width != 0 ? data->desc.width : CW_USEDEFAULT;
+		int defaultHeight = data->desc.height != 0 ? data->desc.height : CW_USEDEFAULT;
+		data->winHandle = CreateWindowW(L"StampWinManager_CLASS", data->desc.name,
+			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+			CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, NULL, NULL, data->hInstance, ptr);
+	}
 
+	if (data->winHandle == NULL) {
+		DWORD error = GetLastError();
+		throw SWM_WINDOW_FAIL_CREATION;
+	}
+
+	data->startTime = getTimeRaw();
+	try {
+		if(data->desc.winevent.Start_proc) data->desc.winevent.Start_proc(ptr->getTime());
+		MSG msg;
+		while (IsWindow(data->winHandle)) {
+			for (int i = 0; i < 500 && PeekMessage(&msg, data->winHandle, 0, 0, PM_REMOVE) != 0; i++) {
+				if (msg.message == WM_PAINT)
+					break;
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+
+			std::thread update{ data->desc.winevent.Update_proc, ptr->getTime() };
+
+			HDC hdc = wglGetCurrentDC();
+			//HGLRC glc = wglGetCurrentContext();
+			glStencilMask(0xFF);
+			glDepthMask(GL_TRUE);
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+			if(data->desc.winevent.Render_proc) data->desc.winevent.Render_proc(ptr->getTime());
+			glFlush();//glFinish();
+			if (data->vSync) SwapBuffers(hdc);
+
+			update.join();
+			if(data->desc.winevent.SyncUpdate_proc) data->desc.winevent.SyncUpdate_proc(ptr->getTime());
+
+			data->deltaMouseX = 0;
+			data->deltaMouseY = 0;
+			data->deltaScroll = 0;
+
+			if (data->updateWinAttrib._value) {
+				if (data->updateWinAttrib._value & UpdateWin::Cursor) {
+					InternalCursorConstraint(ptr, data->cursorContraint);
+					InternalShowCursor(ptr, data->cursorVisble);
+				}
+				if (data->updateWinAttrib._value & UpdateWin::vSync) {
+					glDrawBuffer(data->vSync ? GL_BACK : GL_FRONT);
+				}
+				if (data->updateWinAttrib._value & UpdateWin::WindowMode) {
+					//borderless
+				}
+				data->updateWinAttrib._value = 0;
+			}
+		}
+	}
+	catch (std::exception e) {
+
+	}
 }
 
 void swm::initializeSWM(HINSTANCE hInstance, SWIF flags) {
@@ -292,18 +403,19 @@ void swm::initializeSWM(HINSTANCE hInstance, SWIF flags) {
 
 	//creates window class
 
-	WNDCLASSEX windowClass = {
+	WNDCLASSEXW windowClass = {
+		sizeof(WNDCLASSEXW),
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
-		sizeof(WNDCLASSEX),
 		Wndproc,
 		0,
-		0,
+		sizeof(void*),
 		hInstance,
 		NULL,//icon
 		NULL,//cursor
 		NULL,
 		NULL,
-		L"StampWinManager_CLASS"
+		L"StampWinManager_CLASS",
+		NULL
 	};
 
 	ATOM windowClassAtom = RegisterClassExW(&windowClass);
@@ -312,7 +424,7 @@ void swm::initializeSWM(HINSTANCE hInstance, SWIF flags) {
 		throw error;
 	}
 
-	if (flags.value & SWIF::Debug) {
+	if (flags._value & SWIF::Debug) {
 		AllocConsole();
 #pragma warning(suppress : 4996)
 		freopen("CONOUT$", "w", stdout);
@@ -321,34 +433,16 @@ void swm::initializeSWM(HINSTANCE hInstance, SWIF flags) {
 	}
 }
 swm::SWHWND::SWHWND(StampWindowDesc* desc, HINSTANCE hInstance) {
+	data = 0;
 	if (desc == NULL) return;
 	data = new SWHWND_d();
-	data->updateWinAttrib.value = 0;
+	data->updateWinAttrib._value = 0;
 	data->desc = *desc;
-	data->borderless = desc->flags & SWDF::Borderless;
-	data->vSync = desc->flags & SWDF::Vsync;
+	data->borderless = desc->flags._value & SWDF::Borderless;
+	data->vSync = desc->flags._value & SWDF::Vsync;
 	data->cursorContraint = swm::CursorConstraintState::Free;
 	data->hInstance = hInstance;
-	data->canUpdateWin = desc->flags & SWDF::DynamicAttributes;
-	HWND hwnd;
-
-	if (data->borderless) {
-		int width = CW_USEDEFAULT;
-		int height = CW_USEDEFAULT;
-		swm::getDesktopResolution(width, height);
-		hwnd = CreateWindowExW(WS_EX_TOPMOST, L"StampWinManager_CLASS", data->desc.name, WS_POPUP,
-			0, 0, width, height, NULL, NULL, hInstance, NULL);
-	}
-	else {
-		int defaultWidth = CW_USEDEFAULT;
-		int defaultHeight = CW_USEDEFAULT;
-		hwnd = CreateWindowW(L"StampWinManager_CLASS", data->desc.name,
-			WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-			CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, NULL, NULL, hInstance, NULL);
-	}
-
-	swm::SWHWND* ptr = (swm::SWHWND*)GetWindowLongPtrW(hwnd, 0);
-	ptr = this;
+	data->canUpdateWin = desc->flags._value & SWDF::DynamicAttributes;
 
 	data->managementThread = std::thread{ ManageWindow, this };
 }

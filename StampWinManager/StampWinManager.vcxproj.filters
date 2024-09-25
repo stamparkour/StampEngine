@@ -13,27 +13,60 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\GLM">
+      <UniqueIdentifier>{ccecc3a3-5339-4acc-a6cd-c2428a68c819}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GLM">
+      <UniqueIdentifier>{903b7bd4-602f-4e7b-8477-0e870704d527}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SE">
+      <UniqueIdentifier>{7d9a95de-bee1-482d-a50f-28b40e5b8114}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SE">
+      <UniqueIdentifier>{d37b36b9-7c88-434f-b5c7-e8cd02904bf0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SWM.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GLM\glm.h">
+      <Filter>Header Files\GLM</Filter>
+    </ClInclude>
+    <ClInclude Include="SE\stampengine.hpp">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="SE\render.hpp">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="SE\dll.h">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="eventlistener.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EL_list.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SWM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="math.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="GLM\GLM.cpp">
+      <Filter>Source Files\GLM</Filter>
+    </ClCompile>
+    <ClCompile Include="SE\StampEngine.cpp">
+      <Filter>Source Files\SE</Filter>
+    </ClCompile>
+    <ClCompile Include="SE\Render.cpp">
+      <Filter>Source Files\SE</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

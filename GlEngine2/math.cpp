@@ -270,7 +270,6 @@ Quat& Quat::operator *=(float b) noexcept {
 	*this = *this * b;
 	return *this;
 }
-
 Quat Quat::RotationX(float v) noexcept {
 	return { cosf(v / 2),sinf(v / 2),0,0 };
 }
@@ -284,11 +283,9 @@ Quat Quat::RotationAxis(float r, const Vec3& axis) noexcept {
 	Vec3 a = axis.Normal();
 	return { cosf(r / 2),a.x * sinf(r / 2),a.y * sinf(r / 2),a.z * sinf(r / 2) };
 }
-
 Quat Quat::RotationZXY(float x, float y, float z) noexcept {
 	return Quat::RotationZ(z) * Quat::RotationX(x) * Quat::RotationY(y);
 }
-
 Quat Quat::RotationZYX(float x, float y, float z) noexcept {
 	return Quat::RotationZ(z) * Quat::RotationY(y) * Quat::RotationX(x);
 }
