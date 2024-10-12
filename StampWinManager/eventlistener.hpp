@@ -4,7 +4,7 @@
 
 
 template<class... P>
-class EventListener {
+class EventListener final {
 	std::mutex mutex;
 	std::vector<void (*)(P...)> ptr{};
 public:
@@ -12,11 +12,12 @@ public:
 	bool unsubscribe(void (*callback)(P...));
 	bool hasCallback(void (*callback)(P...));
 	void operator() (P... p);
-	void call(P... p) { (*this)(p...); }
+	void call(P... p);
 };
 
 template<class ...P>
 bool EventListener<P...>::subscribe(void(*callback)(P...)) {
+	if (callback == 0) return false;
 	mutex.lock();
 	ptr.push_back(callback);
 	mutex.unlock();
@@ -24,6 +25,7 @@ bool EventListener<P...>::subscribe(void(*callback)(P...)) {
 }
 template<class ...P>
 bool EventListener<P...>::unsubscribe(void(*callback)(P...)) {
+	if (callback == 0) return false;
 	mutex.lock();
 	for (int i = 0; i < ptr.size(); i++) {
 		if (ptr[i] == callback) {
@@ -37,6 +39,7 @@ bool EventListener<P...>::unsubscribe(void(*callback)(P...)) {
 }
 template<class ...P>
 bool EventListener<P...>::hasCallback(void(*callback)(P...)) {
+	if (callback == 0) return false;
 	mutex.lock();
 	for (int i = 0; i < ptr.size(); i++) {
 		if (ptr[i] == callback) {
@@ -47,11 +50,16 @@ bool EventListener<P...>::hasCallback(void(*callback)(P...)) {
 	mutex.unlock();
 	return false;
 }
+template<typename ...P>
+void EventListener<P...>::operator()(P... para) {
+	call(para...);
+}
 template<class ...P>
-void EventListener<P...>::operator()(P... p) {
+void EventListener<P...>::call(P ...para) {
 	mutex.lock();
-	for (int i = 0; i < ptr.size(); i++) {
-		ptr[i](p...);
+	for (const auto& k : ptr) {
+		k(para...);
 	}
+
 	mutex.unlock();
 }

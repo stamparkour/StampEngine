@@ -27,45 +27,48 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SWM.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="math.hpp">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GLM\glm.h">
-      <Filter>Header Files\GLM</Filter>
-    </ClInclude>
-    <ClInclude Include="SE\stampengine.hpp">
-      <Filter>Header Files\SE</Filter>
-    </ClInclude>
-    <ClInclude Include="SE\render.hpp">
-      <Filter>Header Files\SE</Filter>
-    </ClInclude>
-    <ClInclude Include="SE\dll.h">
-      <Filter>Header Files\SE</Filter>
     </ClInclude>
     <ClInclude Include="eventlistener.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EL_list.hpp">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="engine.hpp">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="libload.h">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="dll.h">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="render.hpp">
+      <Filter>Header Files\SE</Filter>
+    </ClInclude>
+    <ClInclude Include="glm.h">
+      <Filter>Header Files\GLM</Filter>
+    </ClInclude>
+    <ClInclude Include="SWM.hpp">
+      <Filter>Header Files\SE</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SWM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GLM\GLM.cpp">
-      <Filter>Source Files\GLM</Filter>
-    </ClCompile>
-    <ClCompile Include="SE\StampEngine.cpp">
+    <ClCompile Include="StampEngine.cpp">
       <Filter>Source Files\SE</Filter>
     </ClCompile>
-    <ClCompile Include="SE\Render.cpp">
+    <ClCompile Include="Render.cpp">
+      <Filter>Source Files\SE</Filter>
+    </ClCompile>
+    <ClCompile Include="LibLoad.cpp">
+      <Filter>Source Files\SE</Filter>
+    </ClCompile>
+    <ClCompile Include="GLM.cpp">
+      <Filter>Source Files\GLM</Filter>
+    </ClCompile>
+    <ClCompile Include="SWM.cpp">
       <Filter>Source Files\SE</Filter>
     </ClCompile>
   </ItemGroup>

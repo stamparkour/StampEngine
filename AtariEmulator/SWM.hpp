@@ -242,7 +242,7 @@ namespace swm {
 		SWHWND(const SWHWND&) = delete;
 		~SWHWND();
 
-		void setVsync(bool v) { SWM_struct->SWHWND_setVsync_proc(this,v); }
+		void setVsync(bool v) { SWM_struct->SWHWND_setVsync_proc(this, v); }
 		bool getVsync() const { return SWM_struct->SWHWND_getVsync_proc(this); }
 		void setBorderless(bool v) { SWM_struct->SWHWND_setBorderless_proc(this, v); }
 		bool getBorderless() const { return SWM_struct->SWHWND_getBorderless_proc(this); }
@@ -261,16 +261,13 @@ namespace swm {
 		bool getCursorVisibility() const { return SWM_struct->SWHWND_getCursorVisibility_proc(this); }
 		void setCursorConstraint(CursorConstraintState state) { SWM_struct->SWHWND_setCursorConstraint_proc(this, state); }
 		CursorConstraintState getCursorConstraint() const { return SWM_struct->SWHWND_getCursorConstraint_proc(this); }
-		void AddListener(WinEvent& e);
 	};
 
 	inline bool isKeyDown(VertKey key) { return SWM_struct->isKeyDown_proc(key); }
 	inline bool isKeyUp(VertKey key) { return SWM_struct->isKeyDown_proc(key); }
 	inline WinPoint getCursorAbsolutePos() { return SWM_struct->getCursorAbsolutePos_proc(); }
 	inline void getDesktopResolution(int& horizontal, int& vertical) { return SWM_struct->getDesktopResolution_proc(horizontal, vertical); }
+
 	//internal functions
 	//user must call once before creating SWHWND 
-	void initializeSWM(HINSTANCE hInstance, SWIF flags);
-
-	void checkOpenGLErrors();
 }

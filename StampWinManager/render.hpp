@@ -2,8 +2,8 @@
 #include "dll.h"
 #include <vector>
 #include <exception>
-#include "../math.hpp"
-#include "../GLM/glm.h"
+#include "math.hpp"
+#include "glm.h"
 #include <utility>
 #include <istream>
 
@@ -13,10 +13,11 @@
 #define ATTRIBPOINTER_COLOR 3
 
 namespace render {
+
 	template<class P>
 	struct RawMeshBase;
 
-	struct PointPNUC final {
+	struct PointP3NUC final {
 		math::Vec3f pos;
 		math::Vec3f normal;
 		math::Vec2f uv;
@@ -24,12 +25,12 @@ namespace render {
 
 		//function to descibe vertex attributes
 		static void bindAttrib() {
-			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointPNUC), (void*)offsetof(PointPNUC, pos));
-			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointPNUC), (void*)offsetof(PointPNUC, normal));
-			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(PointPNUC), (void*)offsetof(PointPNUC, uv));
-			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(PointPNUC), (void*)offsetof(PointPNUC, color));
+			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, pos));
+			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, normal));
+			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, uv));
+			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, color));
 		}
-		static std::vector<PointPNUC> ParseStream_obj(std::istream data) {
+		static std::vector<PointP3NUC> ParseStream_obj(std::istream data) {
 			auto spos = data.tellg();
 			std::vector<math::Vec3f> pos{};
 			std::vector<math::Vec3f> normal{};
@@ -65,8 +66,8 @@ namespace render {
 				}
 			}
 			data.seekg(spos);
-			std::vector<PointPNUC> mesh{};
-			std::vector<PointPNUC> points{};
+			std::vector<PointP3NUC> mesh{};
+			std::vector<PointP3NUC> points{};
 			while ((bool)data) {
 				data.getline(line, sizeof(line));
 				points.clear();
@@ -79,7 +80,7 @@ namespace render {
 				char* d = line + 1;
 				while (sscanf_s(d, " %d/%d/%d%n", &p, &t, &n, &c) == 3) {
 					d += c;
-					PointPNUC point{};
+					PointP3NUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -88,7 +89,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d//%d%n", &p, &n, &c) == 2) {
 					d += c;
-					PointPNUC point{};
+					PointP3NUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.normal = normal[n - 1];
@@ -96,7 +97,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d/%d%n", &p, &t, &c) == 2) {
 					d += c;
-					PointPNUC point{};
+					PointP3NUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -104,7 +105,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d%n", &p, &c) == 1) {
 					d += c;
-					PointPNUC point{};
+					PointP3NUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					points.push_back(point);
@@ -119,8 +120,6 @@ namespace render {
 			return mesh;
 		}
 	};
-
-
 	
 	class Mesh final {
 		GLuint vbo = 0;
@@ -157,7 +156,7 @@ namespace render {
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, ptr, usageHint);
 		}
 		void bind() {
-			if (!isValid()) throw new std::exception("render::Mesh::bind - failed to bind mesh: mesh does not have assigned buffers.");
+			if (!isValid()) throw std::runtime_error("render::Mesh::bind - failed to bind mesh: mesh does not have assigned buffers.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		}
@@ -190,7 +189,7 @@ namespace render {
 			glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 			if (compiled != GL_TRUE) {
 				glGetShaderInfoLog(shader, sizeof(message), &log_length, message);
-				throw new std::exception(message);
+				throw std::runtime_error(message);
 			}
 		}
 		GLuint getShader() const {
@@ -219,13 +218,13 @@ namespace render {
 			glGetProgramiv(program, GL_LINK_STATUS, &compiled);
 			if (compiled != GL_TRUE) {
 				glGetProgramInfoLog(program, 1024, &log_length, message);
-				throw new std::exception(message);
+				throw std::runtime_error(message);
 			}
 		}
 		void bind() {
 			glUseProgram(program);
 		}
-		bool isValid() {
+		bool isValid() const {
 			return program != 0;
 		}
 		virtual ~ShaderBase() {
@@ -246,7 +245,7 @@ namespace render {
 	public:
 		MaterialBase() {}
 		//attributes
-		//deconstructor
+		//virtual deconstructor
 		template<class P>
 		void bindAttrib() {
 			if (vao == 0) glGenVertexArrays(1, &vao);
@@ -260,7 +259,7 @@ namespace render {
 			glVertexAttrib4f(ATTRIBPOINTER_COLOR, 1, 1, 1, 1);//color
 		}
 		void bind() {
-			if (!isValid()) throw new std::exception("failed to bind mesh: mesh does not have allocated buffers.");
+			if (!isValid()) throw std::runtime_error("failed to bind mesh: mesh does not have allocated buffers.");
 			glBindVertexArray(vao);
 			shader.bind();
 		}
@@ -295,17 +294,17 @@ namespace render {
 		void SetPixel(size_t x, size_t y, const T& v) {
 			data[x + y * width] = v;
 		}
-		T getPixel(size_t x, size_t y) {
+		T GetPixel(size_t x, size_t y) {
 			return data[x + y * width];
 		}
 		void SetImage(size_t length, const T* list) {
-			if (length < width * height) throw std::exception("render::RawTextureBase::SetImage - length cant be less than width*height.");
+			if (length < width * height) throw std::runtime_error("render::RawTextureBase::SetImage - length cant be less than width*height.");
 			for (int i = 0; i < width * height; i++) {
 				data[i] = list[i];
 			}
 		}
 		void SetSubImage(size_t x, size_t y, size_t width, size_t height, size_t length, const T* list) {
-			if (length < width * height) throw std::exception("render::RawTextureBase::SetImage - length cant be less than width*height.");
+			if (length < width * height) throw std::runtime_error("render::RawTextureBase::SetImage - length cant be less than width*height.");
 			for (size_t Y = 0; Y < height; Y++) {
 				for (size_t X = 0; X < width; X++) {
 					size_t i = X + Y * width;
@@ -316,23 +315,24 @@ namespace render {
 		}
 		size_t Width() { return width; }
 		size_t Height() { return height; }
-		void* GetData() { return &(data[0]); }
+		//thread-unsafe
+		T* GetData() { return &(data[0]); }
 
 		//get subImage
 	};
 
-	class RawTexture2d4f : public RawTexture2dBase<math::Vec4f, GL_RGBA, GL_RGBA8> {
+	class RawTexture2d4f final : public RawTexture2dBase<math::Vec4f, GL_RGBA, GL_FLOAT> {
 	public:
 		RawTexture2d4f() : RawTexture2dBase() {}
 		RawTexture2d4f(size_t width, size_t height) : RawTexture2dBase(width, height) {}
 		static RawTexture2d4f ParseStream_bmp(std::istream data) {
 			if (!data || data.get() != 'B' || data.get() != 'M') return {};//0,1
-			uint32_t bmpSize;
+			uint32_t bmpSize = 0;
 			data.read((char*)&bmpSize, sizeof(uint32_t));//2-6
 			data.seekg(10);
-			uint32_t bmpDataOffset;
+			uint32_t bmpDataOffset = 0;
 			data.read((char*)&bmpDataOffset, sizeof(uint32_t));//10-14
-			uint32_t headerSize;
+			uint32_t headerSize = 0;
 			data.read((char*)&headerSize, sizeof(uint32_t));//14-18
 			std::streampos palleteArray = headerSize + 14;
 			uint32_t width = 0, height = 0, bpp = 0, compression = 0, imageSize = 0, paletteCount = 0;
@@ -451,12 +451,17 @@ namespace render {
 		Nearest = GL_NEAREST,
 		//Returns the weighted average of the texture elements that are closest to the specified texture coordinates. These can include items wrapped or repeated from other parts of a texture, depending on the values of GL_TEXTURE_WRAP_S and GL_TEXTURE_WRAP_T, and on the exact mapping.
 		Linear = GL_LINEAR,
-	};
+	}; 
 
 	template<GLenum target>
 	class TextureBase {
-	internal:
+	protected:
 		GLuint textureID = 0;
+		void InitTexture() {
+			if (textureID == 0) {
+				glGenTextures(1, &textureID);
+			}
+		}
 	public:
 		//runtime gen object id
 		//get atribtues
@@ -466,44 +471,100 @@ namespace render {
 		//assignemnt
 		TextureBase() {}
 
-		~TextureBase() {
+		virtual ~TextureBase() {
 			if (textureID == 0) return;
 			glDeleteTextures(1, &textureID);
 			textureID = 0;
 		}
 
-		void InitTexture() {
-			if (textureID == 0) {
-				glGenTextures(1, &textureID);
-			}
-		}
-
 		void Bind() {
-			if (textureID == 0) throw new std::exception("render::TextureBase::Bind - uninitialized texture, attempted access failed.");
+			if (textureID == 0) throw std::runtime_error("render::TextureBase::Bind - uninitialized texture, attempted access failed.");
 			glBindTexture(target, textureID);
 		}
 
 		void SetMinFilter(TextureMinFilter minFilter) {
-			if (textureID == 0) throw new std::exception("render::TextureBase::SetMinFilter - uninitialized texture, attempted modification failed.");
+			if (textureID == 0) throw std::runtime_error("render::TextureBase::SetMinFilter - uninitialized texture, attempted modification failed.");
 			glBindTexture(target, textureID);
 			glTextureParameteri(target, GL_TEXTURE_MIN_FILTER, (int)minFilter);
 		}
 		void SetMagFilter(TextureMagFilter magFilter) {
-			if (textureID == 0) throw new std::exception("render::TextureBase::SetMagFilter - uninitialized texture, attempted modification failed.");
-			glBindTexture(target, textureID);F
+			if (textureID == 0) throw std::runtime_error("render::TextureBase::SetMagFilter - uninitialized texture, attempted modification failed.");
+			glBindTexture(target, textureID);
 			glTextureParameteri(target, GL_TEXTURE_MIN_FILTER, (int)magFilter);
 		}
 		TextureMinFilter GetMinFilter() {
-			if (textureID == 0) throw new std::exception("render::TextureBase::GetMinFilter - uninitialized texture, attempted information retrieval failed.");
+			if (textureID == 0) throw std::runtime_error("render::TextureBase::GetMinFilter - uninitialized texture, attempted information retrieval failed.");
 			int k;
+			glBindTexture(target, textureID);
 			glGetTexParameteriv(target, GL_TEXTURE_MIN_FILTER, &k);
 			return (TextureMinFilter)k;
 		}
 		TextureMagFilter GetMagFilter() {
-			if (textureID == 0) throw new std::exception("render::TextureBase::GetMinFilter - uninitialized texture, attempted information retrieval failed.");
+			if (textureID == 0) throw std::runtime_error("render::TextureBase::GetMinFilter - uninitialized texture, attempted information retrieval failed.");
 			int k;
+			glBindTexture(target, textureID);
 			glGetTexParameteriv(target, GL_TEXTURE_MAG_FILTER, &k);
 			return (TextureMagFilter)k;
+		}
+	};
+
+	template<GLenum internalFormat>
+	class ImageTexture2d final : public TextureBase<GL_TEXTURE_2D>{
+		size_t width = 0;
+		size_t height = 0;
+		size_t mipmapLevels = 0;
+	public:
+		//constructorGL_RGB
+		ImageTexture2d() {}
+		template<typename T, GLenum format, GLenum type>
+		ImageTexture2d(const RawTexture2dBase<T, format, type>& b) {
+		
+		}
+		template<typename T, GLenum format, GLenum type>
+		ImageTexture2d(RawTexture2dBase<T, format, type>&& b) {
+			using std::swap;
+		}
+		//thread-unsafe
+		ImageTexture2d(size_t width, size_t height, int mipmaps) {
+			InitTexture();
+			Bind();
+		}
+		template<typename T, GLenum format, GLenum type>
+		ImageTexture2d(RawTexture2dBase<T, format, type>& base, int scaleMethod, int mipmaps) {
+			InitTexture();
+			Bind();
+		}
+		template<typename T, GLenum format, GLenum type>
+		ImageTexture2d(RawTexture2dBase<T,format, type>* tex[], size_t length = 1, size_t start_mipmap = 0) {
+			InitTexture();
+			Bind();
+			width = tex[0]->Width();
+			height = tex[0]->Height();
+			for (int i = 0; i < length; i++) {
+				if (tex[i]->Width() != width / (i + 1)) throw std::runtime_error("render::ImageTexture2d - width of mipmap layer not half, rounded down, of previous mipmap layer width");
+				if (tex[i]->Height() != height / (i + 1)) throw std::runtime_error("render::ImageTexture2d - height of mipmap layer not half, rounded down, of previous mipmap layer height");
+				glTexImage2D(GL_TEXTURE_2D, start_mipmap, internalFormat, tex[i]->Width(), tex[i]->Height(), 0, format, type, tex[i]->GetData());
+			}
+		}
+		template<typename T, GLenum format, GLenum type>
+		void SetImage(RawTexture2dBase<T, format, type>& tex, int mipmapLevel = 0) {
+			if (tex.Width() != width / (mipmapLevel + 1)) throw std::runtime_error("render::ImageTexture2d::SetImage - width of mipmap layer not half, rounded down, of previous mipmap layer width");
+			if (tex.Height() != height / (mipmapLevel + 1)) throw std::runtime_error("render::ImageTexture2d::SetImage - height of mipmap layer not half, rounded down, of previous mipmap layer height");
+			Bind();
+			glTexSubImage2D(GL_TEXTURE_2D, mipmapLevel, 0, 0, width, height, format, type, tex.GetData());
+		}
+
+		ImageTexture2d& operator =(const ImageTexture2d& b) {
+
+		}
+		ImageTexture2d& operator =(ImageTexture2d&& b) {
+			using std::swap;
+		}
+		size_t Width(int mipmap = 0) {
+			return width / (mipmap + 1);
+		}
+		size_t Height(int mipmap = 0) {
+			return height / (mipmap + 1);
 		}
 	};
 }
