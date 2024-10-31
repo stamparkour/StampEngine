@@ -79,6 +79,7 @@ namespace math {
 		Vec2<float> Normal() const noexcept;
 		inline static Vec4<T> Unit() { return { 1,1 }; }
 	};
+
 	template<Quantity T>
 	struct Vec3 final {
 		T x = 0;

@@ -34,7 +34,7 @@ namespace render {
 		//mutex accessable to mesh to lock.
 		//copy constructor use 
 		//std::lock_guard
-		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) = 0;
+		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) const = 0;
 		virtual GLenum glRenderMode() const = 0;
 		virtual size_t vertexCount() const = 0;
 	public:
@@ -60,7 +60,7 @@ namespace render {
 		std::vector<RawMeshP3NUC::Point> points{};
 	public:
 
-		RawMeshP3NUC() { }
+		RawMeshP3NUC() = default;
 		RawMeshP3NUC(std::vector<RawMeshP3NUC::Point>& points) { 
 			this->points = points;
 		}
@@ -72,7 +72,7 @@ namespace render {
 		RawMeshP3NUC& operator =(const RawMeshP3NUC& other);
 		RawMeshP3NUC operator =(RawMeshP3NUC&& other);
 		inline friend void swap(RawMeshP3NUC& a, RawMeshP3NUC& b);
-		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) {
+		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) const {
 			glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(Point), &(points[0]), (GLenum)hint);
 			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, pos));
 			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(Point), (void*)offsetof(Point, pos));
@@ -179,8 +179,21 @@ namespace render {
 		GLuint vbo = 0;
 		GLenum mode = 0;
 		size_t count = 0;
+
+		void DecrementRefrence() {
+			if (!refrences) return;
+			(*refrences)--;
+			if ((*refrences) == 0) {
+				delete refrences;
+				refrences = 0;
+				glDeleteBuffers(1, &vbo);
+				vbo = 0;
+				glDeleteVertexArrays(1, &vao);
+				vao = 0;
+			}
+		}
 	public:
-		Mesh() {}
+		Mesh() = default;
 		Mesh(const Mesh& other) {
 			if (!other.isValid()) return;
 			vao = other.vao;
@@ -210,9 +223,9 @@ namespace render {
 			swap(*this, other);
 		}
 		Mesh& operator=(const Mesh& other) {
-			if (!other.isValid()) return;
+			if (!other.isValid()) return *this;
 			if (refrences) {
-				delete this;
+				DecrementRefrence();
 			}
 			vao = other.vao;
 			vbo = other.vbo;
@@ -220,10 +233,12 @@ namespace render {
 			count = other.count;
 			refrences = other.refrences;
 			(*refrences)++;
+			return *this;
 		}
 		Mesh& operator=(Mesh&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		void bind() {
 			if (!isValid()) throw std::runtime_error("render::Mesh::bind - failed to bind mesh: mesh does not have assigned buffers.");
@@ -268,16 +283,7 @@ namespace render {
 			swap(a.vbo, b.vbo);
 		}
 		~Mesh() {
-			if (!refrences) return;
-			(*refrences)--;
-			if ((*refrences) == 0) {
-				delete refrences;
-				refrences = 0;
-				glDeleteBuffers(1, &vbo);
-				vbo = 0;
-				glDeleteVertexArrays(1, &vao);
-				vao = 0;
-			}
+			DecrementRefrence();
 		}
 	};
 
@@ -285,6 +291,17 @@ namespace render {
 		friend class ShaderProgramBase;
 		std::atomic_int* refrences = 0;
 		GLuint ubo = 0;
+
+		void DecrementRefrence() {
+			if (!refrences) return;
+			(*refrences)--;
+			if ((*refrences) == 0) {
+				delete refrences;
+				refrences = 0;
+				glDeleteBuffers(1, &ubo);
+				ubo = 0;
+			}
+		}
 	public:
 		UniformBufferObject() = default;
 		UniformBufferObject(const UniformBufferObject& other) {
@@ -300,7 +317,7 @@ namespace render {
 		}
 		UniformBufferObject& operator=(const UniformBufferObject& other) {
 			if (refrences) {
-				delete this;
+				DecrementRefrence();
 			}
 			ubo = other.ubo;
 			refrences = other.refrences;
@@ -335,14 +352,7 @@ namespace render {
 			swap(a.refrences, b.refrences);
 		}
 		~UniformBufferObject() {
-			if (!refrences) return;
-			(*refrences)--;
-			if ((*refrences) == 0) {
-				delete refrences;
-				refrences = 0;
-				glDeleteBuffers(1, &ubo);
-				ubo = 0;
-			}
+			DecrementRefrence();
 		}
 	};
 	using UBObject = UniformBufferObject;
@@ -380,13 +390,13 @@ namespace render {
 			shader = other.shader;
 			(*refrences)++;
 		}
-		ShaderComponent(ShaderComponent&& other) {
+		ShaderComponent(ShaderComponent&& other) noexcept {
 			using std::swap;
 			*this = {};
 			swap(*this, other);
 		}
 		ShaderComponent& operator = (const ShaderComponent& other) = delete;
-		ShaderComponent& operator = (ShaderComponent&& other) {
+		ShaderComponent& operator = (ShaderComponent&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
 		}

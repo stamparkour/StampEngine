@@ -59,9 +59,8 @@ void win::event::Start(double time) {
     points.push_back(RawMeshP3NUC::Point{ {-0.5f,-0.5f,0},{},{0,0},{} });
     points.push_back(RawMeshP3NUC::Point{ {0,0.5f,0},{},{0.5,1},{} });
     RawMeshP3NUC m{ points };
-    mesh.set(m);
-    ShaderComponent vert{};
-    vert.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
+    mesh = render::Mesh{ m, render::BufferUsageHint::StaticDraw } ;
+    ShaderComponent vert{ ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
  layout(location = 0) in vec3 pos;
  layout(location = 1) in vec3 normal;
  layout(location = 2) in vec2 uv;
@@ -71,18 +70,14 @@ void main() {
     gl_Position = vec4(pos,1);
     frag_uv = uv;
 }
-)CAT");
-    ShaderComponent frag{};
-    frag.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
+)CAT" };
+    ShaderComponent frag{ ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
 in vec2 frag_uv;
 layout(location = 0) out vec4 diffuseColor;
 void main() {
     diffuseColor = vec4(0.5,0.2,0.5,1);
 }
-)CAT");
-    vert.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(
-  
-)CAT");
+)CAT" };
     shader.setShader(vert,frag);
     swm::checkOpenGLErrors();
 }
