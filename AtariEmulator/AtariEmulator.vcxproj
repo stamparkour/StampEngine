@@ -149,7 +149,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h" />
     <ClInclude Include="glm.h" />
     <ClInclude Include="libload.h" />
     <ClInclude Include="SWM.hpp" />

@@ -1,11 +1,14 @@
 #pragma once
 #include "dll.h"
-#include <vector>
-#include <exception>
 #include "math.hpp"
 #include "glm.h"
+#include <vector>
+#include <exception>
 #include <utility>
 #include <istream>
+#include <mutex>
+#include <assert.h>
+#include "SWM.hpp"
 
 #define ATTRIBPOINTER_POSITION 0
 #define ATTRIBPOINTER_NORMAL 1
@@ -13,24 +16,73 @@
 #define ATTRIBPOINTER_COLOR 3
 
 namespace render {
+	enum struct BufferUsageHint : GLenum {
+		StreamDraw = GL_STREAM_DRAW,
+		StreamRead = GL_STREAM_READ,
+		StreamCopy = GL_STREAM_COPY,
+		StaticDraw = GL_STATIC_DRAW,
+		StaticRead = GL_STATIC_READ,
+		StaticCopy = GL_STATIC_COPY,
+		DynamicDraw = GL_DYNAMIC_DRAW,
+		DynamicRead = GL_DYNAMIC_READ,
+		DynamicCopy = GL_DYNAMIC_COPY,
+	};
+	class Mesh;
+	class RawMeshBase {
+		friend class Mesh;
+	protected:
+		//mutex accessable to mesh to lock.
+		//copy constructor use 
+		//std::lock_guard
+		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) = 0;
+		virtual GLenum glRenderMode() const = 0;
+		virtual size_t vertexCount() const = 0;
+	public:
+		virtual ~RawMeshBase() {}
+	};
 
-	template<class P>
-	struct RawMeshBase;
+	//get value not pointer
+	//set functions that are mutex controlled
+	//
+	class RawMeshP3NUC final : public RawMeshBase {
+	public:
+		struct Point final {
+			math::Vec3f pos;
+			math::Vec3f normal;
+			math::Vec2f uv;
+			math::Vec4f color;
 
-	struct PointP3NUC final {
-		math::Vec3f pos;
-		math::Vec3f normal;
-		math::Vec2f uv;
-		math::Vec4f color;
+			Point() = default;
+			Point(const math::Vec3f pos, const math::Vec3f normal, const math::Vec2f uv, const math::Vec4f color)
+				: pos(pos), normal(normal), uv(uv), color(color) { }
+		};
+	private:
+		std::vector<RawMeshP3NUC::Point> points{};
+	public:
 
-		//function to descibe vertex attributes
-		static void bindAttrib() {
-			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, pos));
-			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, normal));
-			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, uv));
-			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, color));
+		RawMeshP3NUC() { }
+		RawMeshP3NUC(std::vector<RawMeshP3NUC::Point>& points) { 
+			this->points = points;
 		}
-		static std::vector<PointP3NUC> ParseStream_obj(std::istream data) {
+		void setPoints(std::vector<RawMeshP3NUC::Point>& points) {
+			this->points = points;
+		}
+		RawMeshP3NUC(const RawMeshP3NUC& other);
+		RawMeshP3NUC(RawMeshP3NUC&& other);
+		RawMeshP3NUC& operator =(const RawMeshP3NUC& other);
+		RawMeshP3NUC operator =(RawMeshP3NUC&& other);
+		inline friend void swap(RawMeshP3NUC& a, RawMeshP3NUC& b);
+		virtual void setMesh(Mesh& mesh, BufferUsageHint hint) {
+			glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(Point), &(points[0]), (GLenum)hint);
+			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, pos));
+			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(Point), (void*)offsetof(Point, pos));
+			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, pos));
+			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, pos));
+		}
+		virtual GLenum glRenderMode() const { return GL_TRIANGLES; }
+		virtual size_t vertexCount() const { return points.size(); }
+
+		static RawMeshP3NUC ParseStream_obj(std::istream& data) {
 			auto spos = data.tellg();
 			std::vector<math::Vec3f> pos{};
 			std::vector<math::Vec3f> normal{};
@@ -66,8 +118,8 @@ namespace render {
 				}
 			}
 			data.seekg(spos);
-			std::vector<PointP3NUC> mesh{};
-			std::vector<PointP3NUC> points{};
+			std::vector<RawMeshP3NUC::Point> mesh{};
+			std::vector<RawMeshP3NUC::Point> points{};
 			while ((bool)data) {
 				data.getline(line, sizeof(line));
 				points.clear();
@@ -80,7 +132,7 @@ namespace render {
 				char* d = line + 1;
 				while (sscanf_s(d, " %d/%d/%d%n", &p, &t, &n, &c) == 3) {
 					d += c;
-					PointP3NUC point{};
+					RawMeshP3NUC::Point point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -89,7 +141,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d//%d%n", &p, &n, &c) == 2) {
 					d += c;
-					PointP3NUC point{};
+					RawMeshP3NUC::Point point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.normal = normal[n - 1];
@@ -97,7 +149,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d/%d%n", &p, &t, &c) == 2) {
 					d += c;
-					PointP3NUC point{};
+					RawMeshP3NUC::Point point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -105,7 +157,7 @@ namespace render {
 				}
 				while (sscanf_s(d, " %d%n", &p, &c) == 1) {
 					d += c;
-					PointP3NUC point{};
+					RawMeshP3NUC::Point point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					points.push_back(point);
@@ -113,74 +165,205 @@ namespace render {
 				for (int i = 1; i < points.size() - 1; i++) {
 					mesh.push_back(points[0]);
 					mesh.push_back(points[i]);
-					mesh.push_back(points[i+1]);
+					mesh.push_back(points[i + 1]);
 				}
 			}
-
-			return mesh;
+			return RawMeshP3NUC{mesh};
 		}
+
 	};
-	
+
 	class Mesh final {
+		std::atomic_int* refrences = 0;
+		GLuint vao = 0;
 		GLuint vbo = 0;
-		GLuint ibo = 0;
+		GLenum mode = 0;
+		size_t count = 0;
 	public:
 		Mesh() {}
 		Mesh(const Mesh& other) {
 			if (!other.isValid()) return;
-			GLint i;
-			glGenBuffers(1, &vbo);
-			glGenBuffers(1, &ibo);
-			glBindBuffer(GL_COPY_READ_BUFFER, other.vbo);
-			glGetBufferParameteriv(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &i);
-			glBindBuffer(GL_COPY_WRITE_BUFFER, vbo);
-			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, i);
-			glBindBuffer(GL_COPY_READ_BUFFER, other.ibo);
-			glGetBufferParameteriv(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &i);
-			glBindBuffer(GL_COPY_WRITE_BUFFER, ibo);
-			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, i);
+			vao = other.vao;
+			vbo = other.vbo;
+			mode = other.mode;
+			count = other.count;
+			refrences = other.refrences;
+			(*refrences)++;
 		}
-
-		void setVertices(void* ptr, size_t size, GLenum usageHint = GL_STATIC_DRAW) {
+		Mesh(RawMeshBase& meshBase, BufferUsageHint usageHint = BufferUsageHint::StaticDraw) {
 			if (vbo == 0) {
 				glGenBuffers(1, &vbo);
 			}
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBufferData(GL_ARRAY_BUFFER, size, ptr, usageHint);
-		}
-		void setIndices(void* ptr, size_t size, GLenum usageHint = GL_STATIC_DRAW) {
-			if (ibo == 0) {
-				glGenBuffers(1, &ibo);
+			if (vao == 0) {
+				glGenVertexArrays(1, &vao);
 			}
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, ptr, usageHint);
+			glBindVertexArray(vao);
+			meshBase.setMesh(*this, usageHint);
+			mode = meshBase.glRenderMode();
+			count = meshBase.vertexCount();
+			refrences = new std::atomic_int(1);
+		}
+		Mesh(Mesh&& other) noexcept {
+			using std::swap;
+			*this = {};
+			swap(*this, other);
+		}
+		Mesh& operator=(const Mesh& other) {
+			if (!other.isValid()) return;
+			if (refrences) {
+				delete this;
+			}
+			vao = other.vao;
+			vbo = other.vbo;
+			mode = other.mode;
+			count = other.count;
+			refrences = other.refrences;
+			(*refrences)++;
+		}
+		Mesh& operator=(Mesh&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
 		}
 		void bind() {
 			if (!isValid()) throw std::runtime_error("render::Mesh::bind - failed to bind mesh: mesh does not have assigned buffers.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			glBindVertexArray(vao);
+		}
+		void draw(GLenum mode = 0) {
+			if (!isValid()) throw std::runtime_error("render::Mesh::draw - failed to render mesh: invalid state");
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindVertexArray(vao);
+			if (mode == 0) {
+				glDrawArrays(this->mode, 0, count);
+			}
+			else {
+				glDrawArrays(mode, 0, count);
+			}
+		}
+		void drawInstances(size_t instanceCount, GLenum mode = 0) {
+			if (!isValid()) throw std::runtime_error("render::Mesh::draw - failed to render mesh: invalid state");
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindVertexArray(vao);
+			if (mode == 0) {
+				glDrawArraysInstanced(this->mode, 0, count, instanceCount);
+			}
+			else {
+				glDrawArraysInstanced(mode, 0, count, instanceCount);
+			}
 		}
 
 		bool isValid() const {
-			return vbo != 0 && ibo != 0;
+			return refrences && vbo != 0 && vao != 0;
 		}
-		operator bool() {
+		explicit operator bool() {
 			return isValid();
 		}
+		bool operator!() {
+			return !isValid();
+		}
+		friend inline void swap(Mesh& a, Mesh& b) {
+			using std::swap;
+			swap(a.vao, b.vao);
+			swap(a.vbo, b.vbo);
+		}
 		~Mesh() {
-			glDeleteBuffers(1, &vbo);
-			vbo = 0;
-			glDeleteBuffers(1, &ibo);
-			ibo = 0;
+			if (!refrences) return;
+			(*refrences)--;
+			if ((*refrences) == 0) {
+				delete refrences;
+				refrences = 0;
+				glDeleteBuffers(1, &vbo);
+				vbo = 0;
+				glDeleteVertexArrays(1, &vao);
+				vao = 0;
+			}
 		}
 	};
 
-	class RawShaderComponent final {
+	class UniformBufferObject final {
+		friend class ShaderProgramBase;
+		std::atomic_int* refrences = 0;
+		GLuint ubo = 0;
+	public:
+		UniformBufferObject() = default;
+		UniformBufferObject(const UniformBufferObject& other) {
+			if (!other.refrences) return;
+			refrences = other.refrences;
+			ubo = other.ubo;
+			(*refrences)++;
+		}
+		UniformBufferObject(UniformBufferObject&& other) noexcept {
+			using std::swap;
+			*this = {};
+			swap(*this, other);
+		}
+		UniformBufferObject& operator=(const UniformBufferObject& other) {
+			if (refrences) {
+				delete this;
+			}
+			ubo = other.ubo;
+			refrences = other.refrences;
+			(*refrences)++;
+		}
+		UniformBufferObject& operator=(UniformBufferObject&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		void set(const void* ptr, size_t size, GLenum usage) {
+			if (ubo == 0) glGenBuffers(1, &ubo);
+			bind();
+			glBufferData(GL_UNIFORM_BUFFER, size, ptr, usage);
+		}
+		void bind() {
+			if (!isValid()) throw std::runtime_error("render::UniformBufferObject::bind - failed to bind ubo: buffer not initialized.");
+			glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+		}
+
+		bool isValid() const {
+			return ubo != 0;
+		}
+		explicit operator bool() {
+			return isValid();
+		}
+		bool operator!() {
+			return !isValid();
+		}
+		friend inline void swap(UniformBufferObject& a, UniformBufferObject& b) {
+			using std::swap;
+			swap(a.ubo, b.ubo);
+			swap(a.refrences, b.refrences);
+		}
+		~UniformBufferObject() {
+			if (!refrences) return;
+			(*refrences)--;
+			if ((*refrences) == 0) {
+				delete refrences;
+				refrences = 0;
+				glDeleteBuffers(1, &ubo);
+				ubo = 0;
+			}
+		}
+	};
+	using UBObject = UniformBufferObject;
+	class ShaderComponent final {
+	public:
+		enum struct ShaderType : GLenum {
+			VertexShader = GL_VERTEX_SHADER,
+			FragmentShader = GL_FRAGMENT_SHADER,
+			GeometryShader = GL_GEOMETRY_SHADER,
+			ComputeShader = GL_COMPUTE_SHADER,
+			TessControlShader = GL_TESS_CONTROL_SHADER,
+			TessEvaluationShader = GL_TESS_EVALUATION_SHADER
+		};
+	private:
+		std::atomic_int* refrences = 0;
 		GLuint shader = 0;
 	public:
-		RawShaderComponent() {}
-		void compile(GLenum type, const char* source) {
-			shader = glCreateShader(type);
+		ShaderComponent() = default;
+		ShaderComponent(ShaderType type, const char* source) {
+			refrences = new std::atomic_int(0);
+			shader = glCreateShader((GLenum)type);
 			glShaderSource(shader, 1, &source, NULL);
 			GLint compiled;
 			GLchar message[1024];
@@ -192,27 +375,48 @@ namespace render {
 				throw std::runtime_error(message);
 			}
 		}
+		ShaderComponent(const ShaderComponent& other) {
+			refrences = other.refrences;
+			shader = other.shader;
+			(*refrences)++;
+		}
+		ShaderComponent(ShaderComponent&& other) {
+			using std::swap;
+			*this = {};
+			swap(*this, other);
+		}
+		ShaderComponent& operator = (const ShaderComponent& other) = delete;
+		ShaderComponent& operator = (ShaderComponent&& other) {
+			using std::swap;
+			swap(*this, other);
+		}
+		inline friend void swap(ShaderComponent& a, ShaderComponent& b) {
+			using std::swap;
+			swap(a.shader, b.shader);
+		}
 		GLuint getShader() const {
 			return shader;
 		}
 
-		~RawShaderComponent() {
+		~ShaderComponent() {
 			if (shader == 0) return;
 			glDeleteShader(shader);
+			shader = 0;
 		}
 	};
-	class ShaderBase {
+	class ShaderProgramBase {
+	protected:
 		GLuint program = 0;
-	public:
-		ShaderBase() {}
-		void attachShader(size_t shaderCount, const RawShaderComponent* shaderComponents) {
+		static inline thread_local GLuint currentProgram = 0;
+
+		void setShader(size_t shaderCount, ShaderComponent** const shaderComponents) {
 			GLint compiled;
 			GLchar message[1024];
 			GLsizei log_length = 0;
-
+			if (program) glDeleteProgram(program);
 			program = glCreateProgram();
 			for (int i = 0; i < shaderCount; i++)
-				glAttachShader(program, shaderComponents[i].getShader());
+				glAttachShader(program, shaderComponents[i]->getShader());
 			glLinkProgram(program);
 
 			glGetProgramiv(program, GL_LINK_STATUS, &compiled);
@@ -221,27 +425,113 @@ namespace render {
 				throw std::runtime_error(message);
 			}
 		}
+	public:
+		ShaderProgramBase() {}
+		virtual ~ShaderProgramBase() {
+			if (program == 0) return;
+			glDeleteProgram(program);
+			program = 0;
+		}
 		void bind() {
-			glUseProgram(program);
+			if (currentProgram == 0 || currentProgram != program) {
+				glUseProgram(program);
+				currentProgram = program;
+			}
 		}
 		bool isValid() const {
 			return program != 0;
 		}
-		virtual ~ShaderBase() {
-			if (program == 0) return;
-			glDeleteProgram(program);
+		void uniform(GLint location, int value) {
+			glProgramUniform1i(program, location, value);
+		}
+		void uniform(GLint location, unsigned int value) {
+			glProgramUniform1ui(program, location, value);
+		}
+		void uniform(GLint location, float value) {
+			glProgramUniform1f(program, location, value);
+		}
+		void uniform(GLint location, double value) {
+			glProgramUniform1d(program, location, value);
+		}
+		void uniform(GLint location, math::Vec2i value) {
+			glProgramUniform2iv(program, location, 2, (const int*)value);
+		}
+		void uniform(GLint location, math::Vec2ui value) {
+			glProgramUniform2uiv(program, location, 2, (const unsigned int*)value);
+		}
+		void uniform(GLint location, math::Vec2f value) {
+			glProgramUniform2fv(program, location, 2, (const float*)value);
+		}
+		void uniform(GLint location, math::Vec2d value) {
+			glProgramUniform2dv(program, location, 2, (const double*)value);
+		}
+		void uniform(GLint location, math::Vec3i value) {
+			glProgramUniform3iv(program, location, 3, (const int*)value);
+		}
+		void uniform(GLint location, math::Vec3ui value) {
+			glProgramUniform3uiv(program, location, 3, (const unsigned int*)value);
+		}
+		void uniform(GLint location, math::Vec3f value) {
+			glProgramUniform3fv(program, location, 3, (const float*)value);
+		}
+		void uniform(GLint location, math::Vec3d value) {
+			glProgramUniform3dv(program, location, 3, (const double*)value);
+		}
+		void uniform(GLint location, math::Vec4i value) {
+			glProgramUniform4iv(program, location, 4, (const int*)value);
+		}
+		void uniform(GLint location, math::Vec4ui value) {
+			glProgramUniform4uiv(program, location, 4, (const unsigned int*)value);
+		}
+		void uniform(GLint location, math::Vec4f value) {
+			glProgramUniform4fv(program, location, 4, (const float*)value);
+		}
+		void uniform(GLint location, math::Vec4d value) {
+			glProgramUniform4dv(program, location, 4, (const double*)value);
+		}
+		void uniform(GLint location, math::Quati value) {
+			glProgramUniform4iv(program, location, 4, (const int*)value);
+		}
+		void uniform(GLint location, math::Quatui value) {
+			glProgramUniform4uiv(program, location, 4, (const unsigned int*)value);
+		}
+		void Uniform(GLint location, math::Quatf value) {
+			glProgramUniform4fv(program, location, 4, (const float*)value);
+		}
+		void uniform(GLint location, math::Quatd value) {
+			glProgramUniform4dv(program, location, 4, (const double*)value);
+		}
+		void Uniform(GLint location, math::Mat4f value) {
+			glProgramUniformMatrix4fv(program, location, 16, false, (const float*)value);
+		}
+		void uniform(GLint location, math::Mat4d value) {
+			glProgramUniformMatrix4dv(program, location, 16, false, (const double*)value);
+		}
+		void uniformBuffer(GLint location, UniformBufferObject& ubo) {
+			glUniformBlockBinding(program, location, ubo.ubo);
+		}
+		GLint getUniformLoc(const char* name) {
+			return glGetUniformLocation(program, name);
+		}
+		GLint getUniformBufferLoc(const char* name) {
+			return glGetUniformBlockIndex(program, name);
 		}
 	};
-	class RenderShader : public ShaderBase {
-		void attachShader(RawShaderComponent& vertexComponent, RawShaderComponent& fragmentComponent) {
-			RawShaderComponent arr[2]{ vertexComponent, fragmentComponent };
-			ShaderBase::attachShader(2, arr);
+	class RenderShaderProgram : public ShaderProgramBase {
+	public:
+		void setShader(ShaderComponent& vertexComponent, ShaderComponent& geometryShader, ShaderComponent& fragmentComponent) {
+			ShaderComponent* arr[2]{ &vertexComponent, &fragmentComponent };
+			ShaderProgramBase::setShader(2, arr);
+		}
+		void setShader(ShaderComponent& vertexComponent, ShaderComponent& fragmentComponent) {
+			ShaderComponent* arr[2]{ &vertexComponent, &fragmentComponent };
+			ShaderProgramBase::setShader(2, arr);
 		}
 	};
 
 	class MaterialBase {
 		GLuint vao = 0;
-		RenderShader shader{};
+		RenderShaderProgram shader{};
 	public:
 		MaterialBase() {}
 		//attributes
@@ -274,7 +564,7 @@ namespace render {
 		virtual void bindGenericAttrib() {
 			glVertexAttrib3f(ATTRIBPOINTER_NORMAL, 0, 0, 0);
 			glVertexAttrib2f(ATTRIBPOINTER_UV, 0, 0);
-			glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (float*)color);
+			glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
 		}
 	};
 	
@@ -506,6 +796,12 @@ namespace render {
 			glGetTexParameteriv(target, GL_TEXTURE_MAG_FILTER, &k);
 			return (TextureMagFilter)k;
 		}
+
+		template<GLenum target>
+		friend inline void swap(TextureBase< target>& a, TextureBase< target>& b) {
+			using std::swap;
+			swap(a.textureID, b.textureID);
+		}
 	};
 
 	template<GLenum internalFormat>
@@ -518,11 +814,12 @@ namespace render {
 		ImageTexture2d() {}
 		template<typename T, GLenum format, GLenum type>
 		ImageTexture2d(const RawTexture2dBase<T, format, type>& b) {
-		
+			glBindTexture(GL_TEXTURE_2D, textureID);
 		}
 		template<typename T, GLenum format, GLenum type>
 		ImageTexture2d(RawTexture2dBase<T, format, type>&& b) {
 			using std::swap;
+			swap(*this, b);
 		}
 		//thread-unsafe
 		ImageTexture2d(size_t width, size_t height, int mipmaps) {
@@ -566,7 +863,16 @@ namespace render {
 		size_t Height(int mipmap = 0) {
 			return height / (mipmap + 1);
 		}
+
+		friend inline void swap(ImageTexture2d< internalFormat>& a, ImageTexture2d< internalFormat>& b) {
+			using std::swap;
+			swap(a.width, b.width);
+			swap(a.height, b.height);
+			swap(a.mipmapLevels, b.mipmapLevels);
+			swap((TextureBase<GL_TEXTURE_2D>&)a, (TextureBase<GL_TEXTURE_2D>&)b);
+		}
 	};
+
 }
 
 //post process shader

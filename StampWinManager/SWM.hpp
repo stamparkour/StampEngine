@@ -209,6 +209,8 @@ namespace swm {
 	typedef bool (*isKeyUpProc)(VertKey key);
 	typedef WinPoint(*getCursorAbsolutePosProc)();
 	typedef void (*getDesktopResolutionProc)(int& horizontal, int& vertical);
+	typedef bool (*isRenderThreadProc)();
+	typedef SWHWND* (*getWindowProc)();
 	struct SWM_struct_t {
 		SWHWND_setVsyncProc SWHWND_setVsync_proc;
 		SWHWND_getVsyncProc SWHWND_getVsync_proc;
@@ -233,6 +235,8 @@ namespace swm {
 		isKeyUpProc isKeyUp_proc;
 		getCursorAbsolutePosProc getCursorAbsolutePos_proc;
 		getDesktopResolutionProc getDesktopResolution_proc;
+		isRenderThreadProc isRenderThread_proc;
+		getWindowProc getWindow_proc;
 	} inline* SWM_struct = 0;
 
 	//stamp window handle
@@ -242,7 +246,7 @@ namespace swm {
 		SWHWND(const SWHWND&) = delete;
 		~SWHWND();
 
-		void setVsync(bool v) { SWM_struct->SWHWND_setVsync_proc(this,v); }
+		void setVsync(bool v) { SWM_struct->SWHWND_setVsync_proc(this, v); }
 		bool getVsync() const { return SWM_struct->SWHWND_getVsync_proc(this); }
 		void setBorderless(bool v) { SWM_struct->SWHWND_setBorderless_proc(this, v); }
 		bool getBorderless() const { return SWM_struct->SWHWND_getBorderless_proc(this); }
@@ -268,6 +272,8 @@ namespace swm {
 	inline bool isKeyUp(VertKey key) { return SWM_struct->isKeyDown_proc(key); }
 	inline WinPoint getCursorAbsolutePos() { return SWM_struct->getCursorAbsolutePos_proc(); }
 	inline void getDesktopResolution(int& horizontal, int& vertical) { return SWM_struct->getDesktopResolution_proc(horizontal, vertical); }
+	inline bool isRenderThread() { return SWM_struct->isRenderThread_proc(); }
+	inline SWHWND* getWindow() { return SWM_struct->getWindow_proc(); }
 	//internal functions
 	//user must call once before creating SWHWND 
 	void initializeSWM(HINSTANCE hInstance, SWIF flags);

@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "libload.h"
 #include <iostream>
+#include <math.h>
 
 libload::EngineProc* engineProc;
 
@@ -13,7 +14,7 @@ void Update(double time) {
 	
 }
 void Render(double time) {
-	glClearColor(0.1f, time / 20, 0.2f, 1.0f);
+	glClearColor(sin(time * 17) / 2 + 0.5, sin(time*2) / 2 + 0.5, sin(time * 3.9) / 2 + 0.5, 1.0f);
 }
 void OnKeyDown(swm::VertKey key) {
 	if (key == swm::VertKey::A) {

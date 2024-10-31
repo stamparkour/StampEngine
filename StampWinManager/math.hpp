@@ -7,7 +7,7 @@ namespace math {
 		a = b;
 		a + b;
 		a - b;
-		a * b;
+		a* b;
 		a / b;
 		a += b;
 		a -= b;
@@ -43,6 +43,11 @@ namespace math {
 	using Vec4i = Vec4<int>;
 	using Quati = Quat<int>;
 	using Mat4i = Mat4<int>;
+	using Vec2ui = Vec2<unsigned int>;
+	using Vec3ui = Vec3<unsigned int>;
+	using Vec4ui = Vec4<unsigned int>;
+	using Quatui = Quat<unsigned int>;
+	using Mat4ui = Mat4<unsigned int>;
 
 
 	template<Quantity T>
@@ -51,7 +56,7 @@ namespace math {
 		T y = 0;
 
 		Vec2() noexcept {}
-		Vec2(T x, T y) noexcept : x(x), y(y){}
+		Vec2(T x, T y) noexcept : x(x), y(y) {}
 
 		Vec2<T> operator +(const Vec2<T>& b) const noexcept;
 		Vec2<T>& operator +=(const Vec2<T>& b) noexcept;
@@ -65,13 +70,14 @@ namespace math {
 		bool operator ==(const Vec2& b) const noexcept;
 		bool operator !=(const Vec2& b) const noexcept;
 		template<Quantity T1>
-		operator Vec2<T1>() const noexcept;
+		explicit operator Vec2<T1>() const noexcept;
 		explicit operator Vec3<T>() const noexcept;
 		explicit operator Vec4<T>() const noexcept;
-		operator const T* () const noexcept;
+		explicit operator const T* () const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
 		Vec2<float> Normal() const noexcept;
+		inline static Vec4<T> Unit() { return { 1,1 }; }
 	};
 	template<Quantity T>
 	struct Vec3 final {
@@ -94,12 +100,15 @@ namespace math {
 		Vec3<T>& operator /=(T b) noexcept;
 		bool operator ==(const Vec3<T>& b) const noexcept;
 		bool operator !=(const Vec3<T>& b) const noexcept;
-		operator const T* () const noexcept;
+		explicit operator const T* () const noexcept;
+		template<Quantity T1>
+		explicit operator Vec3<T1>() const noexcept;
 		explicit operator Vec4<T>() const noexcept;
 		explicit operator Vec2<T>() const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
 		Vec3<float> Normal() const noexcept;
+		inline static Vec4<T> Unit() { return { 1,1,1 }; }
 	};
 	template<Quantity T>
 	struct Vec4 final {
@@ -119,13 +128,15 @@ namespace math {
 		Vec4<T>& operator *=(T b) noexcept;
 		Vec4<T> operator /(T b) const noexcept;
 		Vec4<T>& operator /=(T b) noexcept;
-		explicit operator T* () const noexcept;
+		explicit operator const T* () const noexcept;
+		template<Quantity T1>
+		explicit operator Vec4<T1>() const noexcept;
 		explicit operator Vec2<T>() const noexcept;
 		explicit operator Vec3<T>() const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
-		Vec4<float> Normal() const noexcept;
-
+		Vec4<float> Normal() const noexcept; 
+		inline static Vec4<T> Unit() { return { 1,1,1,1 }; }
 	};
 
 	template<Quantity T>
@@ -191,7 +202,7 @@ namespace math {
 		static Mat4<T> RotationZ(T v);
 		static Mat4<T> RotationZXY(T x, T y, T z);
 
-		static const Mat4<T> Identity{ 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 };
+		inline static Mat4<T> Identity() { return { 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 }; }
 	};
 
 	template<Quantity T>
@@ -228,7 +239,8 @@ namespace math {
 		static Quat<T> RotationAxis(T r, const Vec3<T>& axis) noexcept;
 		static Quat<T> RotationZXY(T x, T y, T z) noexcept;
 		static Quat<T> RotationZYX(T x, T y, T z) noexcept;
-		static const Quat<T> Identity{ 1,0,0,0 };
+		explicit operator T* () const noexcept;
+		inline static Quat<T> Identity() { return { 1,0,0,0 }; }
 	};
 
 	template<Quantity T>
@@ -276,6 +288,12 @@ namespace math {
 		return x != b.x || y != b.y;
 	}
 	template<Quantity T>
+	template<Quantity T1>
+	inline Vec2<T>::operator Vec2<T1>() const noexcept
+	{
+		return { (T1)x, (T1)y };
+	}
+	template<Quantity T>
 	Vec2<T>::operator Vec4<T>() const noexcept {
 		return { x,y,0,0 };
 	}
@@ -298,7 +316,7 @@ namespace math {
 	}
 	template<Quantity T>
 	Vec2<float> Vec2<T>::Normal() const noexcept {
-		float mag= Magnitude();
+		float mag = Magnitude();
 		if (mag == 0) return { 0,0 };
 		return (*this) / mag;
 	}
@@ -348,6 +366,12 @@ namespace math {
 		return { x / b, y / b, z / b };
 	}
 	template<Quantity T>
+	template<Quantity T1>
+	inline math::Vec3<T>::operator Vec3<T1>() const noexcept
+	{
+		return { (T1)x,(T1)y,(T1)z };
+	}
+	template<Quantity T>
 	bool Vec3<T>::operator ==(const Vec3<T>& b) const noexcept {
 		return this->x == b.x && this->y == b.y && this->z == b.z;
 	}
@@ -370,7 +394,7 @@ namespace math {
 	}
 	template<Quantity T>
 	Vec3<float> Vec3<T>::Normal() const noexcept {
-		float mag= Magnitude();
+		float mag = Magnitude();
 		if (mag == 0) return { 0,0,0 };
 		return (*this) / mag;
 	}
@@ -417,6 +441,11 @@ namespace math {
 	template<Quantity T>
 	Vec4<T>::operator Vec2<T>() const noexcept {
 		return { x,y };
+	}
+	template<Quantity T>
+	template<Quantity T1>
+	Vec4<T>::operator Vec4<T1>() const noexcept {
+		return { (T1)x,(T1)y ,(T1)z ,(T1)w };
 	}
 	template<Quantity T>
 	float Vec4<T>::MagnitudeSquared() const noexcept {
@@ -722,5 +751,9 @@ namespace math {
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZYX(T x, T y, T z) noexcept {
 		return Quat<T>::RotationZ(z) * Quat<T>::RotationY(y) * Quat<T>::RotationX(x);
+	}
+	template<Quantity T>
+	inline Quat<T>::operator T* () const noexcept {
+		return (T*)this;
 	}
 };

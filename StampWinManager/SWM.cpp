@@ -6,6 +6,9 @@
 #include <iostream>
 #include "libload.h"
 
+
+thread_local swm::SWHWND* localWindow = 0;
+
 //#define SWM_ERRORCATCH
 
 struct UpdateWin {
@@ -182,7 +185,6 @@ static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 		OnCreate(hwnd, (CREATESTRUCT*)lParam);
 		break;
 	case WM_PAINT: {
-		std::cout << "PAINT" << std::endl;
 		static thread_local int count = 0;
 		if (++count > 64) {
 			OnPaint(ptr);
@@ -275,7 +277,7 @@ static void ManageWindow(swm::SWHWND* ptr) {
 #endif
 
 	auto* data = ptr->data;
-
+	localWindow = ptr;
 	data->startTime = getTimeRaw();
 
 	if (data->borderless) {
@@ -443,6 +445,23 @@ void swm::initializeSWM(HINSTANCE hInstance, SWIF flags = {}) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+	};
+	SWM_struct->SWHWND_processWinEvents_proc = [](swm::SWHWND* self) {
+		if (std::this_thread::get_id() != self->data->managementThread.get_id())
+			throw std::runtime_error("swm::SWHWND::processWinEvents - wrong thread, thread required is management thread");
+		MSG msg;
+		while (PeekMessage(&msg, self->data->winHandle, 0, 0, PM_REMOVE) > 0) {
+			if (msg.message == WM_PAINT)
+				break;
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	};
+	SWM_struct->isRenderThread_proc = []() {
+		return localWindow != 0;
+	};
+	SWM_struct->getWindow_proc = []() {
+		return localWindow;
 	};
 
 	HRESULT hr;

@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <iostream>
 
+using namespace render;
+
 namespace win::event {
     void Start(double time);
     void Update(double time);
@@ -33,6 +35,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     auto w = swm::SWHWND(&win::event::WIN_DESC,hInstance);
     w.sleepUntilWindowTerminate();
 }
+render::Mesh mesh{};
+render::RenderShaderProgram shader{};
 void win::event::Start(double time) {
     glClearColor(0.6f,0.2f,0.8f,1.0f);
     glClearStencil(0);
@@ -40,15 +44,47 @@ void win::event::Start(double time) {
     glDepthFunc(GL_LEQUAL);
     glDepthRange(0, 1);
     //glEnable(GL_STENCIL_TEST);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
-    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_DEPTH_TEST);
     glFogi(GL_FOG_MODE, GL_LINEAR);
     glFogf(GL_FOG_START, 0.5);
     glFogf(GL_FOG_END, 1.);
     //glFogfv(GL_FOG_COLOR, 0,0,0,0);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    std::vector<RawMeshP3NUC::Point> points{};
+    points.push_back(RawMeshP3NUC::Point{ {0.5f,-0.5f,0},{},{1,0},{} });
+    points.push_back(RawMeshP3NUC::Point{ {-0.5f,-0.5f,0},{},{0,0},{} });
+    points.push_back(RawMeshP3NUC::Point{ {0,0.5f,0},{},{0.5,1},{} });
+    RawMeshP3NUC m{ points };
+    mesh.set(m);
+    ShaderComponent vert{};
+    vert.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
+ layout(location = 0) in vec3 pos;
+ layout(location = 1) in vec3 normal;
+ layout(location = 2) in vec2 uv;
+ layout(location = 3) in vec3 color;
+out vec2 frag_uv;
+void main() {
+    gl_Position = vec4(pos,1);
+    frag_uv = uv;
+}
+)CAT");
+    ShaderComponent frag{};
+    frag.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(#version 460
+in vec2 frag_uv;
+layout(location = 0) out vec4 diffuseColor;
+void main() {
+    diffuseColor = vec4(0.5,0.2,0.5,1);
+}
+)CAT");
+    vert.compile(ShaderComponent::ShaderType::VertexShader, R"CAT(
+  
+)CAT");
+    shader.setShader(vert,frag);
+    swm::checkOpenGLErrors();
 }
 void win::event::Update(double time) {
 
