@@ -127,8 +127,11 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -147,8 +150,11 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -160,22 +166,29 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="dll.h" />
-    <ClInclude Include="engine.hpp" />
+    <ClCompile Include="engine.ixx" />
+    <ClCompile Include="testScene.ixx" />
+    <ClInclude Include="debug.h" />
     <ClInclude Include="eventlistener.hpp" />
     <ClInclude Include="glm.h" />
-    <ClInclude Include="libload.h" />
-    <ClInclude Include="math.hpp" />
-    <ClInclude Include="render.hpp" />
-    <ClInclude Include="SWM.hpp" />
+    <ClCompile Include="math.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="render.ixx">
+      <DeploymentContent>false</DeploymentContent>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </DeploymentContent>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GLM.cpp" />
-    <ClCompile Include="LibLoad.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Render.cpp" />
-    <ClCompile Include="StampEngine.cpp" />
-    <ClCompile Include="SWM.cpp" />
+    <ClCompile Include="SWM.ixx">
+      <FileType>CppModule</FileType>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

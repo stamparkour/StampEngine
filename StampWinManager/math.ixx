@@ -1,7 +1,10 @@
-#pragma once
-#include <cmath>
+export module math;
 
-namespace math {
+import <cmath>;
+
+export namespace math {
+	constexpr double PI = 3.141592653589793;
+	constexpr double E = 2.718281828459045;
 	template<typename T>
 	concept Quantity = requires(T a, T b) {
 		a = b;
@@ -77,9 +80,11 @@ namespace math {
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
 		Vec2<float> Normal() const noexcept;
-		inline static Vec4<T> Unit() { return { 1,1 }; }
+		inline static const Vec2<T>& Unit() {
+			static Vec2<T> value{ 1,1 };
+			return value; 
+		}
 	};
-
 	template<Quantity T>
 	struct Vec3 final {
 		T x = 0;
@@ -109,7 +114,10 @@ namespace math {
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
 		Vec3<float> Normal() const noexcept;
-		inline static Vec4<T> Unit() { return { 1,1,1 }; }
+		inline static const Vec3<T>& Unit() {
+			static Vec3<T> value{ 1,1,1 };
+			return value;
+		}
 	};
 	template<Quantity T>
 	struct Vec4 final {
@@ -137,7 +145,10 @@ namespace math {
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
 		Vec4<float> Normal() const noexcept; 
-		inline static Vec4<T> Unit() { return { 1,1,1,1 }; }
+		inline static const Vec4<T>& Unit() {
+			static Vec4<T> value{ 1,1,1,1 };
+			return value;
+		}
 	};
 
 	template<Quantity T>
@@ -203,7 +214,10 @@ namespace math {
 		static Mat4<T> RotationZ(T v);
 		static Mat4<T> RotationZXY(T x, T y, T z);
 
-		inline static Mat4<T> Identity() { return { 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 }; }
+		inline static const Mat4<T>& Identity() { 
+			static Mat4<T> value{ 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 };
+			return value;
+		}
 	};
 
 	template<Quantity T>
@@ -240,8 +254,12 @@ namespace math {
 		static Quat<T> RotationAxis(T r, const Vec3<T>& axis) noexcept;
 		static Quat<T> RotationZXY(T x, T y, T z) noexcept;
 		static Quat<T> RotationZYX(T x, T y, T z) noexcept;
+		static Quat<T> LookAt(T x, T y, T z) noexcept;
 		explicit operator T* () const noexcept;
-		inline static Quat<T> Identity() { return { 1,0,0,0 }; }
+		inline static const Quat<T>& Identity() { 
+			static Quat<T> value{ 1,0,0,0 };
+			return value;
+		}
 	};
 
 	template<Quantity T>
@@ -290,8 +308,7 @@ namespace math {
 	}
 	template<Quantity T>
 	template<Quantity T1>
-	inline Vec2<T>::operator Vec2<T1>() const noexcept
-	{
+	math::Vec2<T>::operator Vec2<T1>() const noexcept {
 		return { (T1)x, (T1)y };
 	}
 	template<Quantity T>
@@ -616,10 +633,10 @@ namespace math {
 		return (T*)this;
 	}
 	template<Quantity T>
-	Mat4<T> Mat4<T>::Perspective(T fovy, T ratio, T nearPlane, T farPlane) {
+	Mat4<T> Mat4<T>::Perspective(T fovx, T ratio, T nearPlane, T farPlane) {
 		T v = farPlane - nearPlane;
-		T t = tanf(fovy / 2);
-		return { 1 / t,0,0,0,0,ratio / t,0,0,0,0,farPlane / v,1,0,0,-farPlane * nearPlane / v,0 };
+		T t = tanf(fovx / 2);
+		return { t,0,0,0,0,t * ratio,0,0,0,0,farPlane / v,1,0,0,-farPlane * nearPlane / v,0 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Orthographic(T scale, T ratio, T nearPlane, T farPlane) {
@@ -730,28 +747,35 @@ namespace math {
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationX(T v) noexcept {
-		return { cosf(v / 2),sinf(v / 2),0,0 };
+		return { (T)cosf(v / 2),(T)sinf(v / 2),0,0 };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationY(T v) noexcept {
-		return { cosf(v / 2),0,sinf(v / 2),0 };
+		return { (T)cosf(v / 2),0,(T)sinf(v / 2),0 };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZ(T v) noexcept {
-		return { cosf(v / 2),0,0,sinf(v / 2) };
+		return { (T)cosf(v / 2),0,0,(T)sinf(v / 2) };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationAxis(T r, const Vec3<T>& axis) noexcept {
 		Vec3<T> a = axis.Normal();
-		return { cosf(r / 2),a.x * sinf(r / 2),a.y * sinf(r / 2),a.z * sinf(r / 2) };
+		return { (T)cosf(r / 2),a.x * (T)sinf(r / 2),a.y * (T)sinf(r / 2),a.z * (T)sinf(r / 2) };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZXY(T x, T y, T z) noexcept {
-		return Quat<T>::RotationZ(z) * Quat<T>::RotationX(x) * Quat<T>::RotationY(y);
+		return  Quat<T>::RotationY(y) * Quat<T>::RotationX(x) * Quat<T>::RotationZ(z);
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZYX(T x, T y, T z) noexcept {
-		return Quat<T>::RotationZ(z) * Quat<T>::RotationY(y) * Quat<T>::RotationX(x);
+		return Quat<T>::RotationX(x) * Quat<T>::RotationY(y) * Quat<T>::RotationZ(z);
+	}
+	template<Quantity T>
+	Quat<T> math::Quat<T>::LookAt(T x, T y, T z) noexcept
+	{
+		T thetaY = atan2(x, z);
+		T thetaX = atan2(y, sqrt(x*x+z*z));
+		return RotationY(thetaY) * RotationY(thetaX);
 	}
 	template<Quantity T>
 	inline Quat<T>::operator T* () const noexcept {

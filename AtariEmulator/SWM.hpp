@@ -1,6 +1,12 @@
 #pragma once
 #include "glm.h"
 #include <vector>
+#include <stacktrace>
+#include <iostream>
+
+#define STAMPSTACK() std::cout << std::to_string(std::stacktrace::current()) << std::endl
+#define STAMPDMSG(msg) std::cout << msg << std::endl
+#define STAMPERROR(con,msg) if(con) {STAMPSTACK(); std::cout << msg << std::endl; }
 
 namespace swm {
 	struct SWHWND;
@@ -137,6 +143,8 @@ namespace swm {
 		void (*SyncUpdate_proc)(double time);
 		//REQUIRED: proc called on management thread async with update proc
 		void (*Render_proc)(double time);
+		//proc called before window closes (opengl accessable)
+		void (*End_proc)(double time);
 		//proc called when resizing window
 		void (*Resize_proc)(double time, long width, long height);
 		//proc called once when a key is down
@@ -209,6 +217,8 @@ namespace swm {
 	typedef bool (*isKeyUpProc)(VertKey key);
 	typedef WinPoint(*getCursorAbsolutePosProc)();
 	typedef void (*getDesktopResolutionProc)(int& horizontal, int& vertical);
+	typedef bool (*isRenderThreadProc)();
+	typedef SWHWND* (*getWindowProc)();
 	struct SWM_struct_t {
 		SWHWND_setVsyncProc SWHWND_setVsync_proc;
 		SWHWND_getVsyncProc SWHWND_getVsync_proc;
@@ -233,6 +243,8 @@ namespace swm {
 		isKeyUpProc isKeyUp_proc;
 		getCursorAbsolutePosProc getCursorAbsolutePos_proc;
 		getDesktopResolutionProc getDesktopResolution_proc;
+		isRenderThreadProc isRenderThread_proc;
+		getWindowProc getWindow_proc;
 	} inline* SWM_struct = 0;
 
 	//stamp window handle
@@ -261,13 +273,13 @@ namespace swm {
 		bool getCursorVisibility() const { return SWM_struct->SWHWND_getCursorVisibility_proc(this); }
 		void setCursorConstraint(CursorConstraintState state) { SWM_struct->SWHWND_setCursorConstraint_proc(this, state); }
 		CursorConstraintState getCursorConstraint() const { return SWM_struct->SWHWND_getCursorConstraint_proc(this); }
+		void AddListener(WinEvent& e);
 	};
 
 	inline bool isKeyDown(VertKey key) { return SWM_struct->isKeyDown_proc(key); }
 	inline bool isKeyUp(VertKey key) { return SWM_struct->isKeyDown_proc(key); }
 	inline WinPoint getCursorAbsolutePos() { return SWM_struct->getCursorAbsolutePos_proc(); }
 	inline void getDesktopResolution(int& horizontal, int& vertical) { return SWM_struct->getDesktopResolution_proc(horizontal, vertical); }
-
-	//internal functions
-	//user must call once before creating SWHWND 
+	inline bool isRenderThread() { return SWM_struct->isRenderThread_proc(); }
+	inline SWHWND* getWindow() { return SWM_struct->getWindow_proc(); }
 }

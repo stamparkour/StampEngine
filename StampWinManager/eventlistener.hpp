@@ -1,7 +1,5 @@
 #pragma once
 #include <mutex>
-#include "SWM.hpp"
-
 
 template<class... P>
 class EventListener final {

@@ -5,8 +5,6 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StampWinManager", "StampWinManager\StampWinManager.vcxproj", "{CB705FE3-9C32-4548-BDA6-1B7B65315CCE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AtariEmulator", "AtariEmulator\AtariEmulator.vcxproj", "{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -23,14 +21,6 @@ Global
 		{CB705FE3-9C32-4548-BDA6-1B7B65315CCE}.Release|x64.Build.0 = Release|x64
 		{CB705FE3-9C32-4548-BDA6-1B7B65315CCE}.Release|x86.ActiveCfg = Release|Win32
 		{CB705FE3-9C32-4548-BDA6-1B7B65315CCE}.Release|x86.Build.0 = Release|Win32
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Debug|x64.ActiveCfg = Debug|x64
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Debug|x64.Build.0 = Debug|x64
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Debug|x86.ActiveCfg = Debug|Win32
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Debug|x86.Build.0 = Debug|Win32
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Release|x64.ActiveCfg = Release|x64
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Release|x64.Build.0 = Release|x64
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Release|x86.ActiveCfg = Release|Win32
-		{D64D876A-B9FE-4CAA-93ED-6FA19F92BD2C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
