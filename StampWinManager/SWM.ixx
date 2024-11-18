@@ -167,14 +167,6 @@ export namespace swm {
 		};
 		unsigned int _value;
 	};
-	//stamp window initialization flag
-	struct SWIF {
-		enum {
-			//creates new console window for debug output
-			Debug = 1,
-		};
-		unsigned int _value;
-	};
 	//stamp window descriptor
 	struct StampWindowDesc {
 		const wchar_t* name = 0;
@@ -214,8 +206,8 @@ export namespace swm {
 	bool isKeyDown(VertKey key);
 	bool isKeyUp(VertKey key);
 	WinPoint getCursorAbsolutePos();
-	int getDesktopWidth();
-	int getDesktopHeight();
+	int getWindowWidth();
+	int getWindowHeight();
 	void getDesktopResolution(int& horizontal, int& vertical);
 	bool isRenderThread();
 
@@ -226,7 +218,7 @@ export namespace swm {
 
 	//internal functions
 	//user must call once before creating SWHWND 
-	void initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance, SWIF flags = {});
+	void initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance);
 	void checkOpenGLErrors();
 }
 
@@ -600,15 +592,28 @@ static void ManageWindow() {
 	}
 }
 
-void swm::initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance, SWIF flags) {
+void swm::initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance) {
 	static bool hasInit = false;
 	if (hasInit) return;
 	hasInit = true;
 
+#ifdef SWM_DEBUG
+	AllocConsole();
+#pragma warning(suppress : 4996 6031)
+	freopen("CONOUT$", "w", stdout);
+#pragma warning(suppress : 4996 6031)
+	freopen("CONIN$", "r", stdin);
+#pragma warning(suppress : 4996 6031)
+	freopen("CONOUT$", "w", stderr);
+#endif
+
 	HRESULT hr;
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-	if (FAILED(hr))
-		throw hr;
+	if (FAILED(hr)) {
+		STAMPSTACK();
+		STAMPDMSG("swm::initializeSWM - failed to start \"CoInitializerEx\": " << hr);
+		return;
+	}
 
 	//creates window class
 
@@ -630,17 +635,9 @@ void swm::initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance, SWIF flags) 
 	ATOM windowClassAtom = RegisterClassExW(&windowClass);
 	if (windowClassAtom == NULL) {
 		DWORD error = GetLastError();
-		throw error;
-	}
-
-	if (flags._value & SWIF::Debug) {
-		AllocConsole();
-#pragma warning(suppress : 4996 6031)
-		freopen("CONOUT$", "w", stdout);
-#pragma warning(suppress : 4996 6031)
-		freopen("CONIN$", "r", stdin);
-#pragma warning(suppress : 4996 6031)
-		freopen("CONOUT$", "w", stderr);
+		STAMPSTACK();
+		STAMPDMSG("swm::initializeSWM - failed to start \"CoInitializerEx\": " << error);
+		return;
 	}
 
 	if (desc == NULL) return;
@@ -668,7 +665,6 @@ void swm::checkOpenGLErrors() {
 }
 
 void swm::setVsync(bool v) {
-	if (!localWindow->canUpdateWin) throw - 1;
 	STAMPERROR(!localWindow->canUpdateWin, "swm::SWHWND::setVsync - cannot update window in current configuration.");
 	localWindow->vSync = v;
 	localWindow->updateWinAttrib._value |= UpdateWin::vSync;
@@ -687,10 +683,10 @@ swm::WinPoint swm::getCursorAbsolutePos() {
 double swm::getTime()  {
 	return (getTimeRaw() - localWindow->startTime) * tickTimeLength;
 }
-int swm::getDesktopWidth() {
+int swm::getWindowWidth() {
 	return localWindow->winPos.width;
 }
-int swm::getDesktopHeight() {
+int swm::getWindowHeight() {
 	return localWindow->winPos.height;
 }
 void swm::getDesktopResolution(int& horizontal, int& vertical) {
@@ -745,19 +741,19 @@ bool swm::isWindowActive() {
 	return localWindow->active;
 }
 void swm::sleepUntilWindowTerminate() {
-	if (std::this_thread::get_id() == localWindow->managementThread.get_id())
-		throw std::runtime_error("swm::SWHWND::sleepUntilWindowTerminate - wrong thread, thread required is not management thread");
+	STAMPERROR(std::this_thread::get_id() == localWindow->managementThread.get_id(),
+		"swm::SWHWND::sleepUntilWindowTerminate - wrong thread, thread required is not management thread");
 	localWindow->managementThread.join();
 }
 void swm::sleepUntilGLContext() {
-	if (!localWindow || std::this_thread::get_id() == localWindow->managementThread.get_id())
-		throw std::runtime_error("swm::SWHWND::sleepUntilGLContext - wrong thread, thread required is not management thread");
+	STAMPERROR(!localWindow || std::this_thread::get_id() == localWindow->managementThread.get_id(),
+		"swm::SWHWND::sleepUntilGLContext - wrong thread, thread required is not management thread");
 	localWindow->glContextMutex.lock();
 	localWindow->glContextMutex.unlock();
 }
 void swm::processWinEvents() {
-	if (std::this_thread::get_id() != localWindow->managementThread.get_id())
-		throw std::runtime_error("swm::SWHWND::processWinEvents - wrong thread, thread required is management thread");
+	STAMPERROR(std::this_thread::get_id() != localWindow->managementThread.get_id(),
+		"swm::SWHWND::processWinEvents - wrong thread, thread required is management thread");
 	MSG msg;
 	while (PeekMessage(&msg, localWindow->winHandle, 0, 0, PM_REMOVE) > 0) {
 		if (msg.message == WM_PAINT)
@@ -781,4 +777,7 @@ void swm::setScene(swm::SceneBase* scene) {
 }
 void swm::setWindowResolution(int width, int height) {
 	SetWindowPos(localWindow->winHandle, NULL, 0, 0, width, height, SWP_NOMOVE);
+}
+double swm::getWindowRatio() {
+	return localWindow->screenRatio;
 }
