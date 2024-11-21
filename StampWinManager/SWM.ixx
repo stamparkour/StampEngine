@@ -13,6 +13,11 @@ import <mutex>;
 import "debug.h";
 import "glm.h";
 
+//remove the time parameter to the scene
+//add delta time function
+
+void setScene(class SceneBase* scene);
+
 export namespace swm {
 	//labeled virtual keycode
 	enum struct VertKey {
@@ -140,12 +145,12 @@ export namespace swm {
 	protected:
 		SceneBase() {}
 	public:
-		virtual void Start(double time) = 0;
-		virtual void End(double time) = 0;
-		virtual void Update(double time) = 0;
-		virtual void SyncUpdate(double time) = 0;
-		virtual void Render(double time) = 0;
-		virtual void Resize(double time, long width, long height) = 0;
+		virtual void Start() = 0;
+		virtual void End() = 0;
+		virtual void Update() = 0;
+		virtual void SyncUpdate() = 0;
+		virtual void Render() = 0;
+		virtual void Resize(long width, long height) = 0;
 		virtual ~SceneBase() {}
 	};
 	//stamp window descriptor flag
@@ -179,7 +184,6 @@ export namespace swm {
 	};
 
 	SceneBase* getCurrentScene();
-	void setScene(SceneBase* scene);
 	template<typename T>
 	inline void initScene() {
 		setScene(new T());
@@ -187,6 +191,7 @@ export namespace swm {
 	void setVsync(bool v);
 	bool getVsync();
 	double getTime();
+	double getDeltaTime();
 	void processWinEvents();
 	void sleepUntilWindowTerminate();
 	void sleepUntilGLContext();
@@ -204,7 +209,9 @@ export namespace swm {
 	CursorConstraintState getCursorConstraint();
 
 	bool isKeyDown(VertKey key);
+	bool isKeyHold(VertKey key);
 	bool isKeyUp(VertKey key);
+	bool isKeyRelease(VertKey key);
 	WinPoint getCursorAbsolutePos();
 	int getWindowWidth();
 	int getWindowHeight();
@@ -258,6 +265,8 @@ struct SWindowHandle {
 	int deltaScroll = 0;
 	long long pauseTime = 0;
 	long long startTime = 0;
+	long long prevTime = 0;
+	double deltaTime = 0;
 	swm::WinPos winPos{};
 	HINSTANCE hInstance = 0;
 	swm::SceneBase* scene;
@@ -268,26 +277,50 @@ struct SWindowHandle {
 SWindowHandle* localWindow = 0;
 
 struct {
-	uint8_t state[256 / 8]{};
+	uint8_t down[256 / 8]{};
+	uint8_t hold[256 / 8]{};
 } KeyboardManagerState;
 
 void InternalKeyDown(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return;
 	int shift = key % 8;
-	KeyboardManagerState.state[index] |= 1 << shift;
+	KeyboardManagerState.down[index] |= 1 << shift;
 }
 void InternalKeyUp(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return;
 	int shift = key % 8;
-	KeyboardManagerState.state[index] &= ~(1 << shift);
+	KeyboardManagerState.down[index] &= ~(1 << shift);
 }
-bool InternalGetKeyState(int key) {
+bool InternalGetKeyStateDown(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return false;
 	int shift = key % 8;
-	return KeyboardManagerState.state[index] & 1 << shift;
+	return (KeyboardManagerState.down[index] & 1 << shift) && !(KeyboardManagerState.hold[index] & 1 << shift);
+}
+bool InternalGetKeyStateHold(int key) {
+	int index = key / 8;
+	if (index >= 256 / 8) return false;
+	int shift = key % 8;
+	return KeyboardManagerState.down[index] & 1 << shift;
+}
+bool InternalGetKeyStateRelease(int key) {
+	int index = key / 8;
+	if (index >= 256 / 8) return false;
+	int shift = key % 8;
+	return !(KeyboardManagerState.down[index] & 1 << shift) && !(KeyboardManagerState.hold[index] & 1 << shift);
+}
+bool InternalGetKeyStateUp(int key) {
+	int index = key / 8;
+	if (index >= 256 / 8) return false;
+	int shift = key % 8;
+	return !(KeyboardManagerState.down[index] & 1 << shift);
+}
+void UpdateKeyManager() {
+	for(int i = 0; i < sizeof(KeyboardManagerState.down); i++) {
+		KeyboardManagerState.hold[i] = KeyboardManagerState.down[i];
+	}
 }
 
 //timer management
@@ -301,6 +334,7 @@ static long long getTimeRaw() {
 	QueryPerformanceCounter(&largeInt);
 	return (largeInt.QuadPart);
 }
+
 static void PauseTimer() {
 	long long t = getTimeRaw();
 	if (localWindow->pauseTime != 0) {
@@ -389,7 +423,7 @@ void OnPaint() {
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	if (localWindow->scene) localWindow->scene->Render(swm::getTime());
+	if (localWindow->scene) localWindow->scene->Render();
 
 	if (localWindow->vSync) {
 		if (!SwapBuffers(hdc)) std::cout << "FAILED SWAP BUFFER!" << std::endl;
@@ -397,15 +431,15 @@ void OnPaint() {
 	else {
 		glFinish();//glFlush();
 	}
-	if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Render(swm::getTime());
+	if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Render();
 }
 
 static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_DESTROY:
-		swm::setScene(nullptr);
+		setScene(nullptr);
 		if (localWindow->scene) {
-			localWindow->scene->End(swm::getTime());
+			localWindow->scene->End();
 			delete localWindow->scene;
 			localWindow->scene = 0;
 		}
@@ -453,7 +487,7 @@ static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 		if (!localWindow->initialized) {
 			localWindow->initialized = true;
 		}
-		if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Resize(swm::getTime(), winpos->cx, winpos->cy);
+		if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Resize(winpos->cx, winpos->cy);
 		//glViewport(0, 0, winpos->cx, winpos->cy);
 	} break;
 	case WM_ACTIVATE:
@@ -549,25 +583,25 @@ static void ManageWindow() {
 			DispatchMessage(&msg);
 		}
 		localWindow->pauseTime = 0;
-		std::thread update{ [](double time) {
-			if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Update(time);
-		} , swm::getTime() };
+		std::thread update{ []() {
+			if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Update();
+		} };
 
 		OnPaint();
 
 		update.join();
 		if (localWindow->SceneState == SceneState::End) {
 			if (localWindow->scene) {
-				localWindow->scene->End(swm::getTime());
+				localWindow->scene->End();
 				delete localWindow->scene;
 			}
 			localWindow->SceneState = SceneState::Init;
 			localWindow->scene = localWindow->nextScene;
 		}
 		if (localWindow->scene) {
-			if (localWindow->SceneState == SceneState::Loop) localWindow->scene->SyncUpdate(swm::getTime());
+			if (localWindow->SceneState == SceneState::Loop) localWindow->scene->SyncUpdate();
 			else if (localWindow->SceneState == SceneState::Init) {
-				localWindow->scene->Start(swm::getTime());
+				localWindow->scene->Start();
 				localWindow->SceneState = SceneState::Loop;
 			}
 		}
@@ -575,6 +609,7 @@ static void ManageWindow() {
 		localWindow->deltaMouseX = 0;
 		localWindow->deltaMouseY = 0;
 		localWindow->deltaScroll = 0;
+		UpdateKeyManager();
 
 		if (localWindow->updateWinAttrib._value) {
 			if (localWindow->updateWinAttrib._value & UpdateWin::Cursor) {
@@ -589,6 +624,9 @@ static void ManageWindow() {
 			}
 			localWindow->updateWinAttrib._value = 0;
 		}
+		long long pt = getTimeRaw();
+		localWindow->deltaTime = (pt-localWindow->prevTime) * tickTimeLength;
+		localWindow->prevTime = pt;
 	}
 }
 
@@ -683,6 +721,9 @@ swm::WinPoint swm::getCursorAbsolutePos() {
 double swm::getTime()  {
 	return (getTimeRaw() - localWindow->startTime) * tickTimeLength;
 }
+double swm::getDeltaTime() {
+	return localWindow->deltaTime;
+}
 int swm::getWindowWidth() {
 	return localWindow->winPos.width;
 }
@@ -697,10 +738,16 @@ void swm::getDesktopResolution(int& horizontal, int& vertical) {
 	vertical = desktop.bottom;
 }
 bool swm::isKeyDown(swm::VertKey key) {
-	return InternalGetKeyState((int)key);
+	return InternalGetKeyStateDown((int)key);
+}
+bool swm::isKeyHold(swm::VertKey key) {
+	return InternalGetKeyStateHold((int)key);
 }
 bool swm::isKeyUp(swm::VertKey key) {
-	return !swm::isKeyDown(key);
+	return InternalGetKeyStateUp((int)key);
+}
+bool swm::isKeyRelease(swm::VertKey key) {
+	return InternalGetKeyStateRelease((int)key);
 }
 long swm::getCursorDeltaScroll() {
 	return localWindow->deltaScroll;
@@ -769,7 +816,7 @@ swm::SceneBase* swm::getCurrentScene()
 {
 	return localWindow->scene;
 }
-void swm::setScene(swm::SceneBase* scene) {
+void setScene(swm::SceneBase* scene) {
 	if (scene) {
 		localWindow->SceneState = SceneState::End;
 	}

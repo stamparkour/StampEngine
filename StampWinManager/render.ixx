@@ -29,8 +29,10 @@ export namespace render {
 	constexpr auto ATTRIBPOINTER_COLOR = 4;
 	constexpr auto BLOCKBINDING_CAMERA = 1;
 	constexpr auto BLOCKBINDING_RENDER_PROC = 2;
+	constexpr auto BLOCKBINDING_CAMERAUI = 3;
 	constexpr auto UNIFORM_CAMERA = 1;
 	constexpr auto UNIFORM_TRANSFORM = 2;
+	constexpr auto UNIFORM_CAMERAUI = 3;
 	constexpr auto UNIFORM_NORMALMAP = 10;
 	constexpr auto UNIFORM_TEXTURE0 = 20;
 
@@ -514,6 +516,7 @@ export namespace render {
 		size_t Height(int mipmap = 0) const {
 			return max(1,height / (mipmap + 1));
 		}
+		void Clear();
 
 		inline friend void swap(ImageTexture2d& a, ImageTexture2d& b) {
 			using std::swap;
@@ -751,18 +754,19 @@ export namespace render {
 			GL_VERTEX_SHADER,  GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER, GL_COMPUTE_SHADER
 		};
 		inline static const std::string shaderDefineScript[]{
-			"#define GL_VERTEX_SHADER\n", "#define GL_TESS_CONTROL_SHADER\n", "#define GL_TESS_EVALUATION_SHADER\n", "#define GL_GEOMETRY_SHADER\n", "#define GL_FRAGMENT_SHADER\n","#define GL_COMPUTE_SHADER\n"
+			"GL_VERTEX_SHADER\n", "#GL_TESS_CONTROL_SHADER\n", "GL_TESS_EVALUATION_SHADER\n", "GL_GEOMETRY_SHADER\n", "GL_FRAGMENT_SHADER\n","GL_COMPUTE_SHADER\n"
 		};
 	private:
 		GLuint program = 0;
 		static inline thread_local GLuint currentProgram = 0;
-	private:
-		GLenum ToShaderComp(std::string& progTxt, int index) {
+
+		GLenum ToShaderComp(std::string& version, std::string& progTxt, int index) {
 			static GLint compiled = 0;
 			static GLchar message[1024]{};
 			static GLsizei log_length = 0;
 			GLuint comp = glCreateShader(shaderTypeEnum[index]);
-			std::string p = shaderDefineScript[index] + progTxt;
+			std::string p = version + std::string("#define ") + shaderDefineScript[index] + progTxt;
+			
 			const char* c = p.c_str();
 			glShaderSource(comp, 1, &c, 0);
 
@@ -778,41 +782,59 @@ export namespace render {
 		}
 	protected:
 		ShaderProgramBase() {}
-		void set(std::istream& prog, ShaderType type) {
+		void set(std::istream& prog, ShaderType type, std::vector<std::string>* defines = 0) {
 			if (program) glDeleteProgram(program);
 			program = glCreateProgram();
-			std::string progTxt{ std::istreambuf_iterator<char>(prog), {} };
+			//reseve size of strings?
+			std::string version{};
+			std::string progTxt{};
+			while((bool)prog) {//get version
+				char c = prog.get();
+				if(c == '\r') continue;
+				version += c;
+				if(c == '\n') break;
+			}
+			while((bool)prog) {//get text
+				char c = prog.get();
+				if(c == '\r') continue;
+				progTxt += c;
+			}
+			if(defines) {
+				for(int i = 0; i < defines->size(); i++) {
+					progTxt = std::string("#define ") + (*defines)[i] + std::string("\n") +  progTxt;
+				}
+			}
 			static GLint compiled = 0;
 			static GLchar message[1024]{};
 			static GLsizei log_length = 0;
 			std::vector<GLuint> shaderComp{};
 			if(type._value & ShaderType::VertexShader) {
-				GLenum comp = ToShaderComp(progTxt, 0);	
+				GLenum comp = ToShaderComp(version, progTxt, 0);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
 			if(type._value & ShaderType::TessControlShader) {
-				GLenum comp = ToShaderComp(progTxt, 1);	
+				GLenum comp = ToShaderComp(version, progTxt, 1);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
 			if(type._value & ShaderType::TessEvaluationShader) {
-				GLenum comp = ToShaderComp(progTxt, 2);	
+				GLenum comp = ToShaderComp(version, progTxt, 2);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
 			if(type._value & ShaderType::GeometryShader) {
-				GLenum comp = ToShaderComp(progTxt, 3);	
+				GLenum comp = ToShaderComp(version, progTxt, 3);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
 			if(type._value & ShaderType::FragmentShader) {
-				GLenum comp = ToShaderComp(progTxt, 4);	
+				GLenum comp = ToShaderComp(version, progTxt, 4);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
 			if(type._value & ShaderType::ComputeShader) {
-				GLenum comp = ToShaderComp(progTxt, 5);	
+				GLenum comp = ToShaderComp(version, progTxt, 5);	
 				shaderComp.push_back(comp);
 				glAttachShader(program, comp);
 			}
@@ -1031,9 +1053,9 @@ export namespace render {
 			swap((ShaderProgramBase&)a, (ShaderProgramBase&)b);
 		}
 		virtual ~RenderShaderProgram() { }
-		inline static RenderShaderProgram ParseStream_glsl(std::istream& prog, ShaderType type) {
+		inline static RenderShaderProgram ParseStream_glsl(std::istream& prog, ShaderType type, std::vector<std::string>* defines = 0) {
 			RenderShaderProgram r{};
-			r.ShaderProgramBase::set(prog, { ShaderType::VertexShader | ShaderType::FragmentShader | type._value });
+			r.ShaderProgramBase::set(prog, { ShaderType::VertexShader | ShaderType::FragmentShader | type._value }, defines);
 			return r;
 		}
 	};
@@ -1196,14 +1218,14 @@ export namespace render {
 	class CameraUI final {
 		UBObject ubo{};
 	public:
-		float width = 1920;
-		float height = 1080;
+		static inline float width = 1920;
+		static inline float height = 1080;
 		float nearPlane = 1;
 		float farPlane = 1000;
 		math::Mat4f toMatrix() {
 			return math::Mat4f::Orthographic(width/2, height/width, nearPlane, farPlane);
 		}
-		void Update(int index = BLOCKBINDING_CAMERA) {
+		void Update(int index = BLOCKBINDING_CAMERAUI) {
 			struct cam_t {
 				math::Mat4f cam;
 			} value;
@@ -1262,10 +1284,10 @@ export namespace render {
 		}
 		void Resize(size_t width, size_t height) {
 			for (int i = 0; i < colorAttachments.size(); i++) {
-				colorAttachments[i] = std::move(ImageTexture2d{width, height});
+				colorAttachments[i] = ImageTexture2d{width, height};
 				colorAttachments[i].BindActive();
 			}
-			stencilDepth = std::move(ImageTexture2d(width, height, GL_DEPTH32F_STENCIL8));
+			stencilDepth = ImageTexture2d(width, height, GL_DEPTH32F_STENCIL8);
 		}
 		void Bind() {
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
@@ -1274,6 +1296,9 @@ export namespace render {
 				buffer.get()[i] = GL_COLOR_ATTACHMENT0 + i;
 			}
 			glDrawBuffers(colorAttachments.size(), buffer.get());
+		}
+		void BindActive(int startUniformIndex  = BLOCKBINDING_CAMERAUI) {
+
 		}
 
 		void CopyContentToScreen(int colorAttachmentIndex = 0) {
@@ -1288,7 +1313,6 @@ export namespace render {
 	class PostProcessManager final {
 	public:
 		std::shared_ptr<ComputeShaderProgram> shader{ 0 };
-		UniformBufferObject ubo{};
 		FrameBuffer2d buffer;
 		PostProcessManager(std::shared_ptr<ComputeShaderProgram> shader, int drawBuffers) : buffer{ drawBuffers } {
 			this->shader = shader;
@@ -1304,9 +1328,6 @@ export namespace render {
 			for (int i = 0; i < drawBuffers; i++) {
 				val->textures[i] = this->buffer.colorAttachments[i].GetActiveTextureId();
 			}
-			ubo.Set(val.get(), length);
-			ubo.BindBuffer();
-			shader->UniformBuffer(BLOCKBINDING_RENDER_PROC, ubo);
 		}
 		void ResizeToScreen() {
 			buffer.ResizeToScreen();
