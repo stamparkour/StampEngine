@@ -1,10 +1,6 @@
-export module render;
+export module gamerender;
 
-import <vector>;
-import <exception>;
-import <utility>;
-import <istream>;
-import <mutex>;
+import std;
 import "glm.h";
 import "debug.h";
 
@@ -516,7 +512,9 @@ export namespace render {
 		size_t Height(int mipmap = 0) const {
 			return max(1,height / (mipmap + 1));
 		}
-		void Clear();
+		void Clear() {
+
+		}
 
 		inline friend void swap(ImageTexture2d& a, ImageTexture2d& b) {
 			using std::swap;
@@ -1247,7 +1245,8 @@ export namespace render {
 		GLuint id = 0;
 	public:
 		std::vector<ImageTexture2d> colorAttachments{};
-		ImageTexture2d stencilDepth{};
+		ImageTexture2d stencil{};
+		ImageTexture2d depth{};
 		FrameBuffer2d(int colorAttachments) {
 			if(initFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &initFBO);
 			glGenFramebuffers(1, &id);
@@ -1257,7 +1256,8 @@ export namespace render {
 			for (int i = 0; i < colorAttachments; i++) {
 				glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, this->colorAttachments[i].GetTextureId(), 0);
 			}
-			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, this->stencilDepth.GetTextureId(), 0);
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, this->stencil.GetTextureId(), 0);
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, this->depth.GetTextureId(), 0);
 		}
 		FrameBuffer2d(const FrameBuffer2d& other) = delete;
 		FrameBuffer2d(FrameBuffer2d&& other) noexcept {
@@ -1273,7 +1273,8 @@ export namespace render {
 			using std::swap;
 			swap(a.id, b.id);
 			swap(a.colorAttachments, b.colorAttachments);
-			swap(a.stencilDepth, b.stencilDepth);
+			swap(a.stencil, b.stencil);
+			swap(a.depth, b.depth);
 		}
 		~FrameBuffer2d() {
 			if (id) glDeleteFramebuffers(1, &id);
@@ -1287,7 +1288,8 @@ export namespace render {
 				colorAttachments[i] = ImageTexture2d{width, height};
 				colorAttachments[i].BindActive();
 			}
-			stencilDepth = ImageTexture2d(width, height, GL_DEPTH32F_STENCIL8);
+			stencil = ImageTexture2d(width, height, GL_STENCIL_INDEX8);
+			depth = ImageTexture2d(width, height, GL_DEPTH_COMPONENT32F);
 		}
 		void Bind() {
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
@@ -1316,18 +1318,6 @@ export namespace render {
 		FrameBuffer2d buffer;
 		PostProcessManager(std::shared_ptr<ComputeShaderProgram> shader, int drawBuffers) : buffer{ drawBuffers } {
 			this->shader = shader;
-			struct Data {
-				int length;
-				int stencilDepth;
-				int textures[0];
-			};
-			size_t length = sizeof(Data) + sizeof(int) * drawBuffers;
-			std::unique_ptr<Data> val{ (Data*)malloc(length) };
-			val->length = drawBuffers;
-			val->stencilDepth = buffer.stencilDepth.GetActiveTextureId();
-			for (int i = 0; i < drawBuffers; i++) {
-				val->textures[i] = this->buffer.colorAttachments[i].GetActiveTextureId();
-			}
 		}
 		void ResizeToScreen() {
 			buffer.ResizeToScreen();

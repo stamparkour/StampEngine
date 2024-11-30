@@ -13,10 +13,7 @@ import "glm.h";
 //remove the time parameter to the scene
 //add delta time function
 
-namespace swm {
-	class SceneBase;
-}
-void setScene(swm::SceneBase* scene);
+void setScene(void* (*scene)());
 
 export namespace swm {
 	//labeled virtual keycode
@@ -185,8 +182,10 @@ export namespace swm {
 
 	SceneBase* getCurrentScene();
 	template<typename T>
-	inline void initScene() {
-		setScene(new T());
+	void initScene() {
+		setScene([]() -> void* {
+				return new T();
+			});
 	}
 	void setVsync(bool v);
 	bool getVsync();
@@ -270,7 +269,7 @@ struct SWindowHandle {
 	swm::WinPos winPos{};
 	HINSTANCE hInstance = 0;
 	swm::SceneBase* scene;
-	swm::SceneBase* nextScene;
+	swm::SceneBase* (*nextScene)();
 	SceneState SceneState = SceneState::End;
 	std::mutex glContextMutex{};
 };
@@ -437,13 +436,11 @@ void OnPaint() {
 static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_DESTROY:
-		setScene(0);
 		if (localWindow->scene) {
 			localWindow->scene->End();
 			delete localWindow->scene;
 			localWindow->scene = 0;
 		}
-		
 		PostQuitMessage(0);
 		FreeConsole();
 		break;
@@ -596,7 +593,7 @@ static void ManageWindow() {
 				delete localWindow->scene;
 			}
 			localWindow->SceneState = SceneState::Init;
-			localWindow->scene = localWindow->nextScene;
+			localWindow->scene = localWindow->nextScene();
 		}
 		if (localWindow->scene) {
 			if (localWindow->SceneState == SceneState::Loop) localWindow->scene->SyncUpdate();
@@ -816,15 +813,13 @@ swm::SceneBase* swm::getCurrentScene()
 {
 	return localWindow->scene;
 }
-void setScene(swm::SceneBase* scene) {
-	if (scene) {
-		localWindow->SceneState = SceneState::End;
-	}
-	localWindow->nextScene = scene;
-}
 void swm::setWindowResolution(int width, int height) {
 	SetWindowPos(localWindow->winHandle, NULL, 0, 0, width, height, SWP_NOMOVE);
 }
 double swm::getWindowRatio() {
 	return localWindow->screenRatio;
+}
+void setScene(void* (*scene)()) {
+	localWindow->SceneState = SceneState::End;
+	localWindow->nextScene = (swm::SceneBase* (*)())scene;
 }

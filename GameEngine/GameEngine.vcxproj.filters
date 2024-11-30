@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Game">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Engine\GL">
+      <UniqueIdentifier>{ad844960-9262-4021-a5d4-ea7d15e206b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\StampEngine">
+      <UniqueIdentifier>{ea97d77a-d805-48f5-a787-e6ea341378ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\LUA">
+      <UniqueIdentifier>{a2839e83-6f87-4903-b803-703cb5a339e2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="testScene.ixx">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="luamanager.ixx">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="GLM.cpp">
+      <Filter>Engine\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="engine.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="gamerender.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="math.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="SWM.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debug.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="glm.h">
+      <Filter>Engine\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="eventlistener.hpp">
+      <Filter>Engine</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lua\Makefile" />
+  </ItemGroup>
+</Project>

@@ -166,8 +166,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="engine.ixx" />
-    <ClCompile Include="luamanager.ixx" />
+    <ClCompile Include="engine.ixx">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCppModule</CompileAs>
+    </ClCompile>
+    <ClCompile Include="luamanager.ixx">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCppModule</CompileAs>
+    </ClCompile>
     <ClCompile Include="lua\lapi.c" />
     <ClCompile Include="lua\lauxlib.c" />
     <ClCompile Include="lua\lbaselib.c" />
@@ -207,14 +211,16 @@
     <ClInclude Include="glm.h" />
     <ClCompile Include="math.ixx">
       <FileType>Document</FileType>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCppModule</CompileAs>
     </ClCompile>
-    <ClCompile Include="render.ixx">
+    <ClCompile Include="gamerender.ixx">
       <DeploymentContent>false</DeploymentContent>
       <FileType>Document</FileType>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </DeploymentContent>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCppModule</CompileAs>
     </ClCompile>
     <ClInclude Include="lua\lapi.h" />
     <ClInclude Include="lua\lauxlib.h" />
@@ -250,6 +256,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SWM.ixx">
       <FileType>CppModule</FileType>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCppModule</CompileAs>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

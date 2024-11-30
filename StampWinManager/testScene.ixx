@@ -1,7 +1,7 @@
 export module testScene;
 
 import "glm.h";
-import render;
+import gamerender;
 import swm;
 import math;
 

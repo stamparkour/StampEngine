@@ -131,7 +131,7 @@
     <ClCompile Include="math.ixx">
       <Filter>Engine\StampEngine</Filter>
     </ClCompile>
-    <ClCompile Include="render.ixx">
+    <ClCompile Include="gamerender.ixx">
       <Filter>Engine\StampEngine</Filter>
     </ClCompile>
     <ClCompile Include="testScene.ixx">

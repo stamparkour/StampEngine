@@ -1,6 +1,6 @@
 export module math;
 
-import std;
+import <cmath>;
 
 export namespace math {
 	constexpr double PI = 3.141592653589793;
@@ -202,11 +202,13 @@ export namespace math {
 		Vec4<T> operator *(const Vec4<T>& b) const;
 		Vec4<T> operator *(const Vec3<T>& b) const;
 		operator const T* () const;
-
+		static Mat4<T> Perspective(T right, T left, T top, T bottom, T nearPlane, T farPlane);
+		//ratio : y / xj
+		static Mat4<T> Perspective(T rightRad, T leftRad, T topRad, T bottomRad, T ratio, T nearPlane, T farPlane);
 		//ratio : y / x
-		static Mat4<T> Perspective(T fovy, T ratio, T nearPlane, T farPlane);
+		static Mat4<T> Perspective(T fovx, T ratio, T nearPlane, T farPlane);
 		//ratio : y / x
-		static Mat4<T> Orthographic(T scale, T ratio, T nearPlane, T farPlane);
+		static Mat4<T> Orthographic(T scaleX, T ratio, T nearPlane, T farPlane);
 		static Mat4<T> Scale(T x, T y, T z);
 		static Mat4<T> Translate(T x, T y, T z);
 		static Mat4<T> RotationX(T v);
@@ -453,6 +455,10 @@ export namespace math {
 		return *this = *this / b;
 	}
 	template<Quantity T>
+	math::Vec4<T>::operator const T* () const noexcept {
+		return (const T*)this;
+	}
+	template<Quantity T>
 	Vec4<T>::operator Vec3<T>() const noexcept {
 		return { x,y,z };
 	}
@@ -633,14 +639,26 @@ export namespace math {
 		return (T*)this;
 	}
 	template<Quantity T>
-	Mat4<T> Mat4<T>::Perspective(T fovx, T ratio, T nearPlane, T farPlane) {
-		T v = farPlane - nearPlane;
-		T t = tanf(fovx / 2);
-		return { t,0,0,0,0,t * ratio,0,0,0,0,farPlane / v,1,0,0,-farPlane * nearPlane / v,0 };
+	Mat4<T> math::Mat4<T>::Perspective(T right, T left, T top, T bottom, T near, T far) {
+		return { 2 * near / (right - left),0,(right + left) / (right - left),0,0,2 * near / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
 	}
 	template<Quantity T>
-	Mat4<T> Mat4<T>::Orthographic(T scale, T ratio, T nearPlane, T farPlane) {
-		return { 1 / scale,0,0,0,0,ratio / scale,0,0,0,0,-2 / (farPlane - nearPlane),0,0,0,-(farPlane + nearPlane) / (farPlane - nearPlane),1 };
+	Mat4<T> math::Mat4<T>::Perspective(T right, T left, T top, T bottom, T ratio, T near, T far) {
+		right = tan(right);
+		left = tan(left);
+		top = tan(top) * ratio;
+		bottom = tan(bottom) * ratio;
+		return { 2 / (right - left),0,(right + left) / (right - left),0,0,2 / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
+	}
+	template<Quantity T>
+	Mat4<T> Mat4<T>::Perspective(T fovx, T ratio, T near, T far) {
+		T r = tan(fovx / 2);
+		T t = r * ratio;
+		return { 1 / r,0,0,0,0,1 / t,0,0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
+	}
+	template<Quantity T>
+	Mat4<T> Mat4<T>::Orthographic(T scaleX, T ratio, T nearPlane, T farPlane) {
+		return { 1 / scaleX,0,0,0,0,ratio / scaleX,0,0,0,0,-2 / (farPlane - nearPlane),0,0,0,-(farPlane + nearPlane) / (farPlane - nearPlane),1 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Scale(T x, T y, T z) {
@@ -775,7 +793,7 @@ export namespace math {
 	{
 		T thetaY = atan2(x, z);
 		T thetaX = atan2(y, sqrt(x*x+z*z));
-		return RotationY(thetaY) * RotationY(thetaX);
+		return RotationX(thetaY) * RotationY(thetaX);
 	}
 	template<Quantity T>
 	inline Quat<T>::operator T* () const noexcept {

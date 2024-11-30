@@ -46,9 +46,7 @@ export namespace engine {
 	// +--+--+ 
 	// |  |  |
 	// +--+--+
-	// stretch/fixed width and height
-	//x1, x2
-	//y1, y2
+	//screen alignment, local pivot alignment
 	//
 	//lua construction
 	
@@ -56,7 +54,7 @@ export namespace engine {
 	class Component;
 	class Scene;
 
-	class Component {
+	class Component : public std::enable_shared_from_this<Component> {
 		friend class GameObject;
 		State state = State::Creating;
 		EnableState enable = EnableState::Enabling;
@@ -100,12 +98,14 @@ export namespace engine {
 	class GameObject final : public std::enable_shared_from_this<GameObject> {
 		friend class Scene;
 		bool destroying = false;
+		bool tranformUpdated = false;
+		math::Mat4f transformMat;
 		EnableState enable = EnableState::Enabling;
 		std::vector<std::shared_ptr<GameObject>> children{};
 		std::shared_ptr<GameObject> parent{};
-		std::vector<std::unique_ptr<Component>> components{};
+		std::vector<std::shared_ptr<Component>> components{};
 		void Update() {
-			
+			tranformUpdated = false;
 			for (int i = 0; i < components.size(); i++) {
 				if (components[i]->IsEnabled() && components[i]->state == State::Running) {
 					components[i]->Update();
@@ -147,6 +147,7 @@ export namespace engine {
 					i--;
 				}
 			}
+			QuerySyncTransform();
 		}
 		void OnDestroy() {
 			if (components.size() > 0) {
@@ -157,6 +158,18 @@ export namespace engine {
 			}
 			SetParent();
 		}
+		math::Mat4f QuerySyncTransform() {
+			if (tranformUpdated) return transformMat;
+			math::Mat4f mat = transform.toMatrix();
+			if (parent) {
+				mat = mat * QuerySyncTransform();
+			}
+			else {
+				transformMat = mat;
+			}
+			tranformUpdated = true;
+			return transformMat;
+		}
 	protected:
 		GameObject() {}
 	public:
@@ -164,10 +177,11 @@ export namespace engine {
 		std::string name;
 		render::Transform transform;
 		template<typename T, typename... P>
-		std::unique_ptr<T> AddComponent(P... param) {
-			std::unique_ptr<T> component{ new T(param...) };
+		std::shared_ptr<T> AddComponent(P... param) {
+			std::shared_ptr<T> component = std::static_pointer_cast<T>((new T(param...))->shared_from_this());
 			component->gameObject = shared_from_this();
 			components.push_back(component);
+			return component;
 		}
 		template<typename T>
 		bool RemoveComponent() {
@@ -204,6 +218,9 @@ export namespace engine {
 				this->parent->children.push_back(shared_from_this());
 			}
 		}
+		std::shared_ptr<GameObject> Parent() {
+			return parent;
+		}
 		const std::vector<std::shared_ptr<GameObject>> GetChildren() {
 			return children;
 		}
@@ -217,12 +234,31 @@ export namespace engine {
 				children.resize(0);
 			}
 		}
-		~GameObject() {
+		~GameObject() { }
+
+		math::Vec3f Forward() {
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, 1, 1));
+		}
+		math::Vec3f Back() {
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, -1, 1));
+		}
+		math::Vec3f Right() {
+			return (math::Vec3f)(transformMat * math::Vec4f(1, 0, 0, 1));
+		}
+		math::Vec3f Left() {
+			return (math::Vec3f)(transformMat * math::Vec4f(-1, 0, 0, 1));
+		}
+		math::Vec3f Up() {
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 1, 0, 1));
+		}
+		math::Vec3f Down() {
+			return (math::Vec3f)(transformMat * math::Vec4f(0, -1, 0, 1));
 		}
 	};
 
-	class Scene final : swm::SceneBase {
+	class Scene : swm::SceneBase {
 		static inline Scene* currentScene;
+		render::UniformBufferObject lightBuffer;
 		int maxPhases = 9;
 		std::vector<std::shared_ptr<GameObject>> objects{};
 		virtual void Start() {
@@ -262,12 +298,16 @@ export namespace engine {
 				PostRender(p);
 			}
 		}
-		virtual void Resize(long width, long height) {}
 	public:
-		Scene() {}
-		virtual void Initialize() = 0;
-		virtual void PreRender(int phase) = 0;
-		virtual void PostRender(int phase) = 0;
+		Scene() {
+			objects.reserve(4096);
+		}
+		virtual void Initialize();
+		virtual void PreRender(int phase);
+		virtual void PostRender(int phase);
+		virtual void Resize(long width, long height) {
+		
+		}
 		static std::shared_ptr<GameObject> CreateObject(std::string name, std::shared_ptr<GameObject> parent = nullptr) {
 			std::shared_ptr<GameObject> obj(new GameObject());
 			obj->name = name;
@@ -282,5 +322,192 @@ export namespace engine {
 				}
 			}
 		}
+		static Scene* CurrentScene() {
+			return currentScene;
+		}
+		static render::UniformBufferObject* LightBuffer() {
+			return &(currentScene->lightBuffer);
+		}
 	};
+}
+
+struct Light_t {
+	math::Vec3f position;
+	// direction x,y,z = 0 : point light
+	// direction x,y,z = vector : spot light, radius = spot light radius
+	// direction x,y,z = vector, radius = 0 : sun light
+	math::Vec3f direction;
+	float radius;
+	math::Vec3f color;
+	// distance for point and spot light
+	// brightness for sunlight
+	float magnitude;
+};
+struct LightSupply {
+	int length;
+	Light_t lights[0];
+};
+
+export namespace engine::component{
+	class Camera final : public engine::Component {
+		friend engine::Scene;
+	public:
+		enum struct CameraType {
+			Main,
+		};
+	private:
+		CameraType type;
+		math::Mat4f transform;
+		static inline std::shared_ptr<Camera> mainCamera;
+		virtual void Start() {
+			switch (type) {
+			case CameraType::Main: {
+				mainCamera = std::static_pointer_cast<Camera>(shared_from_this());
+			} break;
+			}
+		}
+		virtual void Update() {}
+		virtual void Render(int phase) {}
+		virtual void SyncUpdate() {
+			transform = GameObject()->transform.toMatrixInverse();
+			for (std::shared_ptr<engine::GameObject> p = GameObject()->Parent(); p; p = p->Parent()) {
+				transform = p->transform.toMatrixInverse() * transform;
+			}
+		}
+		virtual void OnEnable() {
+			cameraUniformObject.BindBuffer();
+		}
+		virtual void OnDisable() {
+			cameraUniformObject.UnbindBuffer();
+		}
+		virtual void OnDestroy() {}
+		static void PreRender(int phase) {
+			if (!mainCamera) return;
+			struct Data {
+				math::Mat4f transform;
+				math::Mat4f perspective;
+				math::Mat4f UI;
+			};
+			Data k{};
+			k.transform = mainCamera->transform;
+			k.perspective = math::Mat4f::Perspective(mainCamera->fov, swm::getWindowRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+			k.UI = math::Mat4f::Orthographic(swm::getWindowWidth(), swm::getWindowRatio(), 1, 10);
+			mainCamera->cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
+		}
+		static void PostRender(int phase) {
+			mainCamera->frameBuffer.CopyContentToScreen();
+		}
+	public:
+		Camera(CameraType type) {
+			this->type = type;
+		}
+		static std::shared_ptr<Camera> MainCamera() {
+			return mainCamera;
+		}
+		render::FrameBuffer2d frameBuffer{8};
+		render::UniformBufferObject cameraUniformObject{};
+		float fov = 60 * math::PI;
+		float nearPlane = 0.1;
+		float farPlane = 400;
+
+	};
+
+	class MeshRenderer final : public engine::Component {
+		//sync safe
+		virtual void Start() {}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(int phase) {
+			if(material && mesh) material->Render(mesh.get(), GameObject()->transform.toMatrix(), &(Camera::MainCamera()->cameraUniformObject));
+		}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+		std::shared_ptr<render::Mesh> mesh;
+		std::shared_ptr<render::MaterialBase> material;
+	};
+
+	class UIManager final : public engine::Component {
+		//sync safe
+		virtual void Start() {}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(int phase) {}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+	};
+
+	class SunLight final : public engine::Component {
+		static inline std::vector<std::shared_ptr<SunLight>> sunlights {};
+
+		friend engine::Scene;
+		static std::vector<Light_t> GetLights() {
+			std::vector<Light_t> lights{};
+			for (int i = 0; i < sunlights.size(); i++) {
+				Light_t v{};
+				v.color = sunlights[i]->color;
+				v.direction = sunlights[i]->GameObject()->Forward();
+				v.magnitude = sunlights[i]->intensity;
+				lights.push_back(v);
+			}
+			return lights;
+		}
+
+		//sync safe
+		virtual void Start() {}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(int phase) {}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+		math::Vec3f color;
+		float intensity;
+	};
+}
+
+void engine::Scene::Initialize() {
+	
+}
+
+void engine::Scene::PreRender(int phase) {
+	if (phase == 0) {
+		std::vector<Light_t> light{};
+		light.append_range(engine::component::SunLight::GetLights());
+		size_t lightSize = sizeof(Light_t) * light.size();
+		size_t lightSupplySize = sizeof(LightSupply) + lightSize;
+		std::unique_ptr<LightSupply> lightSupply{ (LightSupply*)malloc(lightSupplySize) };
+		lightSupply->length = light.size();
+		memcpy(lightSupply->lights, light.begin()._Ptr, lightSize);
+		lightBuffer.Set(lightSupply.get(), lightSupplySize, render::BufferUsageHint::DynamicDraw);
+
+		engine::component::Camera::PreRender(phase);
+	}
+}
+void engine::Scene::PostRender(int phase) {
+	if (phase == 1) {
+		engine::component::Camera::PostRender(phase);
+	}
 }
