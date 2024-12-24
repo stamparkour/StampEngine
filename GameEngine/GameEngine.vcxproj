@@ -155,10 +155,13 @@
   <ItemGroup>
     <ClInclude Include="debug.h" />
     <ClInclude Include="eventlistener.hpp" />
+    <ClInclude Include="getset.h" />
     <ClInclude Include="glm.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="lua\Makefile" />
+    <None Include="resources\oceanShader.glsl" />
+    <None Include="resources\shader.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,11 +1,18 @@
+module;
+
+#include <stdint.h>
+#include "debug.h"
 
 export module engine;
+
+import "glm.h";
 
 import std;
 
 import gamerender;
 import swm;
 import math;
+
 
 enum struct State {
 	Creating,
@@ -21,6 +28,7 @@ enum struct EnableState {
 };
 
 export namespace engine {
+	constexpr auto FloatToUN8(float value) { return (uint8_t)(value * 256); }
 	//uimanager
 	//	--main uielement: screen
 	//	--camera
@@ -178,8 +186,8 @@ export namespace engine {
 		render::Transform transform;
 		template<typename T, typename... P>
 		std::shared_ptr<T> AddComponent(P... param) {
-			std::shared_ptr<T> component = std::static_pointer_cast<T>((new T(param...))->shared_from_this());
-			component->gameObject = shared_from_this();
+			std::shared_ptr<T> component{ new T(param...) };
+			component->gameObject = std::shared_ptr<GameObject>{ shared_from_this()};
 			components.push_back(component);
 			return component;
 		}
@@ -203,7 +211,7 @@ export namespace engine {
 			return nullptr;
 		}
 		void SetParent(std::shared_ptr<GameObject> parent = nullptr) {
-			if (!this->parent.get()) {
+			if (this->parent) {
 				int index = -1;
 				for (int i = 0; i < this->parent->children.size(); i++) {
 					if (this->parent->children[i].get() == this) {
@@ -236,24 +244,30 @@ export namespace engine {
 		}
 		~GameObject() { }
 
+		math::Mat4f Transform() {
+			return transformMat;
+		}
 		math::Vec3f Forward() {
-			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, 1, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, 1, 0)).Normal();
 		}
 		math::Vec3f Back() {
-			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, -1, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, -1, 0)).Normal();
 		}
 		math::Vec3f Right() {
-			return (math::Vec3f)(transformMat * math::Vec4f(1, 0, 0, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(1, 0, 0, 0)).Normal();
 		}
 		math::Vec3f Left() {
-			return (math::Vec3f)(transformMat * math::Vec4f(-1, 0, 0, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(-1, 0, 0, 0)).Normal();
 		}
 		math::Vec3f Up() {
-			return (math::Vec3f)(transformMat * math::Vec4f(0, 1, 0, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 1, 0, 0)).Normal();
 		}
 		math::Vec3f Down() {
-			return (math::Vec3f)(transformMat * math::Vec4f(0, -1, 0, 1));
+			return (math::Vec3f)(transformMat * math::Vec4f(0, -1, 0, 0)).Normal();
 		}
+
+		//add function for disable and enable
+		//fix update method to include it
 	};
 
 	class Scene : swm::SceneBase {
@@ -283,11 +297,14 @@ export namespace engine {
 					i--;
 				}
 			}
+			Iterate();
 		}
 		virtual void SyncUpdate() {
 			for (int i = 0; i < objects.size(); i++) {
 				objects[i]->SyncUpdate();
 			}
+
+			//on object destroy
 		}
 		virtual void Render() {
 			for (int p = 0; p < maxPhases; p++) {
@@ -303,6 +320,7 @@ export namespace engine {
 			objects.reserve(4096);
 		}
 		virtual void Initialize();
+		virtual void Iterate() = 0;
 		virtual void PreRender(int phase);
 		virtual void PostRender(int phase);
 		virtual void Resize(long width, long height) {
@@ -358,13 +376,15 @@ export namespace engine::component{
 	private:
 		CameraType type;
 		math::Mat4f transform;
-		static inline std::shared_ptr<Camera> mainCamera;
+		static inline std::shared_ptr<Camera> mainCamera{};
 		virtual void Start() {
 			switch (type) {
 			case CameraType::Main: {
 				mainCamera = std::static_pointer_cast<Camera>(shared_from_this());
 			} break;
 			}
+
+			frameBuffer.ResizeToScreen(scalePercent);
 		}
 		virtual void Update() {}
 		virtual void Render(int phase) {}
@@ -380,7 +400,11 @@ export namespace engine::component{
 		virtual void OnDisable() {
 			cameraUniformObject.UnbindBuffer();
 		}
-		virtual void OnDestroy() {}
+		virtual void OnDestroy() {
+			if (mainCamera.get() == this) {
+				mainCamera = {};
+			}
+		}
 		static void PreRender(int phase) {
 			if (!mainCamera) return;
 			struct Data {
@@ -390,36 +414,51 @@ export namespace engine::component{
 			};
 			Data k{};
 			k.transform = mainCamera->transform;
-			k.perspective = math::Mat4f::Perspective(mainCamera->fov, swm::getWindowRatio(), mainCamera->nearPlane, mainCamera->farPlane);
-			k.UI = math::Mat4f::Orthographic(swm::getWindowWidth(), swm::getWindowRatio(), 1, 10);
+			k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+			k.UI = math::Mat4f::Orthographic(GameWidth(), GameRatio(), 1, 10);
 			mainCamera->cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
 		}
 		static void PostRender(int phase) {
 			mainCamera->frameBuffer.CopyContentToScreen();
 		}
 	public:
+		render::FrameBuffer2d frameBuffer{ {GL_RGBA8}, -1, -1 };
+		render::UniformBufferObject cameraUniformObject{};
+		float fov = 60.0 * math::DEGTORAD;
+		float nearPlane = 0.1;
+		float farPlane = 5000;
+		float scalePercent = 1.2;
+
 		Camera(CameraType type) {
 			this->type = type;
 		}
 		static std::shared_ptr<Camera> MainCamera() {
 			return mainCamera;
 		}
-		render::FrameBuffer2d frameBuffer{8};
-		render::UniformBufferObject cameraUniformObject{};
-		float fov = 60 * math::PI;
-		float nearPlane = 0.1;
-		float farPlane = 400;
 
+		static int GameWidth() {
+			return mainCamera->frameBuffer.colorAttachments[0].Width();
+		}
+		static int GameHeight() {
+			return mainCamera->frameBuffer.colorAttachments[0].Height();
+		}
+		static float GameRatio() {
+			return (float)GameHeight() / GameWidth();
+		}
 	};
 
 	class MeshRenderer final : public engine::Component {
 		//sync safe
-		virtual void Start() {}
+		virtual void Start() {
+			UpdateRenderer();
+		}
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
 		virtual void Render(int phase) {
-			if(material && mesh) material->Render(mesh.get(), GameObject()->transform.toMatrix(), &(Camera::MainCamera()->cameraUniformObject));
+			if (phase != 0) return;
+			if(material && mesh) 
+				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
 		}
 		//sync safe
 		virtual void SyncUpdate() {}
@@ -432,6 +471,41 @@ export namespace engine::component{
 	public:
 		std::shared_ptr<render::Mesh> mesh;
 		std::shared_ptr<render::MaterialBase> material;
+
+		void UpdateRenderer() {
+			material->UpdateMeshAttrib(mesh.get());
+			material->UpdateMaterial();
+		}
+	};
+	class OceanRenderer final : public engine::Component {
+		//sync safe
+		virtual void Start() {
+			UpdateRenderer();
+		}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(int phase) {
+			if (phase != 0) return;
+			ocean.Render(GameObject()->Transform(), Camera::MainCamera()->cameraUniformObject);
+		}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {
+			ocean.OceanObj.BindBuffer();
+		}
+		//sync safe
+		virtual void OnDisable() {
+			ocean.OceanObj.UnbindBuffer();
+		}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+		render::OceanRenderObject ocean;
+		void UpdateRenderer() {
+			ocean.UpdateRenderer();
+		}
 	};
 
 	class UIManager final : public engine::Component {
@@ -494,6 +568,7 @@ void engine::Scene::Initialize() {
 
 void engine::Scene::PreRender(int phase) {
 	if (phase == 0) {
+
 		std::vector<Light_t> light{};
 		light.append_range(engine::component::SunLight::GetLights());
 		size_t lightSize = sizeof(Light_t) * light.size();
@@ -507,7 +582,7 @@ void engine::Scene::PreRender(int phase) {
 	}
 }
 void engine::Scene::PostRender(int phase) {
-	if (phase == 1) {
+	if (phase == 8) {
 		engine::component::Camera::PostRender(phase);
 	}
 }

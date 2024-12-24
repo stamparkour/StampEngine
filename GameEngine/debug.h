@@ -7,7 +7,7 @@
 //pauses console after error
 #define SWM_DEBUG_PAUSE
 
-#ifdef SWM_DEBUG 
+#if defined(SWM_DEBUG) || defined(_DEBUG) 
 #ifdef SWM_DEBUG_PAUSE 
 #define STAMPSTACK() std::cout << std::to_string(std::stacktrace::current()) << std::endl
 #define STAMPDMSG(msg) std::cout << msg << std::endl; std::cin.get()
@@ -22,3 +22,7 @@
 #define STAMPDMSG(msg)
 #define STAMPERROR(con,msg)
 #endif
+
+#define GLSTAMPERROR STAMPERROR(swm::checkOpenGLErrors(), "")
+
+//DebugBreak(void)

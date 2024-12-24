@@ -4,6 +4,7 @@ import <cmath>;
 
 export namespace math {
 	constexpr double PI = 3.141592653589793;
+	constexpr double DEGTORAD = PI / 180;
 	constexpr double E = 2.718281828459045;
 	template<typename T>
 	concept Quantity = requires(T a, T b) {
@@ -52,7 +53,6 @@ export namespace math {
 	using Quatui = Quat<unsigned int>;
 	using Mat4ui = Mat4<unsigned int>;
 
-
 	template<Quantity T>
 	struct Vec2 final {
 		T x = 0;
@@ -90,6 +90,9 @@ export namespace math {
 		T x = 0;
 		T y = 0;
 		T z = 0;
+	private:
+		T padding{};
+	public:
 
 		Vec3() noexcept {}
 		Vec3(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
@@ -162,7 +165,7 @@ export namespace math {
 	template<Quantity T>
 	T Dot(const Vec4<T>& A, const Vec4<T>& B) noexcept;
 
-	//colum-major
+	//column-major
 	template<Quantity T>
 	struct Mat4 final {
 		T v1 = 0;
@@ -181,7 +184,6 @@ export namespace math {
 		T v14 = 0;
 		T v15 = 0;
 		T v16 = 0;
-		//{ v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16 };
 		Mat4() {};
 		Mat4(Vec4<T>& v1, Vec4<T>& v2, Vec4<T>& v3, Vec4<T>& v4);
 		Mat4(Vec4<T>(&v)[4]);
@@ -203,7 +205,7 @@ export namespace math {
 		Vec4<T> operator *(const Vec3<T>& b) const;
 		operator const T* () const;
 		static Mat4<T> Perspective(T right, T left, T top, T bottom, T nearPlane, T farPlane);
-		//ratio : y / xj
+		//ratio : y / x
 		static Mat4<T> Perspective(T rightRad, T leftRad, T topRad, T bottomRad, T ratio, T nearPlane, T farPlane);
 		//ratio : y / x
 		static Mat4<T> Perspective(T fovx, T ratio, T nearPlane, T farPlane);
@@ -640,7 +642,7 @@ export namespace math {
 	}
 	template<Quantity T>
 	Mat4<T> math::Mat4<T>::Perspective(T right, T left, T top, T bottom, T near, T far) {
-		return { 2 * near / (right - left),0,(right + left) / (right - left),0,0,2 * near / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
+		return { 2 * near / (right - left),0,(right + left) / (right - left),0,0,2 * near / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),1,0,0,2 * far * near / (far - near),0 };
 	}
 	template<Quantity T>
 	Mat4<T> math::Mat4<T>::Perspective(T right, T left, T top, T bottom, T ratio, T near, T far) {
@@ -648,13 +650,12 @@ export namespace math {
 		left = tan(left);
 		top = tan(top) * ratio;
 		bottom = tan(bottom) * ratio;
-		return { 2 / (right - left),0,(right + left) / (right - left),0,0,2 / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
+		return { 2 / (right - left),0,(right + left) / (right - left),0,0,2 / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(far + near) / (far - near),1,0,0,2 * far * near / (far - near),0 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Perspective(T fovx, T ratio, T near, T far) {
-		T r = tan(fovx / 2);
-		T t = r * ratio;
-		return { 1 / r,0,0,0,0,1 / t,0,0,0,0,-(far + near) / (far - near),-2 * far * near / (far - near),0,0,-1,0 };
+		T tangent = tan(fovx / 2);
+		return { ratio / tangent,0,0,0,0,1 / tangent,0,0,0,0,-(near + far) / (far - near),1,0,0,2 * near * far / (far - near),0 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Orthographic(T scaleX, T ratio, T nearPlane, T farPlane) {
