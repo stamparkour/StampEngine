@@ -206,6 +206,7 @@ export namespace swm {
 	bool getCursorVisibility();
 	void setCursorConstraint(CursorConstraintState state);
 	CursorConstraintState getCursorConstraint();
+	HWND getHWND();
 
 	bool isKeyDown(VertKey key);
 	bool isKeyHold(VertKey key);
@@ -227,6 +228,8 @@ export namespace swm {
 	//user must call once before creating SWHWND 
 	void initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance);
 	bool checkOpenGLErrors();
+
+
 }
 
 module : private;
@@ -608,7 +611,8 @@ static void ManageWindow() {
 		}
 
 		std::thread update{ []() {
-			if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Update();
+			if (localWindow->scene && localWindow->SceneState == SceneState::Loop)
+				localWindow->scene->Update();
 		} };
 
 		OnPaint();
@@ -869,4 +873,7 @@ double swm::getWindowRatio() {
 void setScene(void* (*scene)()) {
 	localWindow->SceneState = SceneState::End;
 	localWindow->nextScene = (swm::SceneBase* (*)())scene;
+}
+HWND swm::getHWND() {
+	return localWindow->winHandle;
 }

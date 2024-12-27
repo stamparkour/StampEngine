@@ -1,4 +1,7 @@
 #pragma once
+
+#pragma comment(lib, "opengl32.lib")
+
 #define WGL_WGLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
 #include <Windows.h>

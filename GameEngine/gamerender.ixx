@@ -10,11 +10,13 @@ import swm;
 import math;
 
 namespace render {
-	class TextureBase;
+	class SamplerBase;
 	class UniformBufferObject;
+	class ShaderStorageBufferObject;
 }
-static render::UniformBufferObject** blockBinds = 0;
-static render::TextureBase** textureBinds = 0;
+static render::UniformBufferObject** uniformBlockBinds = 0;
+static render::ShaderStorageBufferObject** shaderBlockBinds = 0;
+static render::SamplerBase** textureBinds = 0;
 int maxTextureUnits = 0;
 int maxBlockUnits = 0;
 int initFBO = -1;
@@ -34,8 +36,6 @@ export namespace render {
 	constexpr auto ATTRIBPOINTER_NORMAL = 2;
 	constexpr auto ATTRIBPOINTER_UV = 3;
 	constexpr auto ATTRIBPOINTER_COLOR = 4;
-	constexpr auto BLOCKBINDING_CAMERA = 1;
-	constexpr auto BLOCKBINDING_RENDER_PROC = 2;
 	constexpr auto UNIFORM_TRANSFORM = 1;
 	constexpr auto UNIFORM_NORMALMAP = 10;
 	constexpr auto UNIFORM_TEXTURE0 = 20;
@@ -313,7 +313,7 @@ export namespace render {
 		Linear = GL_LINEAR,
 	}; 
 
-	class TextureBase : public std::enable_shared_from_this<TextureBase> {
+	class SamplerBase : public std::enable_shared_from_this<SamplerBase> {
 	protected:
 		GLuint textureID = 0;
 		int activeIndex = 0;
@@ -330,15 +330,15 @@ export namespace render {
 		//runtime conversiion between raw and texture
 		//copy
 		//assignemnt
-		TextureBase() {
+		SamplerBase() {
 			if (textureBinds == 0) {
 				glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextureUnits);
-				textureBinds = new TextureBase * [maxTextureUnits];
+				textureBinds = new SamplerBase * [maxTextureUnits];
 				memset(textureBinds, 0, sizeof(void*) * maxTextureUnits);
 			}
 		}
 
-		virtual ~TextureBase() {
+		virtual ~SamplerBase() {
 			if (textureID != 0) {
 				glDeleteTextures(1, &textureID);
 				textureID = 0;
@@ -430,14 +430,14 @@ export namespace render {
 			return !isValid();
 		}
 
-		inline friend void swap(TextureBase& a, TextureBase& b) {
+		inline friend void swap(SamplerBase& a, SamplerBase& b) {
 			using std::swap;
 			swap(a.textureID, b.textureID);
 			swap(a.activeIndex, b.activeIndex);
 			swap(a.target, b.target);
 		}
 	};
-	class ImageTexture2d final : public TextureBase {
+	class SamplerTexture2d final : public SamplerBase {
 		size_t width = 0;
 		size_t height = 0;
 		size_t mipmapLevels = 0;
@@ -454,17 +454,17 @@ export namespace render {
 			glTexStorage2D(GL_TEXTURE_2D, mipmapLevels, internalFormat, width, height);
 		}
 	public:
-		ImageTexture2d() { }
-		ImageTexture2d(size_t width, size_t height,int mipmaps = 1, GLenum internalFormat = GL_RGBA8) {
+		SamplerTexture2d() { }
+		SamplerTexture2d(size_t width, size_t height,int mipmaps = 1, GLenum internalFormat = GL_RGBA8) {
 			Initialize(width, height, mipmaps, internalFormat);
 		}
-		ImageTexture2d(const ImageTexture2d& b) = delete;
-		ImageTexture2d(ImageTexture2d&& b) noexcept {
+		SamplerTexture2d(const SamplerTexture2d& b) = delete;
+		SamplerTexture2d(SamplerTexture2d&& b) noexcept {
 			using std::swap;
 			swap(*this, b);
 		}
-		ImageTexture2d& operator =(const ImageTexture2d& b) = delete;
-		ImageTexture2d& operator =(ImageTexture2d&& b) noexcept {
+		SamplerTexture2d& operator =(const SamplerTexture2d& b) = delete;
+		SamplerTexture2d& operator =(SamplerTexture2d&& b) noexcept {
 			using std::swap;
 			swap(*this, b);
 			return *this;
@@ -490,13 +490,13 @@ export namespace render {
 
 		}
 
-		inline friend void swap(ImageTexture2d& a, ImageTexture2d& b) {
+		inline friend void swap(SamplerTexture2d& a, SamplerTexture2d& b) {
 			using std::swap;
 			swap(a.width, b.width);
 			swap(a.height, b.height);
 			swap(a.mipmapLevels, b.mipmapLevels);
 			swap(a.internalFormat, b.internalFormat);
-			swap((TextureBase&)a, (TextureBase&)b);
+			swap((SamplerBase&)a, (SamplerBase&)b);
 		}
 	};
 	class RawTexture2d4f final : public RawTexture2dBase<math::Vec4f, GL_RGBA, GL_FLOAT> {
@@ -505,11 +505,132 @@ export namespace render {
 		RawTexture2d4f(size_t width, size_t height) {
 			RawTexture2dBase::Initialize(width, height);
 		}
-		RawTexture2d4f(const ImageTexture2d* tex, int mipmap = 0) {
+		RawTexture2d4f(const SamplerTexture2d* tex, int mipmap = 0) {
 			if(tex == 0) return;
 			tex->Bind();
 			RawTexture2dBase::Initialize(tex->Width(mipmap), tex->Height(mipmap));
 			glGetTexImage(GL_TEXTURE_2D, mipmap, GL_RGBA, GL_FLOAT, (void*)GetData());
+		}
+		static RawTexture2d4f Screenshot() {
+			int x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+			int y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			int cx = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+			int cy = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+			HDC dcScreen = GetDC(0);
+			HDC dcTarget = CreateCompatibleDC(dcScreen);
+			HBITMAP bmpTarget = CreateCompatibleBitmap(dcScreen, cx, cy);
+			HGDIOBJ oldBmp = SelectObject(dcTarget, bmpTarget);
+			BitBlt(dcTarget, 0, 0, cx, cy, dcScreen, x, y, SRCCOPY | CAPTUREBLT);
+			SelectObject(dcTarget, oldBmp);
+
+			BITMAPINFO MyBMInfo = { 0 };
+			MyBMInfo.bmiHeader.biSize = sizeof(MyBMInfo.bmiHeader);
+
+			if (0 == GetDIBits(dcScreen, bmpTarget, 0, 0, NULL, &MyBMInfo, DIB_RGB_COLORS)) {
+				std::cout << "render::RawTexture2d4f::Screenshot - error1" << std::endl;
+			}
+
+			// create the bitmap buffer
+			BYTE* lpPixels = new BYTE[MyBMInfo.bmiHeader.biSizeImage];
+
+			// Better do this here - the original bitmap might have BI_BITFILEDS, which makes it
+			// necessary to read the color table - you might not want this.
+			MyBMInfo.bmiHeader.biCompression = BI_RGB;
+
+			// get the actual bitmap buffer
+			if (0 == GetDIBits(dcScreen, bmpTarget, 0, MyBMInfo.bmiHeader.biHeight, (LPVOID)lpPixels, &MyBMInfo, DIB_RGB_COLORS)) {
+				std::cout << "render::RawTexture2d4f::Screenshot - error2" << std::endl;
+			}
+
+			DeleteDC(dcTarget);
+			ReleaseDC(0,dcScreen);
+
+			uint32_t headerSize = MyBMInfo.bmiHeader.biSize;
+			uint32_t bmpDataOffset = 0;
+			uint32_t width = 0, height = 0, bpp = 0, compression = 0, imageSize = 0, paletteCount = 0;
+			if (headerSize == 40 || headerSize == 52 || headerSize == 124) {
+				width = MyBMInfo.bmiHeader.biWidth;
+				height = MyBMInfo.bmiHeader.biHeight;
+				bpp = MyBMInfo.bmiHeader.biBitCount;
+				compression = MyBMInfo.bmiHeader.biCompression;
+				imageSize = MyBMInfo.bmiHeader.biSizeImage;
+				paletteCount = MyBMInfo.bmiHeader.biClrUsed;
+			}
+			else return {};
+			uint32_t maskA = 0;
+			uint32_t maskR = 0xFF;
+			uint32_t maskG = 0xFF;
+			uint32_t maskB = 0xFF;
+			int shiftA = 0;
+			int shiftR = 16;
+			int shiftG = 8;
+			int shiftB = 0;
+			if (compression != 0) {
+				if (compression == 3 || compression == 6) {
+					return {};
+				}
+
+				shiftA = 0;
+				shiftR = 0;
+				shiftG = 0;
+				shiftB = 0;
+
+				for (; maskR && !(maskR & 1); maskR >>= 1)shiftR++;
+				for (; maskG && !(maskG & 1); maskG >>= 1)shiftG++;
+				for (; maskB && !(maskB & 1); maskB >>= 1)shiftB++;
+				for (; maskA && !(maskA & 1); maskA >>= 1)shiftA++;
+			}
+
+			RawTexture2d4f tex{ width,height };
+			int rowSize = ((bpp * width + 31) / 32) * 4;
+			if (bpp == 8) {
+				std::vector<math::Vec4i> pallete = {};
+			}
+			else if (bpp == 16) {
+				for (uint32_t y = 0; y < height; y++) {
+					for (uint32_t x = 0; x < width; x++) {
+						uint32_t v = *(uint32_t*)(lpPixels + bmpDataOffset);
+						float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+						float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+						float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+						float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
+						tex.SetPixel(x, y, { r,g,b,a });
+						bmpDataOffset += sizeof(uint16_t);
+					}
+					bmpDataOffset += rowSize;
+				}
+			}
+			else if (bpp == 24) {
+				for (uint32_t y = 0; y < height; y++) {
+					for (uint32_t x = 0; x < width; x++) {
+						uint32_t v = *(uint32_t*)(lpPixels + bmpDataOffset);
+						float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+						float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+						float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+						float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
+						tex.SetPixel(x, y, { r,g,b,a });
+						bmpDataOffset += 3;
+					}
+					bmpDataOffset += rowSize;
+				}
+			}
+			else if (bpp == 32) {
+				for (uint32_t y = 0; y < height; y++) {
+					for (uint32_t x = 0; x < width; x++) {
+						uint32_t v = *(uint32_t*)(lpPixels + bmpDataOffset);
+						float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
+						float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
+						float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
+						float a = maskA ? (float)((v >> shiftA) & maskA) / maskA : 1;
+						tex.SetPixel(x, y, { r,g,b,a });
+						bmpDataOffset += sizeof(uint32_t);
+					}
+					bmpDataOffset += rowSize;
+				}
+			}
+
+			delete[] lpPixels;
+			return tex;
 		}
 		static RawTexture2d4f ParseStream_bmp(std::istream& data) {
 			if (!data || data.get() != 'B' || data.get() != 'M') return {};//0,1
@@ -586,7 +707,7 @@ export namespace render {
 					data.seekg(bmpDataOffset);
 					for (uint32_t x = 0; x < width; x++) {
 						uint32_t v;
-						data.read((char*)&v, sizeof(3));
+						data.read((char*)&v, 3);
 						float r = maskR ? (float)((v >> shiftR) & maskR) / maskR : 0;
 						float g = maskG ? (float)((v >> shiftG) & maskG) / maskG : 0;
 						float b = maskB ? (float)((v >> shiftB) & maskB) / maskB : 0;
@@ -636,7 +757,7 @@ export namespace render {
 			STAMPERROR(ubo == 0,"render::UniformBufferObject::BindBuffer - buffer unitialized.");
 			int index = -1;
 			for(int i = 1; i < maxBlockUnits; i++) {
-				if (blockBinds[i] == 0) {
+				if (uniformBlockBinds[i] == 0) {
 					index = i;
 					break;
 				}
@@ -646,22 +767,22 @@ export namespace render {
 				return;
 			}
 			glBindBufferBase(GL_UNIFORM_BUFFER, index, ubo);
-			if(blockBinds[index]) blockBinds[index]->blockIndex = 0;
-			blockBinds[index] = this;
+			if(uniformBlockBinds[index]) uniformBlockBinds[index]->blockIndex = 0;
+			uniformBlockBinds[index] = this;
 			blockIndex = index;
 		}
 		void UnbindBuffer() {
-			if(blockBinds == 0 || blockIndex == 0) return;
+			if(uniformBlockBinds == 0 || blockIndex == 0) return;
 			//only need to uncomment to force texture to unload instead of replacing later.
 			//glBindBufferBase(GL_UNIFORM_BUFFER, blockIndex, 0);
-			blockBinds[blockIndex] = nullptr;
+			uniformBlockBinds[blockIndex] = nullptr;
 			blockIndex = 0;
 		}
 		UniformBufferObject() {
-			if (blockBinds == 0) {
+			if (uniformBlockBinds == 0) {
 				glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxBlockUnits);
-				blockBinds = new UniformBufferObject * [maxBlockUnits];
-				memset(blockBinds, 0, sizeof(void*) * maxBlockUnits);
+				uniformBlockBinds = new UniformBufferObject * [maxBlockUnits];
+				memset(uniformBlockBinds, 0, sizeof(void*) * maxBlockUnits);
 			}
 
 			glGenBuffers(1, &ubo);
@@ -681,8 +802,8 @@ export namespace render {
 			glBindBuffer(GL_UNIFORM_BUFFER, ubo);
 		}
 		bool isActive() const {
-			if (!isValid() || blockBinds == 0 || blockIndex == 0) return false;
-			return blockBinds[blockIndex] == this;
+			if (!isValid() || uniformBlockBinds == 0 || blockIndex == 0) return false;
+			return uniformBlockBinds[blockIndex] == this;
 		}
 		int getUniformBlockId() {
 			return blockIndex;
@@ -707,12 +828,104 @@ export namespace render {
 				ubo = 0;
 			}
 			if(textureBinds && blockIndex) {
-				blockBinds[blockIndex] = nullptr;
+				uniformBlockBinds[blockIndex] = nullptr;
 				blockIndex = 0;
 			}
 		}
 	};
 	using UBObject = UniformBufferObject;
+
+	class ShaderStorageBufferObject : public std::enable_shared_from_this<ShaderStorageBufferObject> {
+		friend class ShaderProgramBase;
+		GLuint ssbo = 0;
+		int blockIndex = 0;
+	protected:
+	public:
+		void Set(const void* ptr, size_t size, BufferUsageHint usage = BufferUsageHint::StaticDraw) {
+			Bind();
+			glBufferData(GL_SHADER_STORAGE_BUFFER, size, ptr, (GLenum)usage);
+		}
+		void BindBuffer() {
+			if (blockIndex != 0) return;
+			STAMPERROR(ssbo == 0, "render::ShaderStorageBufferObject::BindBuffer - buffer unitialized.");
+			int index = -1;
+			for (int i = 1; i < maxBlockUnits; i++) {
+				if (shaderBlockBinds[i] == 0) {
+					index = i;
+					break;
+				}
+			}
+			if (index == -1) {
+				STAMPERROR(blockIndex == 0, "render::ShaderStorageBufferObject::BindBuffer - no free buffer.");
+				return;
+			}
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, ssbo);
+			if (shaderBlockBinds[index]) shaderBlockBinds[index]->blockIndex = 0;
+			shaderBlockBinds[index] = this;
+			blockIndex = index;
+		}
+		void UnbindBuffer() {
+			if (shaderBlockBinds == 0 || blockIndex == 0) return;
+			//only need to uncomment to force texture to unload instead of replacing later.
+			//glBindBufferBase(GL_UNIFORM_BUFFER, blockIndex, 0);
+			shaderBlockBinds[blockIndex] = nullptr;
+			blockIndex = 0;
+		}
+		ShaderStorageBufferObject() {
+			if (shaderBlockBinds == 0) {
+				glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxBlockUnits);
+				shaderBlockBinds = new ShaderStorageBufferObject * [maxBlockUnits];
+				memset(shaderBlockBinds, 0, sizeof(void*) * maxBlockUnits);
+			}
+
+			glGenBuffers(1, &ssbo);
+		}
+		ShaderStorageBufferObject(const ShaderStorageBufferObject& other) = delete;
+		ShaderStorageBufferObject(ShaderStorageBufferObject&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		ShaderStorageBufferObject& operator=(const ShaderStorageBufferObject& other) = delete;
+		ShaderStorageBufferObject& operator=(ShaderStorageBufferObject&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		void Bind() {
+			STAMPERROR(!isValid(), "render::ShaderStorageBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+		}
+		bool isActive() const {
+			if (!isValid() || shaderBlockBinds == 0 || blockIndex == 0) return false;
+			return shaderBlockBinds[blockIndex] == this;
+		}
+		int getUniformBlockId() {
+			return blockIndex;
+		}
+
+		bool isValid() const {
+			return ssbo != 0;
+		}
+		explicit operator bool() {
+			return isValid();
+		}
+		bool operator!() {
+			return !isValid();
+		}
+		inline friend void swap(ShaderStorageBufferObject& a, ShaderStorageBufferObject& b) {
+			using std::swap;
+			swap(a.ssbo, b.ssbo);
+		}
+		~ShaderStorageBufferObject() {
+			if (ssbo) {
+				glDeleteBuffers(1, &ssbo);
+				ssbo = 0;
+			}
+			if (textureBinds && blockIndex) {
+				shaderBlockBinds[blockIndex] = nullptr;
+				blockIndex = 0;
+			}
+		}
+	};
 	//layout(Binding=0) uniform sampler2D diffuseTex; // set sampler to target texture without assigning uniform
 	//layout(location=0) uniform int val; // Bind at location 0
 	class ShaderProgramBase : public std::enable_shared_from_this<ShaderProgramBase> {
@@ -858,7 +1071,7 @@ export namespace render {
 		bool isValid() const {
 			return program != 0;
 		}
-		void Uniform(GLint location, const TextureBase* value) {
+		void Uniform(GLint location, const SamplerBase* value) {
 			STAMPERROR(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
 			glProgramUniform1i(program, location, value->GetActiveTextureId());
 		}
@@ -1115,8 +1328,8 @@ export namespace render {
 	public:
 		math::Vec4f color{ 0.8f,0.8f,0.8f,1 };
 		bool useColorValue = true;
-		std::shared_ptr<ImageTexture2d> texture;
-		std::shared_ptr<ImageTexture2d> normalMap;
+		std::shared_ptr<SamplerTexture2d> texture;
+		std::shared_ptr<SamplerTexture2d> normalMap;
 		SolidMaterial() { }
 		SolidMaterial(const SolidMaterial& other) = delete;
 		SolidMaterial(SolidMaterial&& other) noexcept {
@@ -1182,8 +1395,8 @@ export namespace render {
 		GLuint id = 0;
 		std::vector<GLenum> colorAttachmentTypes{};
 	public:
-		std::vector<ImageTexture2d> colorAttachments{};
-		ImageTexture2d depthStencil{};
+		std::vector<SamplerTexture2d> colorAttachments{};
+		SamplerTexture2d depthStencil{};
 		FrameBuffer2d(std::vector<GLenum> colorAttachmentTypes, int width = 0, int height = 0) {
 			if(initFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &initFBO);
 			glGenFramebuffers(1, &id);
@@ -1223,9 +1436,9 @@ export namespace render {
 				height = swm::getWindowHeight();
 			}
 			for (int i = 0; i < colorAttachments.size(); i++) {
-				colorAttachments[i] = ImageTexture2d{width, height, 1, colorAttachmentTypes[i]};
+				colorAttachments[i] = SamplerTexture2d{width, height, 1, colorAttachmentTypes[i]};
 			}
-			depthStencil = ImageTexture2d(width, height, 1, GL_DEPTH24_STENCIL8);
+			depthStencil = SamplerTexture2d(width, height, 1, GL_DEPTH24_STENCIL8);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			for (int i = 0; i < colorAttachments.size(); i++) {

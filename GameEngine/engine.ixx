@@ -65,7 +65,9 @@ export namespace engine {
 	class Component : public std::enable_shared_from_this<Component> {
 		friend class GameObject;
 		State state = State::Creating;
-		EnableState enable = EnableState::Enabling;
+		EnableState enableState = EnableState::Enabling;
+		bool enable = true;
+		bool cascadeEnable = true;
 		std::shared_ptr<GameObject> gameObject;
 	protected:
 		//sync safe
@@ -88,17 +90,26 @@ export namespace engine {
 			return gameObject;
 		}
 		void Enable() {
-			if (enable == EnableState::Disabled || enable == EnableState::Disabling) {
-				enable = EnableState::Enabling;
+			if (!enable) {
+				enable = true;
+				if (cascadeEnable && (enableState == EnableState::Disabled || enableState == EnableState::Disabling)) {
+					enableState = EnableState::Enabling;
+				}
 			}
 		}
 		void Disable() {
-			if (enable == EnableState::Enabled || enable == EnableState::Enabling) {
-				enable = EnableState::Disabling;
+			if (enable) {
+				enable = false;
+				if (cascadeEnable && (enableState == EnableState::Enabled || enableState == EnableState::Enabling)) {
+					enableState = EnableState::Disabling;
+				}
 			}
 		}
 		bool IsEnabled() {
-			return enable == EnableState::Enabled;
+			return enable && cascadeEnable && state != State::Destroying && state != State::Creating;
+		}
+		bool IsDestroyed() {
+			return state == State::Destroying;
 		}
 		virtual ~Component() {}
 	};
@@ -108,12 +119,13 @@ export namespace engine {
 		bool destroying = false;
 		bool tranformUpdated = false;
 		math::Mat4f transformMat;
-		EnableState enable = EnableState::Enabling;
+		bool enable = true;
+		bool cascadeEnable = true;
 		std::vector<std::shared_ptr<GameObject>> children{};
 		std::shared_ptr<GameObject> parent{};
 		std::vector<std::shared_ptr<Component>> components{};
 		void Update() {
-			tranformUpdated = false;
+			if (!IsEnabled()) return;
 			for (int i = 0; i < components.size(); i++) {
 				if (components[i]->IsEnabled() && components[i]->state == State::Running) {
 					components[i]->Update();
@@ -121,31 +133,38 @@ export namespace engine {
 			}
 		}
 		void Render(int phase) {
+			tranformUpdated = false;
+			if (!IsEnabled()) return;
 			for (int i = 0; i < components.size(); i++) {
-				if (components[i]->IsEnabled() && components[i]->state == State::Running) {
+				if (components[i]->enable && components[i]->cascadeEnable && components[i]->state != State::Destroying && components[i]->state == State::Running) {
 					components[i]->Render(phase);
 				}
 			}
 		}
 		void SyncUpdate() {
-			for (int i = 0; i < components.size(); i++) {
-				if ((components[i]->enable == EnableState::Enabled || components[i]->enable == EnableState::Enabling) && components[i]->state == State::Creating) {
-					components[i]->state = State::Running;
-					components[i]->Start();
+			if (IsEnabled()) {
+				for (int i = 0; i < components.size(); i++) {
+					if (components[i]->IsEnabled() && components[i]->state == State::Creating) {
+						components[i]->state = State::Running;
+						components[i]->Start();
+					}
 				}
 			}
 			for (int i = 0; i < components.size(); i++) {
-				if (components[i]->enable == EnableState::Enabling && components[i]->state == State::Running) {
-					components[i]->enable = EnableState::Enabled;
+				if (components[i]->enableState == EnableState::Enabling && components[i]->state == State::Running) {
+					components[i]->enableState = EnableState::Enabled;
 					components[i]->OnEnable();
 				}
-				else if (components[i]->enable == EnableState::Disabling && components[i]->state == State::Running) {
-					components[i]->enable = EnableState::Disabled;
+				else if (components[i]->enableState == EnableState::Disabling && components[i]->state == State::Running) {
+					components[i]->enableState = EnableState::Disabled;
 					components[i]->OnDisable();
 				}
-
-				if (components[i]->enable == EnableState::Enabled && components[i]->state == State::Running) {
-					components[i]->SyncUpdate();
+			}
+			if (IsEnabled()) {
+				for (int i = 0; i < components.size(); i++) {
+					if (components[i]->IsEnabled()) {
+						components[i]->SyncUpdate();
+					}
 				}
 			}
 			for (int i = 0; i < components.size(); i++) {
@@ -178,6 +197,32 @@ export namespace engine {
 			tranformUpdated = true;
 			return transformMat;
 		}
+
+		void CascadeEnable() {
+			for (int i = 0; i < components.size(); i++) {
+				components[i]->cascadeEnable = true;
+				if (components[i]->enable)
+					components[i]->enableState = EnableState::Enabling;
+			}
+			for (int i = 0; i < children.size(); i++) {
+				children[i]->cascadeEnable = true;
+				if (!children[i]->enable) 
+					children[i]->CascadeEnable();
+			}
+		}
+		void CascadeDisable() {
+			for (int i = 0; i < components.size(); i++) {
+				components[i]->cascadeEnable = false;
+				if (components[i]->enable)
+					components[i]->enableState = EnableState::Disabling;
+			}
+			for (int i = 0; i < children.size(); i++) {
+				children[i]->cascadeEnable = false;
+				if(!children[i]->enable) 
+					children[i]->CascadeDisable();
+			}
+		}
+
 	protected:
 		GameObject() {}
 	public:
@@ -191,6 +236,7 @@ export namespace engine {
 			components.push_back(component);
 			return component;
 		}
+		//remake function
 		template<typename T>
 		bool RemoveComponent() {
 			for (int i = 0; i < components.size(); i++) {
@@ -224,6 +270,18 @@ export namespace engine {
 			this->parent = parent;
 			if (this->parent) {
 				this->parent->children.push_back(shared_from_this());
+				if (cascadeEnable && (!this->parent->cascadeEnable || !this->parent->enable)) {
+					cascadeEnable = false;
+					if (enable) CascadeDisable();
+				}
+				else if(!cascadeEnable) {
+					cascadeEnable = true;
+					if (!enable) CascadeEnable();
+				}
+			}
+			else if (!cascadeEnable) {
+				cascadeEnable = true;
+				if (!enable) CascadeEnable();
 			}
 		}
 		std::shared_ptr<GameObject> Parent() {
@@ -234,15 +292,25 @@ export namespace engine {
 		}
 		void Destroy() {
 			destroying = true;
-			if (children.size() > 0) {
-				for (int i = 0; i < children.size(); i++) {
-					children[i]->Destroy();
-					children[i]->parent = 0;
-				}
-				children.resize(0);
+		}
+		void Enable() {
+			if (!enable) {
+				enable = true;
+				if (cascadeEnable) CascadeEnable();
 			}
 		}
-		~GameObject() { }
+		void Disable() {
+			if (enable) {
+				enable = false;
+				if(cascadeEnable) CascadeDisable();
+			}
+		}
+		bool IsEnabled() {
+			return enable && cascadeEnable && !destroying;
+		}
+		bool IsDestroyed() {
+			return destroying;
+		}
 
 		math::Mat4f Transform() {
 			return transformMat;
@@ -266,6 +334,8 @@ export namespace engine {
 			return (math::Vec3f)(transformMat * math::Vec4f(0, -1, 0, 0)).Normal();
 		}
 
+		~GameObject() {}
+
 		//add function for disable and enable
 		//fix update method to include it
 	};
@@ -288,13 +358,8 @@ export namespace engine {
 		}
 		virtual void Update() {
 			for (int i = 0; i < objects.size(); i++) {
-				objects[i]->Update();
-			}
-			for (int i = 0; i < objects.size(); i++) {
-				if (objects[i]->destroying) {
-					objects[i]->OnDestroy();
-					objects.erase(objects.begin() + i);
-					i--;
+				if (!objects[i]->destroying) {
+					objects[i]->Update();
 				}
 			}
 			Iterate();
@@ -302,6 +367,13 @@ export namespace engine {
 		virtual void SyncUpdate() {
 			for (int i = 0; i < objects.size(); i++) {
 				objects[i]->SyncUpdate();
+			}
+			for (int i = 0; i < objects.size(); i++) {
+				if (objects[i]->destroying) {
+					objects[i]->OnDestroy();
+					objects.erase(objects.begin() + i);
+					i--;
+				}
 			}
 
 			//on object destroy
@@ -508,7 +580,7 @@ export namespace engine::component{
 		}
 	};
 
-	class UIManager final : public engine::Component {
+	class Billboard final : public engine::Component {
 		//sync safe
 		virtual void Start() {}
 		//unsafe
