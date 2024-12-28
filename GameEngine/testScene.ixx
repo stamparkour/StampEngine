@@ -116,7 +116,6 @@ public:
         std::fstream oceanShaderFile{ "resources\\oceanShader.glsl" };
         oceanRenderer->ocean.shader = render::RenderShaderProgram::ParseStream_glsl(oceanShaderFile, { 0 }, {});
 
-        testObj->Disable();
 
         engine::Scene::Initialize();
     }
