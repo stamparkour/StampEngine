@@ -136,7 +136,7 @@ export namespace engine {
 			tranformUpdated = false;
 			if (!IsEnabled()) return;
 			for (int i = 0; i < components.size(); i++) {
-				if (components[i]->enable && components[i]->cascadeEnable && components[i]->state != State::Destroying && components[i]->state == State::Running) {
+				if (components[i]->IsEnabled()) {
 					components[i]->Render(phase);
 				}
 			}
@@ -144,7 +144,7 @@ export namespace engine {
 		void SyncUpdate() {
 			if (IsEnabled()) {
 				for (int i = 0; i < components.size(); i++) {
-					if (components[i]->IsEnabled() && components[i]->state == State::Creating) {
+					if (components[i]->enable && components[i]->cascadeEnable && components[i]->state == State::Creating) {
 						components[i]->state = State::Running;
 						components[i]->Start();
 					}
