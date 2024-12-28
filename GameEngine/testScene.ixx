@@ -110,12 +110,13 @@ public:
         std::fstream meshFile{"resources\\mesh.obj"};
         meshRenderer->mesh->set(render::PointP3NUC::ParseStream_obj(meshFile));
         meshRenderer->material = material;
-        
         std::shared_ptr<GameObject> oceanObj = CreateObject("Ocean");
         testObj->transform.position = { 0,0,0 };
-        std::shared_ptr<OceanRenderer> oceanRenderer = testObj->AddComponent<OceanRenderer>();
+        std::shared_ptr<OceanRenderer> oceanRenderer = oceanObj->AddComponent<OceanRenderer>();
         std::fstream oceanShaderFile{ "resources\\oceanShader.glsl" };
         oceanRenderer->ocean.shader = render::RenderShaderProgram::ParseStream_glsl(oceanShaderFile, { 0 }, {});
+
+        testObj->Disable();
 
         engine::Scene::Initialize();
     }
