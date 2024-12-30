@@ -88,7 +88,7 @@ public:
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
         glEnable(GL_DEPTH_TEST);
-        //glEnable(GL_BLEND);
+        glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glStencilMask(0xFF);
         glDepthMask(GL_TRUE);
@@ -107,16 +107,19 @@ public:
         testObj->transform.position = { 0,0,0 };
         std::shared_ptr<MeshRenderer> meshRenderer = testObj->AddComponent<MeshRenderer>();
         meshRenderer->mesh = std::shared_ptr<render::Mesh>( new render::Mesh() );
-        std::fstream meshFile{"resources\\mesh.obj"};
-        meshRenderer->mesh->set(render::PointP3NUC::ParseStream_obj(meshFile));
+        std::fstream meshFile{"resources\\mesh.mesh"};
+        math::Mat4f meshTmpTranform = math::Mat4f::RotationY(-math::DEGTORAD * 90);
+        meshRenderer->mesh->set(render::PointP3NUC::ParseStream_obj(meshFile, &meshTmpTranform));
         meshRenderer->material = material;
         std::shared_ptr<GameObject> oceanObj = CreateObject("Ocean");
         testObj->transform.position = { 0,0,0 };
-        std::shared_ptr<OceanRenderer> oceanRenderer = oceanObj->AddComponent<OceanRenderer>();
+        std::shared_ptr<OceanRenderer> oceanRenderer2 = oceanObj->AddComponent<OceanRenderer>();
+        std::shared_ptr<OceanRenderer> oceanRenderer1 = oceanObj->AddComponent<OceanRenderer>();
         std::fstream oceanShaderFile{ "resources\\oceanShader.glsl" };
-        oceanRenderer->ocean.shader = render::RenderShaderProgram::ParseStream_glsl(oceanShaderFile, { 0 }, {});
-
-
+        oceanRenderer2->ocean.shader = oceanRenderer1->ocean.shader = render::RenderShaderProgram::ParseStream_glsl(oceanShaderFile, { 0 }, {});
+        oceanRenderer2->ocean.scale = 256;
+        oceanRenderer2->ocean.width = oceanRenderer2->ocean.height = 6;
+        oceanRenderer2->ocean.vertOffset = -1;
         engine::Scene::Initialize();
     }
     virtual void Iterate() {

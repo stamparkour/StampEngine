@@ -51,6 +51,7 @@ export namespace render {
 		DynamicRead = GL_DYNAMIC_READ,
 		DynamicCopy = GL_DYNAMIC_COPY,
 	};
+
 	class MaterialBase;
 
 	struct PointP3NUC final {
@@ -71,7 +72,12 @@ export namespace render {
 		}
 		static const GLenum renderMode = GL_TRIANGLES;
 
-		static std::vector<PointP3NUC> ParseStream_obj(std::istream& data) {
+		void Tranform(const math::Mat4f& transform) {
+			pos = (math::Vec3f)(transform * math::Vec4f(pos.x, pos.y, pos.z, 1));
+			normal = (math::Vec3f)(transform * math::Vec4f(normal.x, normal.y, normal.z, 0).Normal());
+		}
+
+		static std::vector<PointP3NUC> ParseStream_obj(std::istream& data, const math::Mat4f* transform = 0) {
 			STAMPERROR(data.fail(), "PointP3NUC::ParseStream_obj - data stream is invalid.");
 			auto spos = data.tellg();
 			std::vector<math::Vec3f> pos{};
@@ -159,6 +165,13 @@ export namespace render {
 					mesh.push_back(points[i + 1]);
 				}
 			}
+
+			if (transform) {
+				for (int i = 0; i < mesh.size(); i++) {
+					mesh[i].Tranform(*transform);
+				}
+			}
+
 			return mesh;
 		}
 	};
@@ -1497,8 +1510,11 @@ export namespace render {
 		int blockBindingOcean = -1;
 		GLuint vao = 0;
 	public:
-		int width = 200;
-		int height = 200;
+		int width = 40;
+		int height = 40;
+		float scale = 1;
+		bool depthTest = true;
+		float vertOffset = 0;
 		std::shared_ptr<ShaderProgramBase> shader;
 		UniformBufferObject OceanObj{};
 		OceanRenderObject() {
@@ -1513,14 +1529,18 @@ export namespace render {
 
 		void Render(const math::Mat4f& transform, UniformBufferObject& camera) {
 			struct Data {
-				float time;
+				GLfloat time;
 				GLint width;
 				GLint height;
 				GLint Vy;
 				GLint count;
+				GLfloat scale;
+				GLfloat vertOffset;
 			};
 
 			Data d{};
+			d.scale = scale;
+			d.vertOffset = vertOffset;
 			d.time = swm::getTime();
 			d.width = width;
 			d.height = height;
@@ -1533,7 +1553,13 @@ export namespace render {
 			shader->UniformBuffer(blockBindingOcean, OceanObj);
 			shader->Uniform(UNIFORM_TRANSFORM, transform);
 			shader->Bind();
+			if (!depthTest) {
+				glDepthMask(GL_FALSE);
+			}
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, d.count);//GL_TRIANGLE_STRIP GL_LINE_STRIP
+			if (!depthTest) {
+				glDepthMask(GL_TRUE);
+			}
 			GLSTAMPERROR;
 		}
 		~OceanRenderObject() {

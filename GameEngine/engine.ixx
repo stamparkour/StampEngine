@@ -142,12 +142,10 @@ export namespace engine {
 			}
 		}
 		void SyncUpdate() {
-			if (IsEnabled()) {
-				for (int i = 0; i < components.size(); i++) {
-					if (components[i]->enable && components[i]->cascadeEnable && components[i]->state == State::Creating) {
-						components[i]->state = State::Running;
-						components[i]->Start();
-					}
+			for (int i = 0; i < components.size(); i++) {
+				if (components[i]->state == State::Creating) {
+					components[i]->state = State::Running;
+					components[i]->Start();
 				}
 			}
 			for (int i = 0; i < components.size(); i++) {
@@ -234,6 +232,10 @@ export namespace engine {
 			std::shared_ptr<T> component{ new T(param...) };
 			component->gameObject = std::shared_ptr<GameObject>{ shared_from_this()};
 			components.push_back(component);
+			if (!IsEnabled()) {
+				component->cascadeEnable = false;
+				component->enableState = EnableState::Disabling;
+			}
 			return component;
 		}
 		//remake function
@@ -241,17 +243,17 @@ export namespace engine {
 		bool RemoveComponent() {
 			for (int i = 0; i < components.size(); i++) {
 				if (typeid(T) == typeid(components[i])) {
-					components.erase(components.begin() + i);
+					components[i]->state = State::Destroying;
 					return true;
 				}
 			}
 			return false;
 		}
 		template<typename T>
-		std::unique_ptr<T> GetComponent() {
+		std::shared_ptr<T> GetComponent() {
 			for (auto& comp : components) {
 				if (typeid(T) == typeid(comp)) {
-					return (std::unique_ptr<T>)comp;
+					return (std::shared_ptr<T>)comp;
 				}
 			}
 			return nullptr;
@@ -332,6 +334,9 @@ export namespace engine {
 		}
 		math::Vec3f Down() {
 			return (math::Vec3f)(transformMat * math::Vec4f(0, -1, 0, 0)).Normal();
+		}
+		math::Vec3f globalPosition() {
+			return (math::Vec3f)(transformMat * math::Vec4f(0, 0, 0, 1));
 		}
 
 		~GameObject() {}
@@ -419,6 +424,55 @@ export namespace engine {
 			return &(currentScene->lightBuffer);
 		}
 	};
+
+
+	std::shared_ptr<render::Mesh> getUIMesh() {
+		static std::weak_ptr<render::Mesh> UIMesh{ };
+		if (UIMesh.expired()) {
+			std::shared_ptr<render::Mesh> mesh{ new render::Mesh() };
+			std::vector<render::PointP3NUC> points{};
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{-0.5,-0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{0,0},
+				math::Vec4f{1,1,1,1},
+				});
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{0.5,0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{1,1},
+				math::Vec4f{1,1,1,1},
+				});
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{0.5,-0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{1,1},
+				math::Vec4f{1,1,1,1},
+				});
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{-0.5,-0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{0,0},
+				math::Vec4f{1,1,1,1},
+				});
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{-0.5,0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{1,1},
+				math::Vec4f{1,1,1,1},
+				});
+			points.push_back(render::PointP3NUC{
+				math::Vec3f{0.5,0.5,0},
+				math::Vec3f{0,0,-1},
+				math::Vec2f{1,1},
+				math::Vec4f{1,1,1,1},
+				});
+			mesh->set(points);
+			UIMesh = mesh;
+		}
+
+		return UIMesh.lock();
+	}
 }
 
 struct Light_t {
@@ -437,6 +491,10 @@ struct LightSupply {
 	int length;
 	Light_t lights[0];
 };
+
+export namespace engine::UI {
+	
+}
 
 export namespace engine::component{
 	class Camera final : public engine::Component {
@@ -457,6 +515,8 @@ export namespace engine::component{
 			}
 
 			frameBuffer.ResizeToScreen(scalePercent);
+
+			GLSTAMPERROR;
 		}
 		virtual void Update() {}
 		virtual void Render(int phase) {}
@@ -478,20 +538,25 @@ export namespace engine::component{
 			}
 		}
 		static void PreRender(int phase) {
-			if (!mainCamera) return;
+			if (!mainCamera || !mainCamera->IsEnabled()) return;
 			struct Data {
 				math::Mat4f transform;
 				math::Mat4f perspective;
 				math::Mat4f UI;
+				math::Vec3f pos;
 			};
 			Data k{};
+			k.pos = mainCamera->GameObject()->globalPosition();
 			k.transform = mainCamera->transform;
 			k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
 			k.UI = math::Mat4f::Orthographic(GameWidth(), GameRatio(), 1, 10);
 			mainCamera->cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
+			GLSTAMPERROR;
 		}
 		static void PostRender(int phase) {
+			if (!mainCamera || !mainCamera->IsEnabled()) return;
 			mainCamera->frameBuffer.CopyContentToScreen();
+			GLSTAMPERROR;
 		}
 	public:
 		render::FrameBuffer2d frameBuffer{ {GL_RGBA8}, -1, -1 };
@@ -580,9 +645,14 @@ export namespace engine::component{
 		}
 	};
 
-	class Billboard final : public engine::Component {
+	class BillboardRenderer final : public engine::Component {
+		std::shared_ptr<render::Mesh> mesh{};
+		render::UBObject billboardUBO{};
 		//sync safe
-		virtual void Start() {}
+		virtual void Start() {
+			mesh = engine::getUIMesh();
+			UpdateAttrib();
+		}
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
@@ -596,6 +666,22 @@ export namespace engine::component{
 		//sync safe
 		virtual void OnDestroy() {}
 	public:
+		std::shared_ptr< render::SamplerTexture2d> texture;
+		//true: can look up and down
+		bool vertAlign = true;
+		//mask depth
+		bool maskDepth = true;
+		//scale with Depth
+		bool scaleDepth = true;
+		//write the const depth instead of actual depth
+		bool constDepth = true;
+		float depthLayer = 0;
+		float width = 1;
+		float height = 1;
+
+		void UpdateAttrib() {
+
+		}
 	};
 
 	class SunLight final : public engine::Component {
