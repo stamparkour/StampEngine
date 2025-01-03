@@ -54,7 +54,7 @@ export namespace math {
 	using Mat4ui = Mat4<unsigned int>;
 
 	template<Quantity T>
-	struct Vec2 final {
+	struct Vec2 {
 		T x = 0;
 		T y = 0;
 
@@ -66,6 +66,8 @@ export namespace math {
 		Vec2<T> operator -(const Vec2<T>& b) const noexcept;
 		Vec2<T>& operator -=(const Vec2<T>& b) noexcept;
 		Vec2<T> operator -() const noexcept;
+		Vec2<T> operator *(Vec2<T> b) const noexcept;
+		Vec2<T>& operator *=(Vec2<T> b) noexcept;
 		Vec2<T> operator *(T b) const noexcept;
 		Vec2<T>& operator *=(T b) noexcept;
 		Vec2<T> operator /(T b) const noexcept;
@@ -79,20 +81,17 @@ export namespace math {
 		explicit operator const T* () const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
-		Vec2<float> Normal() const noexcept;
+		Vec2<T> Normal() const noexcept;
 		inline static const Vec2<T>& Unit() {
 			static Vec2<T> value{ 1,1 };
 			return value; 
 		}
 	};
 	template<Quantity T>
-	struct Vec3 final {
+	struct Vec3 {
 		T x = 0;
 		T y = 0;
 		T z = 0;
-	private:
-		T padding{};
-	public:
 
 		Vec3() noexcept {}
 		Vec3(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
@@ -116,14 +115,14 @@ export namespace math {
 		explicit operator Vec2<T>() const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
-		Vec3<float> Normal() const noexcept;
+		Vec3<T> Normal() const noexcept;
 		inline static const Vec3<T>& Unit() {
 			static Vec3<T> value{ 1,1,1 };
 			return value;
 		}
 	};
 	template<Quantity T>
-	struct Vec4 final {
+	struct Vec4 {
 		T x = 0;
 		T y = 0;
 		T z = 0;
@@ -147,7 +146,7 @@ export namespace math {
 		explicit operator Vec3<T>() const noexcept;
 		float MagnitudeSquared() const noexcept;
 		float Magnitude() const noexcept;
-		Vec4<float> Normal() const noexcept; 
+		Vec4<T> Normal() const noexcept; 
 		inline static const Vec4<T>& Unit() {
 			static Vec4<T> value{ 1,1,1,1 };
 			return value;
@@ -167,7 +166,7 @@ export namespace math {
 
 	//column-major
 	template<Quantity T>
-	struct Mat4 final {
+	struct Mat4 {
 		T v1 = 0;
 		T v2 = 0;
 		T v3 = 0;
@@ -203,6 +202,7 @@ export namespace math {
 		Mat4<T>& operator *=(const Mat4<T>& b);
 		Vec4<T> operator *(const Vec4<T>& b) const;
 		Vec4<T> operator *(const Vec3<T>& b) const;
+		Vec4<T> operator *(const Vec2<T>& b) const;
 		operator const T* () const;
 		static Mat4<T> Perspective(T right, T left, T top, T bottom, T nearPlane, T farPlane);
 		//ratio : y / x
@@ -266,6 +266,43 @@ export namespace math {
 		}
 	};
 
+	struct alignas(sizeof(Vec2f)) GLvec2 : Vec2f {
+		GLvec2() : Vec2f() {}
+		GLvec2(const Vec2f& o) {
+			*this = (const GLvec2&)o;
+		}
+		GLvec2& operator =(const Vec2f& o) {
+			return *this = (const GLvec2&)o;
+		}
+	};
+	struct alignas(sizeof(Vec4f)) GLvec3 : Vec3f {
+		GLvec3() : Vec3f() {}
+		GLvec3(const Vec3f& o) {
+			*this = (const GLvec3&)o;
+		}
+		GLvec3& operator =(const Vec3f& o) {
+			return *this = (const GLvec3&)o;
+		}
+	};
+	struct alignas(sizeof(Vec4f)) GLvec4 : Vec4f {
+		GLvec4() : Vec4f() {}
+		GLvec4(const Vec4f& o) {
+			*this = (const GLvec4&)o;
+		}
+		GLvec4& operator =(const Vec4f& o) {
+			return *this = (const GLvec4&)o;
+		}
+	};
+	struct alignas(sizeof(Vec4f)) GLmat4 : Mat4f {
+		GLmat4() : Mat4f() {}
+		GLmat4(const Mat4f& o) {
+			*this = (const GLmat4&)o;
+		}
+		GLmat4& operator =(const Mat4f& o) {
+			return *this = (const GLmat4&)o;
+		}
+	};
+
 	template<Quantity T>
 	Vec2<T> Vec2<T>::operator +(const Vec2<T>& b) const noexcept {
 		return { x + b.x,y + b.y };
@@ -285,6 +322,14 @@ export namespace math {
 	template<Quantity T>
 	Vec2<T> Vec2<T>::operator -() const noexcept {
 		return { -x, -y };
+	}
+	template<Quantity T>
+	Vec2<T> math::Vec2<T>::operator*(Vec2<T> b) const noexcept {
+		return { x * b.x, y * b.y };
+	}
+	template<Quantity T>
+	Vec2<T>& math::Vec2<T>::operator*=(Vec2<T> b) noexcept {
+		return *this = *this * b;
 	}
 	template<Quantity T>
 	Vec2<T> Vec2<T>::operator *(T b) const noexcept {
@@ -337,7 +382,7 @@ export namespace math {
 		return sqrt(x * x + y * y);
 	}
 	template<Quantity T>
-	Vec2<float> Vec2<T>::Normal() const noexcept {
+	Vec2<T> Vec2<T>::Normal() const noexcept {
 		float mag = Magnitude();
 		if (mag == 0) return { 0,0 };
 		return (*this) / mag;
@@ -388,12 +433,6 @@ export namespace math {
 		return { x / b, y / b, z / b };
 	}
 	template<Quantity T>
-	template<Quantity T1>
-	inline math::Vec3<T>::operator Vec3<T1>() const noexcept
-	{
-		return { (T1)x,(T1)y,(T1)z };
-	}
-	template<Quantity T>
 	bool Vec3<T>::operator ==(const Vec3<T>& b) const noexcept {
 		return this->x == b.x && this->y == b.y && this->z == b.z;
 	}
@@ -406,6 +445,19 @@ export namespace math {
 		return (const T*)this;
 	}
 	template<Quantity T>
+	template<Quantity T1>
+	Vec3<T>::operator Vec3<T1>() const noexcept {
+		return { (T1)x,(T1)y ,(T1)z};
+	}
+	template<Quantity T>
+	Vec3<T>::operator Vec2<T>() const noexcept {
+		return { x,y,0,0 };
+	}
+	template<Quantity T>
+	Vec3<T>::operator Vec4<T>() const noexcept {
+		return { x,y,z,0 };
+	}
+	template<Quantity T>
 	float Vec3<T>::MagnitudeSquared() const noexcept {
 		return x * x + y * y + z * z;
 	}
@@ -415,7 +467,7 @@ export namespace math {
 		return sqrtf(x * x + y * y + z * z);
 	}
 	template<Quantity T>
-	Vec3<float> Vec3<T>::Normal() const noexcept {
+	Vec3<T> Vec3<T>::Normal() const noexcept {
 		float mag = Magnitude();
 		if (mag == 0) return { 0,0,0 };
 		return (*this) / mag;
@@ -483,8 +535,8 @@ export namespace math {
 		return sqrtf(x * x + y * y + z * z + w * w);
 	}
 	template<Quantity T>
-	Vec4<float> Vec4<T>::Normal() const noexcept {
-		float mag= Magnitude();
+	Vec4<T> Vec4<T>::Normal() const noexcept {
+		float mag = Magnitude();
 		if (mag == 0) return { 0,0,0,0 };
 		return (*this) / mag;
 	}
@@ -634,6 +686,15 @@ export namespace math {
 			b.x * v2 + b.y * v6 + b.z * v10 + v14,
 			b.x * v3 + b.y * v7 + b.z * v11 + v15,
 			b.x * v4 + b.y * v8 + b.z * v12 + v16,
+		};
+	}
+	template<Quantity T>
+	Vec4<T> math::Mat4<T>::operator*(const Vec2<T>& b) const {
+		return {
+			b.x * v1 + b.y * v5 + v13,
+			b.x * v2 + b.y * v6 + v14,
+			b.x * v3 + b.y * v7 + v15,
+			b.x * v4 + b.y * v8 + v16,
 		};
 	}
 	template<Quantity T>

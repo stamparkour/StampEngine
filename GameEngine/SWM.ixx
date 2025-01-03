@@ -693,7 +693,6 @@ void swm::initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance) {
 	if (desc == NULL) return;
 
 	localWindow = new SWindowHandle();
-	if(desc->height != 0 && desc->width != 0) localWindow->screenRatio = (double)desc->height / desc->width;
 	localWindow->updateWinAttrib._value = 0;
 	localWindow->desc = *desc;
 	localWindow->borderless = desc->flags._value & SWDF::Borderless;
@@ -767,7 +766,7 @@ double swm::getTime()  {
 	return (getTimeRaw() - localWindow->startTime) * tickTimeLength;
 }
 double swm::DeltaTime() {
-	return localWindow->deltaTime;
+	return min(localWindow->deltaTime, 1);
 }
 int swm::getWindowWidth() {
 	return localWindow->winPos.width;

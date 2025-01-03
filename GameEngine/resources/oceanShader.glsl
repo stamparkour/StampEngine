@@ -18,6 +18,7 @@ layout(std140) uniform ST_Ocean {
 	int count;
 	float scale;
 	float vertOffset;
+	vec3 origin;
 } ocean;
 
 float getHeight(vec2 v) {
@@ -35,6 +36,7 @@ vec3 getNormal(vec2 v) {
 #ifdef VERTEX_SHADER
 
 out vec3 worldPos;
+out vec3 localPos;
 
 void main() {
 	vec2 position_v = vec2(-gl_VertexID/ocean.Vy + ocean.width / 2.0, - ocean.height / 2.0);
@@ -62,6 +64,7 @@ void main() {
 	
 	wp.y = getHeight(wp.xz) * wp.y + ocean.vertOffset;
 	worldPos = wp.xyz;
+	localPos = wp.xyz - ocean.origin;
 	gl_Position = camera.perspective * camera.transform * wp;
 }
 
@@ -71,17 +74,18 @@ void main() {
 
 layout(location = 0) out vec4 diffuseColor;
 in vec3 worldPos;
-const vec4 color = vec4(0.1,0.2,0.7,1);
+in vec3 localPos;
+const vec4 color = vec4(0.13,0.04,0.64,1);
 void main() {
 	vec3 normal = getNormal(worldPos.xz);
 	vec3 viewNormal = normalize(worldPos - camera.position);
 	vec3 reflectionNormal = normalize(viewNormal - 2 * dot(viewNormal, normal) * normal);
 	float spectral = dot(reflectionNormal, lightSource);
-	float aura = max(0.5,dot(reflectionNormal, viewNormal));
+	float aura = max(0.4,dot(reflectionNormal, viewNormal));
 	spectral = (spectral - 0.985) / (0.992 - 0.985);
 	spectral = clamp(spectral, 0, 1);
-	diffuseColor = color * aura + spectral; //* (worldPos.y +  6.0 / 25) * 25 / 12;
-	if(ocean.scale < 64) diffuseColor.a = ( ocean.width * ocean.scale / 2 - max(abs(worldPos.x), abs(worldPos.z)) ) ;
+	diffuseColor = color * aura + spectral; //* (localPos.y +  6.0 / 25) * 25 / 12;
+	if(ocean.scale < 64) diffuseColor.a = ( ocean.width * ocean.scale / 2 - max(abs(localPos.x), abs(localPos.z)) ) ;
 	else diffuseColor.a = 1;
 	//diffuseColor = vec4(normal.x,0,normal.z,1);
 }

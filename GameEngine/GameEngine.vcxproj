@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Economy.ixx" />
     <ClCompile Include="engine.ixx" />
     <ClCompile Include="gamerender.ixx" />
     <ClCompile Include="GLM.cpp" />
@@ -159,7 +160,6 @@
     <ClInclude Include="glm.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="lua\Makefile" />
     <None Include="resources\oceanShader.glsl" />
     <None Include="resources\shader.glsl" />
   </ItemGroup>

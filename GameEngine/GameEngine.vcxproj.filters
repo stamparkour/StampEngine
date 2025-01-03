@@ -18,6 +18,9 @@
     <Filter Include="Engine\LUA">
       <UniqueIdentifier>{a2839e83-6f87-4903-b803-703cb5a339e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Economy">
+      <UniqueIdentifier>{ca10d0a8-3be9-45c1-a60c-d2a4b290127e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -44,6 +47,9 @@
     <ClCompile Include="SWM.ixx">
       <Filter>Engine\StampEngine</Filter>
     </ClCompile>
+    <ClCompile Include="Economy.ixx">
+      <Filter>Economy</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug.h">
@@ -60,7 +66,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="lua\Makefile" />
     <None Include="resources\shader.glsl">
       <Filter>Game</Filter>
     </None>

@@ -187,7 +187,7 @@ export namespace engine {
 			if (tranformUpdated) return transformMat;
 			math::Mat4f mat = transform.toMatrix();
 			if (parent) {
-				mat = mat * QuerySyncTransform();
+				transformMat = mat * parent->QuerySyncTransform();
 			}
 			else {
 				transformMat = mat;
@@ -259,6 +259,7 @@ export namespace engine {
 			return nullptr;
 		}
 		void SetParent(std::shared_ptr<GameObject> parent = nullptr) {
+			if (this->parent == parent) return;
 			if (this->parent) {
 				int index = -1;
 				for (int i = 0; i < this->parent->children.size(); i++) {
@@ -276,7 +277,7 @@ export namespace engine {
 					cascadeEnable = false;
 					if (enable) CascadeDisable();
 				}
-				else if(!cascadeEnable) {
+				else if(!cascadeEnable && this->parent->cascadeEnable && this->parent->enable) {
 					cascadeEnable = true;
 					if (!enable) CascadeEnable();
 				}
@@ -400,9 +401,7 @@ export namespace engine {
 		virtual void Iterate() = 0;
 		virtual void PreRender(int phase);
 		virtual void PostRender(int phase);
-		virtual void Resize(long width, long height) {
-		
-		}
+		virtual void Resize(long width, long height) { }
 		static std::shared_ptr<GameObject> CreateObject(std::string name, std::shared_ptr<GameObject> parent = nullptr) {
 			std::shared_ptr<GameObject> obj(new GameObject());
 			obj->name = name;
@@ -514,8 +513,8 @@ export namespace engine::component{
 			} break;
 			}
 
+			GLSTAMPERROR;
 			frameBuffer.ResizeToScreen(scalePercent);
-
 			GLSTAMPERROR;
 		}
 		virtual void Update() {}
@@ -540,13 +539,13 @@ export namespace engine::component{
 		static void PreRender(int phase) {
 			if (!mainCamera || !mainCamera->IsEnabled()) return;
 			struct Data {
-				math::Mat4f transform;
-				math::Mat4f perspective;
-				math::Mat4f UI;
-				math::Vec3f pos;
+				math::GLmat4 transform;
+				math::GLmat4 perspective;
+				math::GLmat4 UI;
+				math::GLvec4 pos;
 			};
 			Data k{};
-			k.pos = mainCamera->GameObject()->globalPosition();
+			k.pos = (math::Vec4f)(mainCamera->GameObject()->globalPosition());
 			k.transform = mainCamera->transform;
 			k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
 			k.UI = math::Mat4f::Orthographic(GameWidth(), GameRatio(), 1, 10);
@@ -680,7 +679,13 @@ export namespace engine::component{
 		float height = 1;
 
 		void UpdateAttrib() {
+			struct Billboard_t {
+				math::Mat4f transform;
+				GLfloat depthLayer;
+			};
+			Billboard_t billboard{};
 
+			billboardUBO.Set(&billboard, sizeof(Billboard_t), render::BufferUsageHint::DynamicDraw);
 		}
 	};
 

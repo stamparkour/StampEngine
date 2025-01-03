@@ -1479,7 +1479,7 @@ export namespace render {
 			glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
 			glDrawBuffer(GL_BACK_LEFT);
 			glBlitFramebuffer(0, 0, colorAttachments[colorAttachmentIndex].Width(), colorAttachments[colorAttachmentIndex].Height(), 0, 0,
-				swm::getWindowWidth(), swm::getWindowHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);//GL_NEAREST  GL_LINEAR
+				swm::getWindowWidth(), swm::getWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
 			Bind();
 			GLSTAMPERROR;
 		}
@@ -1536,6 +1536,7 @@ export namespace render {
 				GLint count;
 				GLfloat scale;
 				GLfloat vertOffset;
+				math::GLvec3 origin;
 			};
 
 			Data d{};
@@ -1546,6 +1547,7 @@ export namespace render {
 			d.height = height;
 			d.Vy = 4 + 2 * height;
 			d.count = d.Vy * width - 1;
+			d.origin = (math::Vec3f)(transform * math::Vec3f(0, 0, 0));
 			OceanObj.Set(&d, sizeof(Data), BufferUsageHint::StreamDraw);
 
 			glBindVertexArray(vao);
@@ -1556,7 +1558,9 @@ export namespace render {
 			if (!depthTest) {
 				glDepthMask(GL_FALSE);
 			}
+			glEnable(GL_BLEND);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, d.count);//GL_TRIANGLE_STRIP GL_LINE_STRIP
+			glDisable(GL_BLEND);
 			if (!depthTest) {
 				glDepthMask(GL_TRUE);
 			}
