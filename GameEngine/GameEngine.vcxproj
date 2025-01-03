@@ -150,6 +150,7 @@
     <ClCompile Include="luamanager.ixx" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math.ixx" />
+    <ClCompile Include="server.ixx" />
     <ClCompile Include="SWM.ixx" />
     <ClCompile Include="testScene.ixx" />
   </ItemGroup>
