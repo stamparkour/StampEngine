@@ -1,6 +1,6 @@
 export module math;
 
-import <cmath>;
+import std;
 
 export namespace math {
 	constexpr double PI = 3.141592653589793;
@@ -11,14 +11,12 @@ export namespace math {
 		a = b;
 		a + b;
 		a - b;
-		a* b;
+		a * b;
 		a / b;
 		a += b;
 		a -= b;
 		a *= b;
 		a /= b;
-		cos(a);
-		sin(a);
 	};
 
 	template<Quantity T>
@@ -85,6 +83,10 @@ export namespace math {
 		inline static const Vec2<T>& Unit() {
 			static Vec2<T> value{ 1,1 };
 			return value; 
+		}
+		inline friend std::ostream& operator << (std::ostream& o, Vec2<T> v) {
+			o << "(" << v.x << "," << v.y << ")";
+			return o;
 		}
 	};
 	template<Quantity T>
@@ -269,37 +271,41 @@ export namespace math {
 	struct alignas(sizeof(Vec2f)) GLvec2 : Vec2f {
 		GLvec2() : Vec2f() {}
 		GLvec2(const Vec2f& o) {
-			*this = (const GLvec2&)o;
+			*((Vec2f*)this) = o;
 		}
 		GLvec2& operator =(const Vec2f& o) {
-			return *this = (const GLvec2&)o;
+			*((Vec2f*)this) = o;
+			return *this;
 		}
 	};
 	struct alignas(sizeof(Vec4f)) GLvec3 : Vec3f {
 		GLvec3() : Vec3f() {}
 		GLvec3(const Vec3f& o) {
-			*this = (const GLvec3&)o;
+			*((Vec3f*)this) = o;
 		}
 		GLvec3& operator =(const Vec3f& o) {
-			return *this = (const GLvec3&)o;
+			*((Vec3f*)this) = o;
+			return *this;
 		}
 	};
 	struct alignas(sizeof(Vec4f)) GLvec4 : Vec4f {
 		GLvec4() : Vec4f() {}
 		GLvec4(const Vec4f& o) {
-			*this = (const GLvec4&)o;
+			*((Vec4f*)this) = o;
 		}
 		GLvec4& operator =(const Vec4f& o) {
-			return *this = (const GLvec4&)o;
+			*((Vec4f*)this) = o;
+			return *this;
 		}
 	};
 	struct alignas(sizeof(Vec4f)) GLmat4 : Mat4f {
 		GLmat4() : Mat4f() {}
 		GLmat4(const Mat4f& o) {
-			*this = (const GLmat4&)o;
+			*((Mat4f*)this) =o;
 		}
 		GLmat4& operator =(const Mat4f& o) {
-			return *this = (const GLmat4&)o;
+			*((Mat4f*)this) = o;
+			return *this;
 		}
 	};
 
@@ -531,8 +537,9 @@ export namespace math {
 	}
 	template<Quantity T>
 	float Vec4<T>::Magnitude() const noexcept {
+		using namespace std;
 		if (x == 0 && y == 0 && z == 0 && w == 0) return 0;
-		return sqrtf(x * x + y * y + z * z + w * w);
+		return sqrt(x * x + y * y + z * z + w * w);
 	}
 	template<Quantity T>
 	Vec4<T> Vec4<T>::Normal() const noexcept {
@@ -720,7 +727,7 @@ export namespace math {
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Orthographic(T scaleX, T ratio, T nearPlane, T farPlane) {
-		return { 1 / scaleX,0,0,0,0,ratio / scaleX,0,0,0,0,-2 / (farPlane - nearPlane),0,0,0,-(farPlane + nearPlane) / (farPlane - nearPlane),1 };
+		return { ratio / scaleX,0,0,0,0,1 / scaleX,0,0,0,0,-2 / (farPlane - nearPlane),0,0,0,(farPlane + nearPlane) / (farPlane - nearPlane),1 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::Scale(T x, T y, T z) {
@@ -736,11 +743,13 @@ export namespace math {
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::RotationY(T v) {
-		return { cosf(v),0,-sinf(v),0,0,1,0,0,sinf(v),0,cosf(v),0,0,0,0,1 };
+		using namespace std;
+		return { cos(v),0,-sin(v),0,0,1,0,0,sin(v),0,cos(v),0,0,0,0,1 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::RotationZ(T v) {
-		return { cosf(v),sinf(v),0,0,-sinf(v),cosf(v),0,0,0,0,1,0,0,0,0,1 };
+		using namespace std;
+		return { cos(v),sin(v),0,0,-sin(v),cos(v),0,0,0,0,1,0,0,0,0,1 };
 	}
 	template<Quantity T>
 	Mat4<T> Mat4<T>::RotationZXY(T x, T y, T z) {
@@ -827,20 +836,20 @@ export namespace math {
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationX(T v) noexcept {
-		return { (T)cosf(v / 2),(T)sinf(v / 2),0,0 };
+		return { (T)cos(v / 2),(T)sin(v / 2),0,0 };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationY(T v) noexcept {
-		return { (T)cosf(v / 2),0,(T)sinf(v / 2),0 };
+		return { (T)cos(v / 2),0,(T)sin(v / 2),0 };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZ(T v) noexcept {
-		return { (T)cosf(v / 2),0,0,(T)sinf(v / 2) };
+		return { (T)cos(v / 2),0,0,(T)sin(v / 2) };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationAxis(T r, const Vec3<T>& axis) noexcept {
 		Vec3<T> a = axis.Normal();
-		return { (T)cosf(r / 2),a.x * (T)sinf(r / 2),a.y * (T)sinf(r / 2),a.z * (T)sinf(r / 2) };
+		return { (T)cos(r / 2),a.x * (T)sin(r / 2),a.y * (T)sin(r / 2),a.z * (T)sin(r / 2) };
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationZXY(T x, T y, T z) noexcept {

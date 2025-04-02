@@ -77,6 +77,7 @@ export namespace render {
 			normal = (math::Vec3f)(transform * math::Vec4f(normal.x, normal.y, normal.z, 0).Normal());
 		}
 
+		//text stream
 		static std::vector<PointP3NUC> ParseStream_obj(std::istream& data, const math::Mat4f* transform = 0) {
 			STAMPERROR(data.fail(), "PointP3NUC::ParseStream_obj - data stream is invalid.");
 			auto spos = data.tellg();
@@ -231,6 +232,8 @@ export namespace render {
 			using std::swap;
 			swap(a.vbo, b.vbo);
 			swap(a.count, b.count);
+			swap(a.renderMode, b.renderMode);
+			swap(a.setMaterial, b.setMaterial);
 		}
 		~Mesh() {
 			STAMPERROR(!swm::isRenderThread(),"render::Mesh::~Mesh - can only Bind mesh in management thread.");
@@ -356,9 +359,9 @@ export namespace render {
 				glDeleteTextures(1, &textureID);
 				textureID = 0;
 			}
-			if(activeIndex && textureID) {
-				textureBinds[textureID] = nullptr;
-				textureID = 0;
+			if(activeIndex) {
+				textureBinds[activeIndex] = nullptr;
+				activeIndex = 0;
 			}
 		}
 		void BindActive() {
@@ -397,7 +400,7 @@ export namespace render {
 		int GetTarget() const {
 			return target;
 		}
-		int GetActiveTextureId() const {
+		int GetActiveTextureIndex() const {
 			return activeIndex;
 		}
 		void Bind() const {
@@ -412,12 +415,15 @@ export namespace render {
 		void SetMinFilter(TextureMinFilter minFilter) {
 			STAMPERROR(textureID == 0,"render::TextureBase::SetMinFilter - uninitialized texture, attempted modification failed.");
 			glBindTexture(target, textureID);
-			glTextureParameteri(target, GL_TEXTURE_MIN_FILTER, (int)minFilter);
+			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, (int)minFilter);
 		}
 		void SetMagFilter(TextureMagFilter magFilter) {
 			STAMPERROR(textureID == 0,"render::TextureBase::SetMagFilter - uninitialized texture, attempted modification failed.");
+			GLSTAMPERROR;
 			glBindTexture(target, textureID);
-			glTextureParameteri(target, GL_TEXTURE_MIN_FILTER, (int)magFilter);
+			GLSTAMPERROR;
+			glTexParameteri(target, GL_TEXTURE_MAG_FILTER, (int)magFilter);
+			GLSTAMPERROR;
 		}
 		TextureMinFilter GetMinFilter() const {
 			STAMPERROR(textureID == 0,"render::TextureBase::GetMinFilter - uninitialized texture, attempted information retrieval failed.");
@@ -484,11 +490,13 @@ export namespace render {
 		}
 		template<typename T, GLenum format, GLenum type>
 		void SetImage(RawTexture2dBase<T, format, type>& tex, int mipmapLevel = 0) {
-			STAMPERROR(mipmapLevels >= this->mipmapLevels, "render::ImageTexture2d::SetImage - mipmap above max value assigned");
+			STAMPERROR(mipmapLevel >= this->mipmapLevels, "render::ImageTexture2d::SetImage - mipmap above max value assigned");
 			STAMPERROR(tex.Width() != Width(mipmapLevel),"render::ImageTexture2d::SetImage - width of mipmap layer not half, rounded down, of previous mipmap layer width");
 			STAMPERROR(tex.Height() != Height(mipmapLevel),"render::ImageTexture2d::SetImage - height of mipmap layer not half, rounded down, of previous mipmap layer height");
 			Bind();
-			glTexSubImage2D(GL_TEXTURE_2D, mipmapLevel, internalFormat, width, height, 0, format, type, tex.GetData());
+			GLSTAMPERROR;
+			glTexSubImage2D(GL_TEXTURE_2D, mipmapLevel, 0, 0, tex.Width(), tex.Height(), format, type, tex.GetData());
+			GLSTAMPERROR;
 		}
 		void GenMipmaps() {
 			glGenerateTextureMipmap(textureID);
@@ -645,6 +653,7 @@ export namespace render {
 			delete[] lpPixels;
 			return tex;
 		}
+		//binary filetype
 		static RawTexture2d4f ParseStream_bmp(std::istream& data) {
 			if (!data || data.get() != 'B' || data.get() != 'M') return {};//0,1
 			uint32_t bmpSize = 0;
@@ -656,7 +665,7 @@ export namespace render {
 			data.read((char*)&headerSize, sizeof(uint32_t));//14-18
 			std::streampos palleteArray = headerSize + 14;
 			uint32_t width = 0, height = 0, bpp = 0, compression = 0, imageSize = 0, paletteCount = 0;
-			if (headerSize == 40 || headerSize == 52 || headerSize == 124) {
+			if (headerSize == 40 || headerSize == 52 || headerSize == 56 || headerSize == 124) {
 				data.read((char*)&width, sizeof(uint32_t));//18-22
 				data.read((char*)&height, sizeof(uint32_t));//22-26
 				data.seekg(28);
@@ -886,7 +895,7 @@ export namespace render {
 		}
 		ShaderStorageBufferObject() {
 			if (shaderBlockBinds == 0) {
-				glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxBlockUnits);
+				glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maxBlockUnits);
 				shaderBlockBinds = new ShaderStorageBufferObject * [maxBlockUnits];
 				memset(shaderBlockBinds, 0, sizeof(void*) * maxBlockUnits);
 			}
@@ -927,6 +936,7 @@ export namespace render {
 		inline friend void swap(ShaderStorageBufferObject& a, ShaderStorageBufferObject& b) {
 			using std::swap;
 			swap(a.ssbo, b.ssbo);
+			swap(a.blockIndex, b.blockIndex);
 		}
 		~ShaderStorageBufferObject() {
 			if (ssbo) {
@@ -1086,7 +1096,7 @@ export namespace render {
 		}
 		void Uniform(GLint location, const SamplerBase* value) {
 			STAMPERROR(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
-			glProgramUniform1i(program, location, value->GetActiveTextureId());
+			glProgramUniform1i(program, location, value->GetActiveTextureIndex());
 		}
 		void Uniform(GLint location, int value) {
 			glProgramUniform1i(program, location, value);
@@ -1246,6 +1256,9 @@ export namespace render {
 		GLint GetUniformBlockIndex(const char* name) {
 			return glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, name);
 		}
+		GLint GetShaderStorageIndex(const char* name) {
+			return glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
+		}
 	};
 	class RenderShaderProgram : public ShaderProgramBase {
 	public:
@@ -1308,13 +1321,14 @@ export namespace render {
 		}
 		MaterialBase(const MaterialBase& other) = delete;
 		MaterialBase& operator =(const MaterialBase& other) = delete;
+		virtual void UpdateMaterial() = 0;
 	public:
 		std::shared_ptr<ShaderProgramBase> shader{};
-		virtual void UpdateMaterial() = 0;
 		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) = 0;
 		void UpdateMeshAttrib(Mesh* mesh) {
 			if (!mesh) return;
 			Bind();
+			mesh->Bind();
 			mesh->setMaterial(*this);
 			UpdateMaterial();
 		}
@@ -1338,12 +1352,29 @@ export namespace render {
 	};
 	class SolidMaterial final : public MaterialBase {
 		int blockBindingCamera = -1;
+
+		virtual void UpdateMaterial() {
+			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
+			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
+			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
+			if (useVertexColorValue) {
+				glEnableVertexAttribArray(ATTRIBPOINTER_COLOR);
+			}
+			else {
+				glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
+				glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
+			}
+
+			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
+			if (texture != 0) texture->BindActive();
+			if (normalMap != 0) normalMap->BindActive();
+		}
 	public:
 		math::Vec4f color{ 0.8f,0.8f,0.8f,1 };
-		bool useColorValue = true;
+		bool useVertexColorValue = false;
 		std::shared_ptr<SamplerTexture2d> texture;
 		std::shared_ptr<SamplerTexture2d> normalMap;
-		SolidMaterial() { }
+		SolidMaterial() {}
 		SolidMaterial(const SolidMaterial& other) = delete;
 		SolidMaterial(SolidMaterial&& other) noexcept {
 			using std::swap;
@@ -1353,19 +1384,6 @@ export namespace render {
 		SolidMaterial& operator =(SolidMaterial&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
-		}
-		virtual void UpdateMaterial() {
-			Bind();
-			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
-			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
-			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
-			if (useColorValue) {
-				glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
-				glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
-			}
-			else  glEnableVertexAttribArray(ATTRIBPOINTER_COLOR);
-
-			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
 		}
 		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) {
 			Bind();
@@ -1378,8 +1396,73 @@ export namespace render {
 		inline friend void swap(SolidMaterial& a, SolidMaterial& b) noexcept {
 			using std::swap;
 			swap((MaterialBase&)a, (MaterialBase&)b);
+			swap(a.blockBindingCamera, b.blockBindingCamera);
+			swap(a.color, b.color);
+			swap(a.useVertexColorValue, b.useVertexColorValue);
+			swap(a.texture, b.texture);
+			swap(a.normalMap, b.normalMap);
 		}
-		virtual ~SolidMaterial() { }
+		virtual ~SolidMaterial() {}
+	};
+	class UIMaterial final : public MaterialBase {
+		int blockBindingCamera = -1;
+		int blockBindingUIMaterial = -1;
+		UniformBufferObject ubo{};
+
+		virtual void UpdateMaterial() {
+			GLSTAMPERROR;
+			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
+			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
+			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
+			glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
+
+			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
+			blockBindingUIMaterial = shader->GetUniformBufferLocation("ST_UIMAT");
+			if (texture != 0) texture->BindActive();
+
+			struct UIMaterial_t {
+				GLboolean texture0;
+			} uimat{};
+			uimat.texture0 = texture != 0;
+			ubo.Set(&uimat, sizeof(uimat), render::BufferUsageHint::DynamicDraw);
+			ubo.BindBuffer();
+			GLSTAMPERROR;
+		}
+	public:
+		math::Vec4f color{ 0.8f,0.8f,0.8f,1 };
+		std::shared_ptr<SamplerTexture2d> texture;
+		UIMaterial() {}
+		UIMaterial(const UIMaterial& other) = delete;
+		UIMaterial(UIMaterial&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		UIMaterial& operator =(const UIMaterial& other) = delete;
+		UIMaterial& operator =(UIMaterial&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) {
+			GLSTAMPERROR;
+			Bind();
+			if (texture != 0) shader->Uniform(UNIFORM_TEXTURE0, texture.get());
+			shader->UniformBuffer(blockBindingCamera, *camera);
+			shader->UniformBuffer(blockBindingUIMaterial, ubo);
+			shader->Uniform(UNIFORM_TRANSFORM, transform);
+			glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
+			mesh->RenderArray();
+			GLSTAMPERROR;
+		}
+		inline friend void swap(UIMaterial& a, UIMaterial& b) noexcept {
+			using std::swap;
+			swap((MaterialBase&)a, (MaterialBase&)b);
+			swap(a.blockBindingCamera, b.blockBindingCamera);
+			swap(a.blockBindingUIMaterial, b.blockBindingUIMaterial);
+			swap(a.ubo, b.ubo);
+			swap(a.color, b.color);
+			swap(a.texture, b.texture);
+		}
+		virtual ~UIMaterial() {}
 	};
 
 	class Transform final : public std::enable_shared_from_this<Transform> {
@@ -1411,7 +1494,7 @@ export namespace render {
 		std::vector<SamplerTexture2d> colorAttachments{};
 		SamplerTexture2d depthStencil{};
 		FrameBuffer2d(std::vector<GLenum> colorAttachmentTypes, int width = 0, int height = 0) {
-			if(initFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &initFBO);
+			getInitId();
 			glGenFramebuffers(1, &id);
 			this->colorAttachmentTypes = colorAttachmentTypes;
 			colorAttachments.resize (colorAttachmentTypes.size());
@@ -1441,7 +1524,7 @@ export namespace render {
 			id = 0;
 		}
 		void ResizeToScreen(float scale = 1) {
-			Resize(ceil(swm::getWindowWidth() * scale), ceil(swm::getWindowHeight() * scale));
+			Resize(ceil(swm::getViewportWidth() * scale), ceil(swm::getViewportHeight() * scale));
 		}
 		void Resize(size_t width = 0, size_t height = 0) {
 			if (width == 0 || height == 0) {
@@ -1468,18 +1551,18 @@ export namespace render {
 			glDrawBuffers(colorAttachments.size(), buffer.get());
 			glViewport(0, 0, colorAttachments[colorAttachmentIndex].Width(), colorAttachments[colorAttachmentIndex].Height());
 		}
-		void BindActive(int startUniformIndex) {
-
-		}
+		// void BindActive(int startUniformIndex) {
+		//
+		// }
 
 		void CopyContentToScreen(int colorAttachmentIndex = 0) {
 			GLSTAMPERROR;
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, id);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, initFBO);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, getInitId());
 			glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
-			glDrawBuffer(GL_BACK_LEFT);
-			glBlitFramebuffer(0, 0, colorAttachments[colorAttachmentIndex].Width(), colorAttachments[colorAttachmentIndex].Height(), 0, 0,
-				swm::getWindowWidth(), swm::getWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
+			glDrawBuffer(swm::getScreenDrawBuffer());
+			glBlitFramebuffer(0, 0, colorAttachments[colorAttachmentIndex].Width(), colorAttachments[colorAttachmentIndex].Height(), swm::getViewportX(), swm::getViewportY(),
+				swm::getViewportX() + swm::getViewportWidth(), swm::getViewportY() + swm::getViewportHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
 			Bind();
 			GLSTAMPERROR;
 		}
@@ -1487,6 +1570,15 @@ export namespace render {
 		bool IsValid() {
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			return glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+		}
+
+		static GLuint getInitId() {
+			if (initFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &initFBO);
+			return initFBO;
+		}
+
+		GLuint getId() {
+			return id;
 		}
 	};
 	/*class PostProcessManager final : public std::enable_shared_from_this<PostProcessManager> {
@@ -1505,7 +1597,7 @@ export namespace render {
 		}
 	};*/
 
-	class OceanRenderObject {
+	class OceanRenderObject : public std::enable_shared_from_this<OceanRenderObject> {
 		int blockBindingCamera = -1;
 		int blockBindingOcean = -1;
 		GLuint vao = 0;
@@ -1516,6 +1608,7 @@ export namespace render {
 		bool depthTest = true;
 		float vertOffset = 0;
 		std::shared_ptr<ShaderProgramBase> shader;
+		std::shared_ptr<SamplerTexture2d> noiseTex;
 		UniformBufferObject OceanObj{};
 		OceanRenderObject() {
 			glGenVertexArrays(1, &vao);
@@ -1524,6 +1617,8 @@ export namespace render {
 			if (blockBindingCamera == -1) blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
 			if(blockBindingOcean == -1) blockBindingOcean = shader->GetUniformBufferLocation("ST_Ocean");
 
+
+			if (noiseTex != 0) noiseTex->BindActive();
 			glBindVertexArray(vao);
 		}
 
@@ -1554,6 +1649,7 @@ export namespace render {
 			shader->UniformBuffer(blockBindingCamera, camera);
 			shader->UniformBuffer(blockBindingOcean, OceanObj);
 			shader->Uniform(UNIFORM_TRANSFORM, transform);
+			if (noiseTex != 0) shader->Uniform(UNIFORM_TEXTURE0, noiseTex.get());
 			shader->Bind();
 			if (!depthTest) {
 				glDepthMask(GL_FALSE);
@@ -1571,6 +1667,131 @@ export namespace render {
 				glDeleteVertexArrays(1, &vao);
 				vao = 0;
 			}
+		}
+	};
+
+	class FontMap : public std::enable_shared_from_this<FontMap> {
+		struct FontMapEntry {
+			unsigned short X;
+			unsigned short Y;
+			unsigned char width;
+			unsigned char height;
+			unsigned char yOffset;
+		};
+
+		std::map<int, FontMapEntry> fontMap{};
+		size_t lineHeight;
+
+		static char fromHex(char c) {
+			if (c >= '0' && c <= '9') return c - '0';
+			else if (c >= 'A' && c <= 'F') return c - 'A';
+			else if (c >= 'a' && c <= 'f') return c - 'a';
+			return -1;
+		}
+	public:
+		struct FontMapItem {
+			math::Vec2f uvTR;
+			math::Vec2f uvTL;
+			math::Vec2f uvBR;
+			math::Vec2f uvBL;
+			unsigned char width;
+			unsigned char height;
+			unsigned char yOffset;
+		};
+
+		std::shared_ptr<SamplerTexture2d> texture = 0;
+
+		static unsigned int ParseUTF8Char(char* txt, size_t& index, size_t size) {
+			size_t i = index;
+			if (size - index >= 1 && (txt[i] & 0x80) == 0) {
+				index += 1;
+				return txt[i];
+			}
+			else if (size - index >= 2 && (txt[i] & 0xE0) == 0xC0) {
+				index += 2;
+				return ((txt[i] & 0x1F) << 6) | (txt[i + 1] & 0x3F);
+			}
+			else if (size - index >= 3 && (txt[i] & 0xF0) == 0xE0) {
+				index += 3;
+				return ((txt[i] & 0x0F) << 12) | ((txt[i + 1] & 0x3F) << 6) | (txt[i + 2] & 0x3F);
+			}
+			else if (size - index >= 4 && (txt[0] & 0xF8) == 0xF0) {
+				index += 4;
+				return ((txt[i] & 0x07) << 18) | ((txt[i + 1] & 0x3F) << 12) | ((txt[i + 2] & 0x3F) << 6) | (txt[i + 3] & 0x3F);
+			}
+			else {
+				index++;
+				return 0xFFFD;
+			}
+		}
+
+		// text file
+		// relative to topleft
+		// line height
+		// [CHARACTER] X Y width height
+		static std::shared_ptr<FontMap> Parse_fmp(std::istream& stream, std::shared_ptr<SamplerTexture2d> texture = 0) {
+			std::shared_ptr< FontMap> map = std::shared_ptr< FontMap>{ new FontMap()};
+			if (texture) map->texture = texture;
+
+			uint32_t character;
+			std::string word{};
+			word.reserve(1024);
+			uint32_t X, Y, width, height, yOffset;
+			stream >> map->lineHeight;
+			while (stream.good()) {
+				word.clear();
+				stream >> word;
+				if (!stream.good()) break;
+				if (word.size() >= 3 && word[0] == 'U' && word[1] == '+') {
+					character = 0;
+					for (int i = 2; i < word.size(); i++) {
+						character <<= 4;
+						character |= fromHex(word[i]);
+					}
+				}
+				else {
+					size_t index = 0;
+					character = ParseUTF8Char(word.data(), index, word.size());
+				}
+				stream >> X;
+				if (!stream.good()) break;
+				stream >> Y;
+				if (!stream.good()) break;
+				stream >> width;
+				if (!stream.good()) break;
+				stream >> height;
+				if (!stream.good()) break;
+				stream >> yOffset;
+				if (!stream.good()) break;
+
+				map->fontMap.insert({ character, FontMapEntry{
+					(unsigned short)X,
+					(unsigned short)Y,
+					(unsigned char)width,
+					(unsigned char)height,
+					(unsigned char)yOffset
+				} });
+			}
+			return map;
+		}
+
+		FontMapItem getCharData(int utf8char) {
+			if (!texture) return {};
+			if (!fontMap.contains(utf8char)) return {};
+			FontMapEntry entry = fontMap[utf8char];
+			FontMapItem item{};
+			item.uvBL = { (float)(entry.X) / texture->Width(), (float)(texture->Height() - entry.Y) / texture->Width() };
+			item.uvBR = { (float)(entry.X + entry.width) / texture->Width(), (float)(texture->Height() - entry.Y) / texture->Width() };
+			item.uvTL = { (float)(entry.X) / texture->Width(), (float)(texture->Height() - entry.Y - entry.height) / texture->Width() };
+			item.uvTR = { (float)(entry.X + entry.width) / texture->Width(), (float)(texture->Height() - entry.Y - entry.height) / texture->Width() };
+			item.width = entry.width;
+			item.height = entry.height;
+			item.yOffset = entry.yOffset;
+			return item;
+		}
+
+		size_t LineHeight() {
+			return lineHeight;
 		}
 	};
 }

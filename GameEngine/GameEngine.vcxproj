@@ -70,6 +70,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -122,7 +128,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -143,6 +149,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AI.ixx" />
     <ClCompile Include="Economy.ixx" />
     <ClCompile Include="engine.ixx" />
     <ClCompile Include="gamerender.ixx" />
@@ -153,6 +160,7 @@
     <ClCompile Include="server.ixx" />
     <ClCompile Include="SWM.ixx" />
     <ClCompile Include="testScene.ixx" />
+    <ClCompile Include="WinManager.ixx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug.h" />
@@ -163,6 +171,7 @@
   <ItemGroup>
     <None Include="resources\oceanShader.glsl" />
     <None Include="resources\shader.glsl" />
+    <None Include="resources\shaderUI.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

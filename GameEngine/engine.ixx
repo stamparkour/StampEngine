@@ -10,7 +10,7 @@ import "glm.h";
 import std;
 
 import gamerender;
-import swm;
+import winmanager;
 import math;
 
 
@@ -19,6 +19,7 @@ enum struct State {
 	Running,
 	Destroying
 };
+
 
 enum struct EnableState {
 	Enabling,
@@ -29,6 +30,17 @@ enum struct EnableState {
 
 export namespace engine {
 	constexpr auto FloatToUN8(float value) { return (uint8_t)(value * 256); }
+
+	int GetGameScreenWidth();
+	int GetGameScreenHeight();
+	int GetGameScreenRatio();
+
+	enum struct RenderLayer {
+		MainScene,
+		GUI,
+		Max,
+	};
+
 	//uimanager
 	//	--main uielement: screen
 	//	--camera
@@ -60,7 +72,7 @@ export namespace engine {
 	
 	class GameObject;
 	class Component;
-	class Scene;
+	class SceneBase;
 
 	class Component : public std::enable_shared_from_this<Component> {
 		friend class GameObject;
@@ -68,14 +80,14 @@ export namespace engine {
 		EnableState enableState = EnableState::Enabling;
 		bool enable = true;
 		bool cascadeEnable = true;
-		std::shared_ptr<GameObject> gameObject;
+		std::shared_ptr<GameObject> gameObject{};
 	protected:
 		//sync safe
 		virtual void Start() = 0;
 		//unsafe
 		virtual void Update() = 0;
 		//gl context safe
-		virtual void Render(int phase) = 0;
+		virtual void Render(RenderLayer renderLayer) = 0;
 		//sync safe
 		virtual void SyncUpdate() = 0;
 		//sync safe
@@ -115,10 +127,10 @@ export namespace engine {
 	};
 
 	class GameObject final : public std::enable_shared_from_this<GameObject> {
-		friend class Scene;
+		friend class SceneBase;
 		bool destroying = false;
 		bool tranformUpdated = false;
-		math::Mat4f transformMat;
+		math::Mat4f transformMat{};
 		bool enable = true;
 		bool cascadeEnable = true;
 		std::vector<std::shared_ptr<GameObject>> children{};
@@ -132,12 +144,12 @@ export namespace engine {
 				}
 			}
 		}
-		void Render(int phase) {
+		void Render(RenderLayer renderLayer) {
 			tranformUpdated = false;
 			if (!IsEnabled()) return;
 			for (int i = 0; i < components.size(); i++) {
 				if (components[i]->IsEnabled()) {
-					components[i]->Render(phase);
+					components[i]->Render(renderLayer);
 				}
 			}
 		}
@@ -225,7 +237,7 @@ export namespace engine {
 		GameObject() {}
 	public:
 		//only change in sync update, onenable, ondisable.
-		std::string name;
+		std::string name{};
 		render::Transform transform;
 		template<typename T, typename... P>
 		std::shared_ptr<T> AddComponent(P... param) {
@@ -252,8 +264,8 @@ export namespace engine {
 		template<typename T>
 		std::shared_ptr<T> GetComponent() {
 			for (auto& comp : components) {
-				if (typeid(T) == typeid(comp)) {
-					return (std::shared_ptr<T>)comp;
+				if (typeid(T) == typeid(*comp)) {
+					return std::dynamic_pointer_cast<T>(comp);
 				}
 			}
 			return nullptr;
@@ -346,10 +358,10 @@ export namespace engine {
 		//fix update method to include it
 	};
 
-	class Scene : swm::SceneBase {
-		static inline Scene* currentScene;
-		render::UniformBufferObject lightBuffer;
-		int maxPhases = 9;
+	class SceneBase : wm::RawSceneBase {
+		static thread_local inline SceneBase* currentScene{};
+		render::UniformBufferObject lightBuffer{};
+		int maxrenderLayers = (int)RenderLayer::Max;
 		std::vector<std::shared_ptr<GameObject>> objects{};
 		virtual void Start() {
 			currentScene = this;
@@ -363,6 +375,7 @@ export namespace engine {
 			objects.resize(0);
 		}
 		virtual void Update() {
+			currentScene = this;
 			for (int i = 0; i < objects.size(); i++) {
 				if (!objects[i]->destroying) {
 					objects[i]->Update();
@@ -371,6 +384,7 @@ export namespace engine {
 			Iterate();
 		}
 		virtual void SyncUpdate() {
+			currentScene = this;
 			for (int i = 0; i < objects.size(); i++) {
 				objects[i]->SyncUpdate();
 			}
@@ -385,23 +399,24 @@ export namespace engine {
 			//on object destroy
 		}
 		virtual void Render() {
-			for (int p = 0; p < maxPhases; p++) {
-				PreRender(p);
+			currentScene = this;
+			for (int p = 0; p < maxrenderLayers; p++) {
+				PreRender((RenderLayer)p);
 				for (int i = 0; i < objects.size(); i++) {
-					objects[i]->Render(p);
+					objects[i]->Render((RenderLayer)p);
 				}
-				PostRender(p);
+				PostRender((RenderLayer)p);
 			}
 		}
 	public:
-		Scene() {
+		SceneBase(wm::Window* window) : wm::RawSceneBase(window) {
 			objects.reserve(4096);
 		}
 		virtual void Initialize();
 		virtual void Iterate() = 0;
-		virtual void PreRender(int phase);
-		virtual void PostRender(int phase);
-		virtual void Resize(long width, long height) { }
+		virtual void PreRender(RenderLayer renderLayer);
+		virtual void PostRender(RenderLayer renderLayer);
+		virtual void Resize(long width, long height);
 		static std::shared_ptr<GameObject> CreateObject(std::string name, std::shared_ptr<GameObject> parent = nullptr) {
 			std::shared_ptr<GameObject> obj(new GameObject());
 			obj->name = name;
@@ -416,7 +431,7 @@ export namespace engine {
 				}
 			}
 		}
-		static Scene* CurrentScene() {
+		static SceneBase* CurrentScene() {
 			return currentScene;
 		}
 		static render::UniformBufferObject* LightBuffer() {
@@ -424,11 +439,11 @@ export namespace engine {
 		}
 	};
 
-
 	std::shared_ptr<render::Mesh> getUIMesh() {
 		static std::weak_ptr<render::Mesh> UIMesh{ };
+		std::shared_ptr<render::Mesh> mesh;
 		if (UIMesh.expired()) {
-			std::shared_ptr<render::Mesh> mesh{ new render::Mesh() };
+			mesh = std::shared_ptr<render::Mesh>{ new render::Mesh() };
 			std::vector<render::PointP3NUC> points{};
 			points.push_back(render::PointP3NUC{
 				math::Vec3f{-0.5,-0.5,0},
@@ -445,7 +460,7 @@ export namespace engine {
 			points.push_back(render::PointP3NUC{
 				math::Vec3f{0.5,-0.5,0},
 				math::Vec3f{0,0,-1},
-				math::Vec2f{1,1},
+				math::Vec2f{1,0},
 				math::Vec4f{1,1,1,1},
 				});
 			points.push_back(render::PointP3NUC{
@@ -457,7 +472,7 @@ export namespace engine {
 			points.push_back(render::PointP3NUC{
 				math::Vec3f{-0.5,0.5,0},
 				math::Vec3f{0,0,-1},
-				math::Vec2f{1,1},
+				math::Vec2f{0,1},
 				math::Vec4f{1,1,1,1},
 				});
 			points.push_back(render::PointP3NUC{
@@ -469,7 +484,7 @@ export namespace engine {
 			mesh->set(points);
 			UIMesh = mesh;
 		}
-
+		
 		return UIMesh.lock();
 	}
 }
@@ -497,14 +512,14 @@ export namespace engine::UI {
 
 export namespace engine::component{
 	class Camera final : public engine::Component {
-		friend engine::Scene;
+		friend engine::SceneBase;
 	public:
 		enum struct CameraType {
 			Main,
 		};
 	private:
-		CameraType type;
-		math::Mat4f transform;
+		CameraType type{};
+		math::Mat4f transform{};
 		static inline std::shared_ptr<Camera> mainCamera{};
 		virtual void Start() {
 			switch (type) {
@@ -518,7 +533,7 @@ export namespace engine::component{
 			GLSTAMPERROR;
 		}
 		virtual void Update() {}
-		virtual void Render(int phase) {}
+		virtual void Render(engine::RenderLayer renderLayer) {}
 		virtual void SyncUpdate() {
 			transform = GameObject()->transform.toMatrixInverse();
 			for (std::shared_ptr<engine::GameObject> p = GameObject()->Parent(); p; p = p->Parent()) {
@@ -536,26 +551,33 @@ export namespace engine::component{
 				mainCamera = {};
 			}
 		}
-		static void PreRender(int phase) {
+		static void PreRender(RenderLayer renderLayer) {
+			if (renderLayer != engine::RenderLayer::MainScene) return;
 			if (!mainCamera || !mainCamera->IsEnabled()) return;
+
 			struct Data {
-				math::GLmat4 transform;
-				math::GLmat4 perspective;
-				math::GLmat4 UI;
-				math::GLvec4 pos;
+				math::GLmat4 transform{};
+				math::GLmat4 perspective{};
+				math::GLmat4 UI{};
+				math::GLvec4 pos{};
 			};
 			Data k{};
 			k.pos = (math::Vec4f)(mainCamera->GameObject()->globalPosition());
 			k.transform = mainCamera->transform;
-			k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
-			k.UI = math::Mat4f::Orthographic(GameWidth(), GameRatio(), 1, 10);
+			if (mainCamera->isPerspective)
+				k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+			else
+				k.perspective = math::Mat4f::Orthographic(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+			k.UI = math::Mat4f::Orthographic(1, 1, 0, 10);
 			mainCamera->cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
 			GLSTAMPERROR;
 		}
-		static void PostRender(int phase) {
+		static void PostRender(RenderLayer renderLayer) {
 			if (!mainCamera || !mainCamera->IsEnabled()) return;
 			mainCamera->frameBuffer.CopyContentToScreen();
 			GLSTAMPERROR;
+		}
+		static void OnResize(int width, int height) {
 		}
 	public:
 		render::FrameBuffer2d frameBuffer{ {GL_RGBA8}, -1, -1 };
@@ -564,6 +586,7 @@ export namespace engine::component{
 		float nearPlane = 0.1;
 		float farPlane = 5000;
 		float scalePercent = 1.2;
+		bool isPerspective = true;
 
 		Camera(CameraType type) {
 			this->type = type;
@@ -579,7 +602,20 @@ export namespace engine::component{
 			return mainCamera->frameBuffer.colorAttachments[0].Height();
 		}
 		static float GameRatio() {
-			return (float)GameHeight() / GameWidth();
+			float height = GameHeight();
+			float width = GameWidth();
+			return (float)height / width;
+		}
+		static void ResizeScreen(int width, int height) {
+			GLSTAMPERROR;
+			mainCamera->frameBuffer.Resize(width * mainCamera->scalePercent, height * mainCamera->scalePercent);
+			swm::setClientResolution(width, height, true);
+			GLSTAMPERROR;
+		}
+		void ResizeDrawToScreen() {
+			GLSTAMPERROR;
+			frameBuffer.ResizeToScreen(scalePercent);
+			GLSTAMPERROR;
 		}
 	};
 
@@ -591,10 +627,11 @@ export namespace engine::component{
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
-		virtual void Render(int phase) {
-			if (phase != 0) return;
-			if(material && mesh) 
+		virtual void Render(engine::RenderLayer renderLayer) {
+			if (renderLayer != engine::RenderLayer::MainScene) return;
+			if (material && mesh) {
 				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+			}
 		}
 		//sync safe
 		virtual void SyncUpdate() {}
@@ -607,22 +644,21 @@ export namespace engine::component{
 	public:
 		std::shared_ptr<render::Mesh> mesh;
 		std::shared_ptr<render::MaterialBase> material;
-
 		void UpdateRenderer() {
 			material->UpdateMeshAttrib(mesh.get());
-			material->UpdateMaterial();
 		}
 	};
 	class OceanRenderer final : public engine::Component {
 		//sync safe
 		virtual void Start() {
-			UpdateRenderer();
+			ocean.UpdateRenderer();
 		}
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
-		virtual void Render(int phase) {
-			if (phase != 0) return;
+		virtual void Render(engine::RenderLayer renderLayer) {
+			if (renderLayer != engine::RenderLayer::MainScene) return;
+
 			ocean.Render(GameObject()->Transform(), Camera::MainCamera()->cameraUniformObject);
 		}
 		//sync safe
@@ -639,9 +675,6 @@ export namespace engine::component{
 		virtual void OnDestroy() {}
 	public:
 		render::OceanRenderObject ocean;
-		void UpdateRenderer() {
-			ocean.UpdateRenderer();
-		}
 	};
 
 	class BillboardRenderer final : public engine::Component {
@@ -655,7 +688,7 @@ export namespace engine::component{
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
-		virtual void Render(int phase) {}
+		virtual void Render(engine::RenderLayer renderLayer) {}
 		//sync safe
 		virtual void SyncUpdate() {}
 		//sync safe
@@ -666,6 +699,7 @@ export namespace engine::component{
 		virtual void OnDestroy() {}
 	public:
 		std::shared_ptr< render::SamplerTexture2d> texture;
+		std::shared_ptr<render::MaterialBase> material{};
 		//true: can look up and down
 		bool vertAlign = true;
 		//mask depth
@@ -678,9 +712,11 @@ export namespace engine::component{
 		float width = 1;
 		float height = 1;
 
+		void UpdateMaterial() {
+
+		}
 		void UpdateAttrib() {
 			struct Billboard_t {
-				math::Mat4f transform;
 				GLfloat depthLayer;
 			};
 			Billboard_t billboard{};
@@ -689,10 +725,236 @@ export namespace engine::component{
 		}
 	};
 
+	class TransformUI final : public engine::Component {
+		bool calculated = false;
+		//sync safe
+		virtual void Start() {}
+		//unsafe
+		virtual void Update() {
+			CalcTransform();
+		}
+		//gl context safe
+		virtual void Render(engine::RenderLayer renderLayer) {}
+		//sync safe
+		virtual void SyncUpdate() {
+			calculated = false;
+		}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+
+		math::Vec2f CalcTransform() {
+			if (calculated) {
+				return {height / 2, width / 2};
+			}
+			calculated = true;
+			float top, bottom, right, left;
+			std::shared_ptr<TransformUI> p;
+			if (GameObject()->Parent() && (p = GameObject()->Parent()->GetComponent<TransformUI>())) {
+				auto v = p->CalcTransform();
+				top = v.x;
+				bottom = -top;
+				right = v.y;
+				left = -right;
+			}
+			else {
+				top = engine::GetGameScreenHeight() / 2;
+				bottom = -top;
+				right = engine::GetGameScreenWidth() / 2;
+				left = -right;
+			}
+			float X = alignX;
+			float Y = alignY;
+			X += (offsetX + width / 2 - (pivotX + 1) / 2 * width) / (right - left);
+			Y += (offsetY + height / 2 - (pivotY + 1) / 2 * height) / (top - bottom);
+			GameObject()->transform.position = { X,Y,0.01 };
+			GameObject()->transform.scale = { width / (right - left) , height / (top - bottom), 1 };
+
+			return { height / 2, width / 2 };
+		}
+	public:
+		float width = 256;
+		float height = 256;
+		//percent [-1,1]
+		float alignX = 0;
+		//percent [-1,1]
+		float alignY = 0;
+		//percent [-1,1]
+		float pivotX = 0;
+		//percent [-1,1]
+		float pivotY = 0;
+		//pixels
+		float offsetX = 0;
+		//pixels
+		float offsetY = 0;
+
+	};
+
+	class ImageRendererUI final : public engine::Component {
+		std::shared_ptr<render::Mesh> mesh{};
+		//sync safe
+		virtual void Start() {
+			mesh = engine::getUIMesh();
+			UpdateRenderer();
+		}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(engine::RenderLayer renderLayer) {
+			if (renderLayer != engine::RenderLayer::GUI) return;
+			if (material && mesh) {
+				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+			}
+		}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+		std::shared_ptr<render::MaterialBase> material{};
+		void UpdateRenderer() {
+			material->UpdateMeshAttrib(mesh.get());
+		}
+	};
+
+	class TextRendererUI final : public engine::Component {
+		render::Mesh mesh{};
+		std::shared_ptr<TransformUI> transform;
+		//sync safe
+		virtual void Start() {
+			transform = GameObject()->GetComponent<TransformUI>();
+			UpdateRenderer();
+		}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(engine::RenderLayer renderLayer) {
+			if (renderLayer != engine::RenderLayer::GUI) return;
+			if (material && mesh) {
+				glEnable(GL_BLEND);
+				material->Render(&mesh, GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+				glDisable(GL_BLEND);
+			}
+		}
+		//sync safe
+		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+
+		std::shared_ptr<render::UIMaterial> material{};
+		std::u8string text = u8"UI Textij!\n012345678901234";
+		std::shared_ptr<render::FontMap> fontMap{};
+		int textAlign;
+		float scale = 2;
+		int lineHoriGap = 0;
+		int lineVertGap = 2;
+		float horiAlign = 0;
+		float vertAlign = 1;
+		void UpdateRenderer() {
+			material->texture = fontMap->texture;
+			fontMap->texture->BindActive();
+			std::vector<render::PointP3NUC> points{};
+			size_t index = 0;
+			float lineHeight = (lineVertGap + fontMap->LineHeight()) * scale;
+			int linePointStart = 0;
+			float lineWidth = 0;
+			float lineY = lineHeight;
+			while (index < text.size()) {
+				unsigned int character = render::FontMap::ParseUTF8Char((char*)text.data(), index, text.size());
+				if (character == '\n') {
+					for (int i = linePointStart; i < points.size(); i++) {
+						points[i].pos.x += (transform->width - lineWidth) * (horiAlign + 1) / 2 / transform->width;
+					}
+					lineWidth = 0;
+					lineY += lineHeight;
+					linePointStart = points.size();
+					continue;
+				}
+
+				render::FontMap::FontMapItem item = fontMap->getCharData(character);
+
+				if (lineWidth + (item.width + lineHoriGap) * scale >= transform->width) {
+					for (int i = linePointStart; i < points.size(); i++) {
+						points[i].pos.x += (transform->width - lineWidth) * (horiAlign + 1) / 2 / transform->width;
+					}
+					lineWidth = 0;
+					lineY += lineHeight;
+					linePointStart = points.size();
+				}
+
+				float x = (lineWidth - transform->width / 2) / transform->width;
+				float y = (transform->height / 2 - lineY - item.yOffset * scale) / transform->height;
+				float w = item.width / transform->width * scale;
+				float h = item.height / transform->height * scale;
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x,y,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvTL},
+					math::Vec4f{1,1,1,1},
+					});
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x + w,y + h,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvBR},
+					math::Vec4f{1,1,1,1},
+					});
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x + w,y,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvTR},
+					math::Vec4f{1,1,1,1},
+					});
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x,y,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvTL},
+					math::Vec4f{1,1,1,1},
+					});
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x,y + h,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvBL},
+					math::Vec4f{1,1,1,1},
+					});
+				points.push_back(render::PointP3NUC{
+					math::Vec3f{x + w,y + h,0},
+					math::Vec3f{0,0,0},
+					math::Vec2f{item.uvBR},
+					math::Vec4f{1,1,1,1},
+					});
+				lineWidth += (item.width + lineHoriGap) * scale;
+			}
+
+			for (int i = linePointStart; i < points.size(); i++) {
+				points[i].pos.x += std::floor((transform->width - lineWidth) * (horiAlign + 1) / 2) / transform->width;
+			}
+			lineY += lineVertGap * scale;
+
+			for (int i = 0; i < points.size(); i++) {
+				points[i].pos.y -= std::floor(((transform->height - lineY) * (1 - vertAlign) / 2)) / transform->height;
+			}
+
+			mesh.set(points, render::BufferUsageHint::DynamicDraw);
+			material->UpdateMeshAttrib(&mesh);
+		}
+	};
+
 	class SunLight final : public engine::Component {
 		static inline std::vector<std::shared_ptr<SunLight>> sunlights {};
 
-		friend engine::Scene;
+		friend engine::SceneBase;
 		static std::vector<Light_t> GetLights() {
 			std::vector<Light_t> lights{};
 			for (int i = 0; i < sunlights.size(); i++) {
@@ -710,7 +972,7 @@ export namespace engine::component{
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
-		virtual void Render(int phase) {}
+		virtual void Render(engine::RenderLayer renderLayer) {}
 		//sync safe
 		virtual void SyncUpdate() {}
 		//sync safe
@@ -725,12 +987,22 @@ export namespace engine::component{
 	};
 }
 
-void engine::Scene::Initialize() {
+int engine::GetGameScreenWidth() {
+	return engine::component::Camera::GameWidth();
+}
+int engine::GetGameScreenHeight() {
+	return engine::component::Camera::GameHeight();
+}
+int engine::GetGameScreenRatio() {
+	return engine::component::Camera::GameRatio();
+}
+
+void engine::SceneBase::Initialize() {
 	
 }
 
-void engine::Scene::PreRender(int phase) {
-	if (phase == 0) {
+void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {
+	if (renderLayer == engine::RenderLayer::MainScene) {
 
 		std::vector<Light_t> light{};
 		light.append_range(engine::component::SunLight::GetLights());
@@ -740,12 +1012,18 @@ void engine::Scene::PreRender(int phase) {
 		lightSupply->length = light.size();
 		memcpy(lightSupply->lights, light.begin()._Ptr, lightSize);
 		lightBuffer.Set(lightSupply.get(), lightSupplySize, render::BufferUsageHint::DynamicDraw);
+	}
+	else if (renderLayer == engine::RenderLayer::GUI) {
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	}
 
-		engine::component::Camera::PreRender(phase);
+	engine::component::Camera::PreRender(renderLayer);
+}
+void engine::SceneBase::PostRender(engine::RenderLayer renderLayer) {
+	if (renderLayer == (engine::RenderLayer)((int)engine::RenderLayer::Max - 1)) {
+		engine::component::Camera::PostRender(renderLayer);
 	}
 }
-void engine::Scene::PostRender(int phase) {
-	if (phase == 8) {
-		engine::component::Camera::PostRender(phase);
-	}
+void engine::SceneBase::Resize(long width, long height) {
+	engine::component::Camera::OnResize(width, height);
 }

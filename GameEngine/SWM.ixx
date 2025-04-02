@@ -138,9 +138,9 @@ export namespace swm {
 		Confined,
 		Frozen,
 	};
-	class SceneBase {
+	class RawSceneBase {
 	protected:
-		SceneBase() {}
+		RawSceneBase() {}
 	public:
 		virtual void Start() = 0;
 		virtual void End() = 0;
@@ -148,7 +148,7 @@ export namespace swm {
 		virtual void SyncUpdate() = 0;
 		virtual void Render() = 0;
 		virtual void Resize(long width, long height) = 0;
-		virtual ~SceneBase() {}
+		virtual ~RawSceneBase() {}
 	};
 	//stamp window descriptor flag
 	struct SWDF {
@@ -162,7 +162,7 @@ export namespace swm {
 			RenderInBackground = 0x20,
 			XAudio = 0x40,
 			TitleBar = 0x80,
-			//ignored if "NoTitleBar" flag
+			//ignored if No "TitleBar" flag
 			Maximizable = 0x100,
 			ThrowExceptions = 0x200,
 			DynamicAttributes = 0x400,
@@ -180,7 +180,7 @@ export namespace swm {
 		unsigned long height = 0;
 	};
 
-	SceneBase* getCurrentScene();
+	RawSceneBase* getCurrentScene();
 	template<typename T>
 	void initScene() {
 		setScene([]() -> void* {
@@ -205,6 +205,7 @@ export namespace swm {
 	void setCursorVisibility(bool visible);
 	bool getCursorVisibility();
 	void setCursorConstraint(CursorConstraintState state);
+	void setViewportRatio(double ratio);
 	CursorConstraintState getCursorConstraint();
 	HWND getHWND();
 
@@ -215,14 +216,21 @@ export namespace swm {
 	WinPoint getCursorAbsolutePos();
 	int getWindowWidth();
 	int getWindowHeight();
+	int getClientWidth();
+	int getClientHeight();
+	int getViewportX();
+	int getViewportY();
+	int getViewportWidth();
+	int getViewportHeight();
+	int getViewportRatio();
 	void getDesktopResolution(int& horizontal, int& vertical);
 	bool isRenderThread();
 	GLenum getScreenDrawBuffer();
 
 	//resize window function
-	void setWindowResolution(int width, int height);
+	void setClientResolution(int width, int height, bool updateRatio = false);
 	//get ratio function
-	double getWindowRatio();
+	double getClientRatio();
 
 	//internal functions
 	//user must call once before creating SWHWND 
@@ -272,10 +280,17 @@ struct SWindowHandle {
 	double deltaTime = 0;
 	swm::WinPos winPos{};
 	HINSTANCE hInstance = 0;
-	swm::SceneBase* scene;
-	swm::SceneBase* (*nextScene)();
+	swm::RawSceneBase* scene;
+	swm::RawSceneBase* (*nextScene)();
 	SceneState SceneState = SceneState::End;
 	std::mutex glContextMutex{};
+	long long viewportX = 0;
+	long long viewportY = 0;
+	long long viewportWidth = 0;
+	long long viewportHeight = 0;
+	double viewportRatio = 0;
+	long long clientWidth = 0;
+	long long clientHeight = 0;
 };
 SWindowHandle* localWindow = 0;
 
@@ -284,48 +299,64 @@ struct {
 	uint8_t hold[256 / 8]{};
 } KeyboardManagerState;
 
-void InternalKeyDown(int key) {
+static void InternalUpdateViewport() {
+	float w, h;
+	if (localWindow->clientWidth * localWindow->viewportRatio <= localWindow->clientHeight) {
+		w = localWindow->clientWidth;
+		h = localWindow->clientWidth * localWindow->viewportRatio;
+	}
+	else {
+		w = localWindow->clientHeight / localWindow->viewportRatio;
+		h = localWindow->clientHeight;
+	}
+	localWindow->viewportX = std::floor(localWindow->clientWidth / 2 - w / 2);
+	localWindow->viewportY = std::ceil(localWindow->clientHeight / 2 - h / 2);
+	localWindow->viewportWidth = std::ceil(w);
+	localWindow->viewportHeight = std::ceil(h);
+}
+
+static void InternalKeyDown(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return;
 	int shift = key % 8;
 	KeyboardManagerState.down[index] |= 1 << shift;
 }
-void InternalKeyUp(int key) {
+static void InternalKeyUp(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return;
 	int shift = key % 8;
 	KeyboardManagerState.down[index] &= ~(1 << shift);
 }
-bool InternalGetKeyStateDown(int key) {
+static bool InternalGetKeyStateDown(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return false;
 	int shift = key % 8;
 	return (KeyboardManagerState.down[index] & 1 << shift) && !(KeyboardManagerState.hold[index] & 1 << shift);
 }
-bool InternalGetKeyStateHold(int key) {
+static bool InternalGetKeyStateHold(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return false;
 	int shift = key % 8;
 	return KeyboardManagerState.down[index] & 1 << shift;
 }
-bool InternalGetKeyStateRelease(int key) {
+static bool InternalGetKeyStateRelease(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return false;
 	int shift = key % 8;
 	return !(KeyboardManagerState.down[index] & 1 << shift) && !(KeyboardManagerState.hold[index] & 1 << shift);
 }
-bool InternalGetKeyStateUp(int key) {
+static bool InternalGetKeyStateUp(int key) {
 	int index = key / 8;
 	if (index >= 256 / 8) return false;
 	int shift = key % 8;
 	return !(KeyboardManagerState.down[index] & 1 << shift);
 }
-void UpdateKeyManager() {
+static void UpdateKeyManager() {
 	for (int i = 0; i < sizeof(KeyboardManagerState.down); i++) {
 		KeyboardManagerState.hold[i] = KeyboardManagerState.down[i];
 	}
 }
-void ResetKeyManager() {
+static void ResetKeyManager() {
 	for (int i = 0; i < sizeof(KeyboardManagerState.down); i++) {
 		KeyboardManagerState.down[i] = 0;
 	}
@@ -407,12 +438,12 @@ static void OnCreate(HWND hwnd, CREATESTRUCT* create) {
 	int value;
 	glGetIntegerv(GL_STENCIL_BITS, &value);
 	wglSwapIntervalEXT(1);
-	//if (localWindow->vSync) {
-	//	glDrawBuffer(GL_BACK_LEFT);
-	//}
-	//else {
-	//	glDrawBuffer(GL_FRONT_LEFT);
-	//}
+	if (localWindow->vSync) {
+		glDrawBuffer(GL_BACK_LEFT);
+	}
+	else {
+		glDrawBuffer(GL_FRONT_LEFT);
+	}
 	RAWINPUTDEVICE Rid[1]{} ;
 	Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
 	Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
@@ -421,6 +452,8 @@ static void OnCreate(HWND hwnd, CREATESTRUCT* create) {
 	RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
 	
 	std::cout << "[window] created" << std::endl;
+
+	localWindow->glContextMutex.unlock();
 }
 
 void OnPaint() {
@@ -437,7 +470,8 @@ void OnPaint() {
 		if (!SwapBuffers(hdc)) std::cout << "FAILED SWAP BUFFER!" << std::endl;
 	}
 	else {
-		glFinish();//glFlush();
+		//glFinish();
+		glFlush();
 	}
 }
 
@@ -477,9 +511,14 @@ static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 			InternalShowCursor(localWindow->cursorVisble);
 			localWindow->active = true;
 			if (localWindow->screenRatio == 0) {
-				localWindow->screenRatio = (double)winpos->cy / winpos->cx;
+				RECT clientRect;
+				GetClientRect(localWindow->winHandle, &clientRect);
+				localWindow->clientWidth = clientRect.right - clientRect.left;
+				localWindow->clientHeight = clientRect.bottom - clientRect.top;
+				localWindow->screenRatio = (double)localWindow->clientHeight / localWindow->clientWidth;
 				localWindow->winPos.width = winpos->cx;
 				localWindow->winPos.height = winpos->cy;
+				InternalUpdateViewport();
 			}
 		}
 		if (!(winpos->flags & SWP_NOMOVE)) {
@@ -487,14 +526,19 @@ static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 			localWindow->winPos.top = winpos->y;
 		}
 		if (!(winpos->flags & SWP_NOSIZE)) {
-			localWindow->screenRatio = (double)winpos->cy / winpos->cx;
+			RECT clientRect;
+			GetClientRect(localWindow->winHandle, &clientRect);
+			localWindow->clientWidth = clientRect.right - clientRect.left;
+			localWindow->clientHeight = clientRect.bottom - clientRect.top;
+			localWindow->screenRatio = (double)localWindow->clientHeight / localWindow->clientWidth;
 			localWindow->winPos.width = winpos->cx;
 			localWindow->winPos.height = winpos->cy;
+			InternalUpdateViewport();
+			if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Resize(localWindow->clientWidth, localWindow->clientHeight);
 		}
 		if (!localWindow->initialized) {
 			localWindow->initialized = true;
 		}
-		if (localWindow->scene && localWindow->SceneState == SceneState::Loop) localWindow->scene->Resize(winpos->cx, winpos->cy);
 		//glViewport(0, 0, winpos->cx, winpos->cy);
 	} break;
 	case WM_ACTIVATE:
@@ -533,6 +577,9 @@ static LRESULT __stdcall Wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 			{
 				localWindow->deltaMouseX += raw->data.mouse.lLastX;
 				localWindow->deltaMouseY += raw->data.mouse.lLastY;
+				auto f = raw->data.mouse.usButtonFlags;
+				if (f & RI_MOUSE_LEFT_BUTTON_DOWN) InternalKeyDown((int)swm::VertKey::LeftMouse);
+				if (f & RI_MOUSE_LEFT_BUTTON_UP) InternalKeyUp((int)swm::VertKey::LeftMouse);
 			}
 		}
 		break;
@@ -560,15 +607,19 @@ static void CreateSWindow() {
 		swm::getDesktopResolution(width, height);
 		localWindow->winHandle = CreateWindowExW(WS_EX_TOPMOST, L"StampWinManager_CLASS", localWindow->desc.name, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 			0, 0, width, height, NULL, NULL, localWindow->hInstance, nullptr);
+		localWindow->viewportRatio = (double)height / width;
 	}
 	else {
-		int defaultWidth = localWindow->desc.width != 0 ? localWindow->desc.width : CW_USEDEFAULT;
-		int defaultHeight = localWindow->desc.height != 0 ? localWindow->desc.height : CW_USEDEFAULT;
+		int defaultWidth = localWindow->desc.width != 0 ? localWindow->desc.width : 900;
+		int defaultHeight = localWindow->desc.height != 0 ? localWindow->desc.height : 600;
 		localWindow->winHandle = CreateWindowExW(0, L"StampWinManager_CLASS", localWindow->desc.name,
 			(localWindow->desc.flags._value & swm::SWDF::Maximizable ? WS_MAXIMIZEBOX : 0) |
-			(localWindow->desc.flags._value & swm::SWDF::TitleBar ? WS_CAPTION | WS_SYSMENU : 0) |
-			WS_MINIMIZEBOX | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+			(localWindow->desc.flags._value & swm::SWDF::TitleBar ? WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX : WS_POPUP) |
+			WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 			CW_USEDEFAULT, CW_USEDEFAULT, defaultWidth, defaultHeight, NULL, NULL, localWindow->hInstance, nullptr);
+
+		localWindow->viewportRatio = (double)defaultHeight / defaultWidth;
+		swm::setClientResolution(defaultWidth, defaultHeight);
 	}
 	STAMPERROR(localWindow->winHandle == NULL, "swm::SWHWND -> ManageWindow - failed to initialize window: " << GetLastError());
 }
@@ -580,7 +631,6 @@ static void ManageWindow() {
 	CreateSWindow();
 
 	MSG msg;
-	localWindow->glContextMutex.unlock();
 
 	std::cout << "[window] start running loop" << std::endl;
 	while (IsWindow(localWindow->winHandle)) {
@@ -607,6 +657,7 @@ static void ManageWindow() {
 				localWindow->scene->Start();
 				localWindow->SceneState = SceneState::Loop;
 				localWindow->scene->SyncUpdate();
+				localWindow->scene->Resize(swm::getClientWidth(), swm::getClientHeight());
 			}
 		}
 
@@ -643,9 +694,7 @@ static void ManageWindow() {
 }
 
 void swm::initializeSWM(StampWindowDesc* desc, HINSTANCE hInstance) {
-	static bool hasInit = false;
-	if (hasInit) return;
-	hasInit = true;
+	if (localWindow) return;
 
 #ifdef SWM_DEBUG
 	AllocConsole();
@@ -797,9 +846,11 @@ long swm::getCursorDeltaScroll() {
 	return localWindow->deltaScroll;
 }
 long swm::getCursorDeltaX() {
+	if (localWindow->cursorContraint != swm::CursorConstraintState::Frozen) return 0;
 	return localWindow->deltaMouseX;
 }
 long swm::getCursorDeltaY() {
+	if (localWindow->cursorContraint != swm::CursorConstraintState::Frozen) return 0;
 	return localWindow->deltaMouseY;
 }
 long swm::getCursorX() {
@@ -859,20 +910,49 @@ bool swm::isRenderThread() {
 GLenum swm::getScreenDrawBuffer() {
 	return localWindow->vSync ? GL_BACK_LEFT : GL_FRONT_LEFT;
 }
-swm::SceneBase* swm::getCurrentScene()
+swm::RawSceneBase* swm::getCurrentScene()
 {
 	return localWindow->scene;
 }
-void swm::setWindowResolution(int width, int height) {
-	SetWindowPos(localWindow->winHandle, NULL, 0, 0, width, height, SWP_NOMOVE);
+void swm::setClientResolution(int width, int height, bool updateRatio) {
+	if (localWindow->borderless) return;
+
+	int hor, ver;
+	int w = width + swm::getWindowWidth() - swm::getClientWidth();
+	int h = height + swm::getWindowHeight() - swm::getClientHeight();
+	swm::getDesktopResolution(hor, ver);
+	SetWindowPos(localWindow->winHandle, NULL, hor / 2 - w / 2, ver / 2 - h / 2, w, h, 0);
+	if (updateRatio) swm::setViewportRatio((double)height / width);
 }
-double swm::getWindowRatio() {
+double swm::getClientRatio() {
 	return localWindow->screenRatio;
 }
 void setScene(void* (*scene)()) {
 	localWindow->SceneState = SceneState::End;
-	localWindow->nextScene = (swm::SceneBase* (*)())scene;
+	localWindow->nextScene = (swm::RawSceneBase* (*)())scene;
 }
 HWND swm::getHWND() {
 	return localWindow->winHandle;
+}
+void swm::setViewportRatio(double ratio) {
+	localWindow->viewportRatio = ratio;
+	InternalUpdateViewport();
+}
+int swm::getViewportX() {
+	return localWindow->viewportX;
+}
+int swm::getViewportY() {
+	return localWindow->viewportY;
+}
+int swm::getViewportWidth() {
+	return localWindow->viewportWidth;
+}
+int swm::getViewportHeight() {
+	return localWindow->viewportHeight;
+}
+int swm::getClientWidth() {
+	return localWindow->clientWidth;
+}
+int swm::getClientHeight() {
+	return localWindow->clientHeight;
 }

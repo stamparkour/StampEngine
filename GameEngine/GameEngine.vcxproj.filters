@@ -24,6 +24,9 @@
     <Filter Include="Network">
       <UniqueIdentifier>{bc4bf8c5-9bb1-4ee5-8afc-d7f14e8dd0cf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AI">
+      <UniqueIdentifier>{cbdbbb55-82b2-4dab-9214-7552ba4b3ef1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -56,6 +59,12 @@
     <ClCompile Include="server.ixx">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="AI.ixx">
+      <Filter>AI</Filter>
+    </ClCompile>
+    <ClCompile Include="WinManager.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug.h">
@@ -76,6 +85,9 @@
       <Filter>Game</Filter>
     </None>
     <None Include="resources\oceanShader.glsl">
+      <Filter>Game</Filter>
+    </None>
+    <None Include="resources\shaderUI.glsl">
       <Filter>Game</Filter>
     </None>
   </ItemGroup>

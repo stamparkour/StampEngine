@@ -8,8 +8,10 @@ export module testScene;
 import std;
 import engine;
 import gamerender;
-import swm;
+import winmanager;
 import math;
+
+export class InitScene;
 
 class ControlComponent : public engine::Component {
     math::Vec2f direction{};
@@ -17,7 +19,7 @@ class ControlComponent : public engine::Component {
     virtual void Start() {}
     //unsafe
     virtual void Update() {
-        math::Vec2f cursor{(float)swm::getCursorDeltaX(), (float)swm::getCursorDeltaY()};
+        math::Vec2f cursor{(float)wm::, (float)swm::getCursorDeltaY()};
         cursor *= 0.002;
         direction += cursor;
         GameObject()->transform.rotation = math::Quatf::RotationZXY(direction.y, direction.x,0);
@@ -40,12 +42,13 @@ class ControlComponent : public engine::Component {
         if (swm::isKeyHold(swm::VertKey::Q)) {
             GameObject()->transform.position += math::Vec3f(0, -1, 0) * swm::DeltaTime() * speed;
         }
-
-
+        if (swm::isKeyDown(swm::VertKey::LeftMouse)) {
+            GameObject()->transform.position += math::Vec3f(0, -1, 0) * speed;
+        }
     }
     //gl context safe
-    virtual void Render(int phase) {
-        if(phase == 0)
+    virtual void Render(engine::RenderLayer phase) {
+        if(phase == engine::RenderLayer::MainScene)
         if (swm::isKeyDown(swm::VertKey::F1)) {
             static bool k = true;
             if (k)
@@ -56,7 +59,18 @@ class ControlComponent : public engine::Component {
         }
     }
     //sync safe
-    virtual void SyncUpdate() {}
+    virtual void SyncUpdate() {
+        if (swm::isKeyDown(swm::VertKey::F2)) {
+            engine::component::Camera::ResizeScreen(1024, 512);
+        }
+        if (swm::isKeyDown(swm::VertKey::F3)) {
+            swm::initScene<InitScene>();
+        }
+        if (swm::isKeyDown(swm::VertKey::F4)) {
+            swm::setCursorVisibility(true);
+            swm::setCursorConstraint(swm::CursorConstraintState::Free);
+        }
+    }
     //sync safe
     virtual void OnEnable() {}
     //sync safe
@@ -106,7 +120,7 @@ class BoatComponent : public engine::Component {
         }
     }
     //gl context safe
-    virtual void Render(int phase) {
+    virtual void Render(engine::RenderLayer phase) {
     }
     //sync safe
     virtual void SyncUpdate() {}
@@ -140,9 +154,9 @@ public:
     } sails[8];
 };
 
-export class InitScene : public engine::Scene {
+export class InitScene : public engine::SceneBase {
 public:
-    InitScene() {}
+    InitScene(wm::Window* window) : engine::SceneBase(window) {}
     virtual void Initialize() {
         using namespace engine;
         using namespace engine::component;
@@ -163,15 +177,27 @@ public:
         glStencilMask(0xFF);
         glDepthMask(GL_TRUE);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        
-        math::Mat4f matrix = math::Mat4f::Perspective(math::PI / 2, 1, 1, 100);
-        math::Vec4f vec = matrix * math::Vec4f(0,0,1, 1);
+
+        std::fstream imageFile{ "resources\\test.bmp", std::fstream::in | std::ios::binary };
+        render::RawTexture2d4f texture = render::RawTexture2d4f::ParseStream_bmp(imageFile);
+
+        std::fstream imageNoiseFile{ "resources\\noiseTexture.bmp", std::fstream::in | std::ios::binary };
+        render::RawTexture2d4f noiseTex = render::RawTexture2d4f::ParseStream_bmp(imageNoiseFile);
+
+        std::fstream imageFontFile{ "resources\\ariel_24.bmp", std::fstream::in | std::ios::binary };
+        render::RawTexture2d4f fontTex = render::RawTexture2d4f::ParseStream_bmp(imageFontFile);
+        std::fstream ariel_24{ "resources\\ariel_24.fmp", std::fstream::in };
+        std::shared_ptr<render::FontMap> fontmap = render::FontMap::Parse_fmp(ariel_24);
+        fontmap->texture = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d{fontTex.Width(), fontTex.Height()}};
+        fontmap->texture->SetImage(fontTex);
+
         std::shared_ptr<render::SolidMaterial> material{ new render::SolidMaterial() };
         std::fstream shaderFile{ "resources\\shader.glsl" };
         material->shader = render::RenderShaderProgram::ParseStream_glsl(shaderFile, { 0 }, { {"test"}});
 
         std::shared_ptr<GameObject> cameraObj = CreateObject("Camera");
         std::shared_ptr<Camera> camera = cameraObj->AddComponent<Camera>(Camera::CameraType::Main);
+        camera->isPerspective = true;
         camera->scalePercent = 0.7;
         std::shared_ptr<ControlComponent> controller = cameraObj->AddComponent<ControlComponent>();
         cameraObj->transform.position = { 0,0,-5 };
@@ -193,24 +219,63 @@ public:
         oceanRenderer2->ocean.scale = 256;
         oceanRenderer2->ocean.width = oceanRenderer2->ocean.height = 6;
         oceanRenderer2->ocean.vertOffset = -0.4;
-        engine::Scene::Initialize();
+
+        oceanRenderer2->ocean.noiseTex = oceanRenderer1->ocean.noiseTex = std::shared_ptr<render::SamplerTexture2d>(new render::SamplerTexture2d(noiseTex.Width(), noiseTex.Height()));
+        oceanRenderer1->ocean.noiseTex->SetImage(noiseTex);
+        oceanRenderer1->ocean.noiseTex->SetMagFilter(render::TextureMagFilter::Linear);
+        oceanRenderer1->ocean.noiseTex->SetMinFilter(render::TextureMinFilter::Linear);
+
+        std::shared_ptr<GameObject> uiObj = CreateObject("uiThingy");
+        std::shared_ptr<TransformUI> transformUI = uiObj->AddComponent<TransformUI>();
+        transformUI->alignX = -1;
+        transformUI->alignY = 1;
+        transformUI->pivotX = -1;
+        transformUI->pivotY = 1;
+        transformUI->offsetX = -50;
+        transformUI->offsetY = 100;
+        std::shared_ptr<render::UIMaterial> uiMat { new render::UIMaterial() };
+        std::fstream shaderUIFile{ "resources\\shaderUI.glsl" };
+        uiMat->shader = render::RenderShaderProgram::ParseStream_glsl(shaderUIFile, { 0 }, {});
+        uiMat->texture = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d(texture.Width(),texture.Height())};
+        uiMat->texture->BindActive();
+        uiMat->texture->SetImage(texture);
+        std::shared_ptr<ImageRendererUI> imageRendererUI = uiObj->AddComponent<ImageRendererUI>();
+        imageRendererUI->material = uiMat;
+
+        std::shared_ptr<GameObject> textObj = CreateObject("textThingy");
+        std::shared_ptr<TransformUI> transformUI2 = textObj->AddComponent<TransformUI>();
+        transformUI2->alignX = 1;
+        transformUI2->pivotX = 1;
+        transformUI2->pivotY = 1;
+        transformUI2->offsetX = -50;
+        transformUI2->offsetY = 100;
+        transformUI2->height = 700;
+        std::shared_ptr<TextRendererUI> textRen = textObj->AddComponent<TextRendererUI>();
+        textRen->fontMap = fontmap;
+        std::shared_ptr<render::UIMaterial> uiMat2{ new render::UIMaterial() };
+        uiMat2->shader = uiMat->shader;
+        uiMat2->color = math::Vec4f(0.5,0.1,0.2,1);
+        textRen->material = uiMat2;
+
+
+        engine::SceneBase::Initialize();
     }
     virtual void Iterate() {
     }
-    virtual void PreRender(int phase) {
-        if (phase == 0) {
+    virtual void PreRender(engine::RenderLayer renderLayer) {
+        if (renderLayer == engine::RenderLayer::MainScene) {
             glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
             //unsigned int clearColor[] = { engine::FloatToUN8(0.6f), engine::FloatToUN8(0.2f), engine::FloatToUN8(0.8f), engine::FloatToUN8(0.0f) };
             //glClearBufferuiv(GL_COLOR,0, clearColor);
             GLSTAMPERROR;
         }
-        engine::Scene::PreRender(phase);
+        engine::SceneBase::PreRender(renderLayer);
     }
-    virtual void PostRender(int phase) {
-        engine::Scene::PostRender(phase);
+    virtual void PostRender(engine::RenderLayer renderLayer) {
+        engine::SceneBase::PostRender(renderLayer);
     }
     virtual void Resize(long width, long height) {
-        engine::Scene::Resize(width, height);
+        engine::SceneBase::Resize(width, height);
     }
     ~InitScene() {}
 }; 

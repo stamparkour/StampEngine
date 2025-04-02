@@ -1,8 +1,9 @@
 #version 450
 
-const float eps = 0.01;
+const float eps = 0.17;
 const vec3 lightSource = normalize(vec3(2,1,0));
 
+layout(location = 20) uniform sampler2D noise;
 layout(location = 1) uniform mat4 transform;
 layout(std140) uniform ST_Camera {
 	mat4 transform;
@@ -22,7 +23,7 @@ layout(std140) uniform ST_Ocean {
 } ocean;
 
 float getHeight(vec2 v) {
-	return (sin(v.x*1.94 + ocean.time * 2.81) * 0.14 + sin(v.x*-0.74 + v.y*0.36 + ocean.time *1.74) * 0.3 + sin(0.52 * v.y + 0.54 * v.x + 0.74 * ocean.time) * 0.63) / 4;
+	return pow(texture(noise,v / 80 + vec2(0.01,0.02) * ocean.time).r,3) * 2 + texture(noise,v / 30 + vec2(0.2,0.07) + vec2(0.03,0.01) * ocean.time).g * 0.5 - 0.6;
 }
 
 vec3 getNormal(vec2 v) {
@@ -75,19 +76,18 @@ void main() {
 layout(location = 0) out vec4 diffuseColor;
 in vec3 worldPos;
 in vec3 localPos;
-const vec4 color = vec4(0.13,0.04,0.64,1);
+const vec4 color = vec4(0.11,0.07,0.64,1);
 void main() {
 	vec3 normal = getNormal(worldPos.xz);
 	vec3 viewNormal = normalize(worldPos - camera.position);
 	vec3 reflectionNormal = normalize(viewNormal - 2 * dot(viewNormal, normal) * normal);
 	float spectral = dot(reflectionNormal, lightSource);
 	float aura = max(0.4,dot(reflectionNormal, viewNormal));
-	spectral = (spectral - 0.985) / (0.992 - 0.985);
+	spectral = (spectral - 0.989) / (0.996 - 0.989);
 	spectral = clamp(spectral, 0, 1);
 	diffuseColor = color * aura + spectral; //* (localPos.y +  6.0 / 25) * 25 / 12;
-	if(ocean.scale < 64) diffuseColor.a = ( ocean.width * ocean.scale / 2 - max(abs(localPos.x), abs(localPos.z)) ) ;
+	if(ocean.scale < 64) diffuseColor.a = ( ocean.width * ocean.scale / 2 - length(localPos) ) ;
 	else diffuseColor.a = 1;
-	//diffuseColor = vec4(normal.x,0,normal.z,1);
 }
 
 
