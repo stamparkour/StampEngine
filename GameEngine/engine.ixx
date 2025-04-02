@@ -431,13 +431,21 @@ export namespace engine {
 				}
 			}
 		}
-		static SceneBase* CurrentScene() {
-			return currentScene;
-		}
-		static render::UniformBufferObject* LightBuffer() {
+
+		static inline render::UniformBufferObject* LightBuffer() {
 			return &(currentScene->lightBuffer);
 		}
+
+		friend SceneBase* CurrentScene();
+		friend wm::Window* CurrentWindow();
 	};
+
+	SceneBase* CurrentScene() {
+		return SceneBase::currentScene;
+	}
+	wm::Window* CurrentWindow() {
+		return SceneBase::currentScene->GetWindow();
+	}
 
 	std::shared_ptr<render::Mesh> getUIMesh() {
 		static std::weak_ptr<render::Mesh> UIMesh{ };

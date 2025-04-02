@@ -19,7 +19,7 @@ class ControlComponent : public engine::Component {
     virtual void Start() {}
     //unsafe
     virtual void Update() {
-        math::Vec2f cursor{(float)wm::, (float)swm::getCursorDeltaY()};
+        math::Vec2f cursor = (math::Vec2f)engine::CurrentWindow()->Mouse()->GetVelocity();
         cursor *= 0.002;
         direction += cursor;
         GameObject()->transform.rotation = math::Quatf::RotationZXY(direction.y, direction.x,0);
