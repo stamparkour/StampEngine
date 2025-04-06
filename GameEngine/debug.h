@@ -23,6 +23,6 @@
 #define STAMPERROR(con,msg)
 #endif
 
-#define GLSTAMPERROR STAMPERROR(swm::checkOpenGLErrors(), "")
+#define GLSTAMPERROR STAMPERROR(wm::checkOpenGLErrors(), "")
 
 //DebugBreak(void)
