@@ -326,16 +326,14 @@ export namespace wm {
 		friend LRESULT(::Wndproc)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 		Window* window = 0;
-		double x = 0;
-		double y = 0;
-		double px = 0;
-		double py = 0;
-		double dx = 0;
-		double dy = 0;
-		double dsx = 0;
-		double dsy = 0;
-		int dx1 = 0;
-		int dy1 = 0;
+		math::Vec2d gamePos = { 0,0 };
+		math::Vec2d gameNextPos = { 0,0 };
+		math::Vec2i screenPos = { 0,0 };
+		math::Vec2i screenNextPos = { 0,0 };
+		math::Vec2d rawVelocity = { 0,0 };
+		math::Vec2d gameVelocity = { 0,0 };
+		math::Vec2i screenVelocity = { 0,0 };
+		math::Vec2d nextRawVelocity = { 0,0 };
 		double sensitivity = 1.0f;
 		bool isShown = true;
 		bool currentlyShown = true;
@@ -351,8 +349,7 @@ export namespace wm {
 				//abs mouse
 			}
 			else {
-				dx1 += mouse->lLastX;
-				dy1 += mouse->lLastY;
+				nextRawVelocity += { mouse->lLastX, mouse->lLastY };
 			}
 		}
 		void MouseMove(int x, int y);
@@ -375,23 +372,55 @@ export namespace wm {
 		/// 
 		/// </summary>
 		/// <returns>current position of cursor in normalized game space</returns>
+		math::Vec2d GetGameSpacePosition() const {
+			return gamePos;
+		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns>current position of cursor in window's screen space</returns>
+		math::Vec2i GetScreenSpacePosition() const {
+			return screenPos;
+		}
+		/// <summary>
+		/// alias for <see cref="GetGameSpacePosition()"/>
+		/// </summary>
+		/// <returns>current position of cursor in normalized game space</returns>
 		math::Vec2d GetPosition() const {
-			return { x, y };
+			return GetGameSpacePosition();
 		}
 		/// <summary>
 		/// 
 		/// </summary>
 		/// <returns>current screen space velocity of the mouse</returns>
-		math::Vec2d GetScreenVelocity() const {
-			return math::Vec2d{ dsx, dsy };
+		math::Vec2d GetGameSpaceVelocity() const {
+			return gameVelocity;
 		}
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <returns>current raw velocity of the mouse</returns>
-		math::Vec2d GetVelocity() const {
-			return math::Vec2d{ dx, dy };
+		/// <returns>current screen space velocity of the mouse</returns>
+		math::Vec2i GetScreenSpaceVelocity() const {
+			return screenVelocity;
 		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns>current raw input velocity of the mouse</returns>
+		math::Vec2d GetInputVelocity() const {
+			return rawVelocity;
+		}
+		/// <summary>
+		/// alias for <see cref="GetInputVelocity()"/>
+		/// </summary>
+		/// <returns>current raw input velocity of the mouse</returns>
+		math::Vec2d GetVelocity() const {
+			return GetInputVelocity();
+		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sensitivity"> - multiplier for <see cref="GetInputVelocity()"/></param>
 		void setSensitivity(double sensitivity) {
 			this->sensitivity = sensitivity;
 		}
@@ -793,9 +822,29 @@ export namespace wm {
 	};
 }
 
+LRESULT WndprocSYSCMD(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+	wm::Window* window = (wm::Window*)GetWindowLongPtrA(hwnd, 0);
+	if (!window) return 0;
+	switch (wparam) {
+	case SC_CLOSE: {
+		PostMessageA(hwnd, WM_CLOSE, 0, 0);
+	} return 0;
+	case SC_MAXIMIZE: {
+		window->SetWindowState(wm::ShowWindowState::Maximize);
+	} return 0;
+	case SC_MINIMIZE: {
+		window->SetWindowState(wm::ShowWindowState::Minimize);
+	} return 0;
+	case SC_RESTORE: {
+		window->SetWindowState(wm::ShowWindowState::Restore);
+	} return 0;
+	}
+	return 0;
+}
+
 LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	wm::Window* window = (wm::Window*)GetWindowLongPtrA(hwnd, 0);
-	std::cout << window << ": " << msg << std::endl;
+	//std::cout << window << ": " << msg << std::endl;
 	switch (msg) {
 	case WM_CREATE:
 		SetWindowLongPtrA(hwnd, 0, (long long)((CREATESTRUCT*)lparam)->lpCreateParams);
@@ -856,8 +905,8 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		}
 		window->initializeCV.notify_all();
 	} return 0;
-	// case WM_SYSCOMMAND:
-	// return 0;
+	case WM_SYSCOMMAND: 
+		return WndprocSYSCMD(hwnd, msg, wparam, lparam);
 	}
 
 	return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -896,20 +945,20 @@ wm::Mouse::Mouse(wm::Window* window) {
 
 void wm::Mouse::MouseMove(int x, int y) {
 	Rect r = window->GetGameRect();
-	this->x = (double)(x - r.x) / r.width * 2 - 1;
-	this->y = (double)(y - r.y) / r.height * 2 - 1;
+	double sx = (double)(x - r.x) / r.width * 2 - 1;
+	double sy = (double)(y - r.y) / r.height * 2 - 1;
+	gameNextPos = { sx, sy };
+	screenNextPos = { x, y };
 }
 
 void wm::Mouse::SyncUpdate() {
-	dx = dx1 * sensitivity;
-	dy = dy1 * sensitivity;
-	dy1 = 0;
-	dx1 = 0;
+	rawVelocity = nextRawVelocity * sensitivity;
+	nextRawVelocity = { 0, 0 };
 
-	dsx = x - px;
-	dsy = y - py;
-	px = x;
-	py = y;
+	screenVelocity = screenNextPos - screenPos;
+	screenPos = screenNextPos;
+	gameVelocity = gameNextPos - gamePos;
+	gamePos = gameNextPos;
 	math::Vec2d v = GetPosition();
 	//std::cout << v << std::endl;
 	bool inRange = !(v.x > 1 || v.x < -1 || v.y > 1 || v.y < -1);
@@ -929,11 +978,11 @@ void wm::Mouse::InternalConstrainCursor(ConstrainCursorState state) {
 	switch (state) {
 	default:
 	case ConstrainCursorState::Free: {
-		std::cout << "FREE" << std::endl;
+		std::cout << "FREE MOUSE" << std::endl;
 		ClipCursor(NULL);
 	} break;
 	case ConstrainCursorState::Constrained: {
-		std::cout << "CONSTRAINED" << std::endl;
+		std::cout << "CONSTRAINED MOUSE" << std::endl;
 		RECT v{};
 		Rect k = window->GetGameAbsRect();
 		v.top = k.y;
@@ -943,7 +992,7 @@ void wm::Mouse::InternalConstrainCursor(ConstrainCursorState state) {
 		ClipCursor(&v);
 	} break;
 	case ConstrainCursorState::Freeze: {
-		std::cout << "FREEZE" << std::endl;
+		std::cout << "FREEZE MOUSE" << std::endl;
 		RECT v{};
 		Rect k = window->GetGameAbsRect();
 		v.top = v.bottom = k.y + k.height / 2;
