@@ -6,7 +6,7 @@ import "getset.h";
 import "glm.h";
 import "debug.h";
 
-import swm;
+import winmanager;
 import math;
 
 namespace render {

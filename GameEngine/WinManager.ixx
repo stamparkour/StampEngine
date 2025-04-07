@@ -36,6 +36,14 @@ export namespace wm {
 		}
 	};
 
+	enum struct MouseButton {
+		Left = 0x01,
+		Right = 0x02,
+		Middle = 0x04,
+		X1 = 0x05,
+		X2 = 0x06,
+	};
+
 	enum struct VertKey {
 		//LeftMouse = 0x01,
 		//RightMouse = 0x02,
@@ -337,6 +345,7 @@ export namespace wm {
 		double sensitivity = 1.0f;
 		bool isShown = true;
 		bool currentlyShown = true;
+		
 		ConstrainCursorState constrainState = ConstrainCursorState::Free;
 		ConstrainCursorState prevConstrainState = ConstrainCursorState::Free;
 		Mouse() {}
@@ -434,6 +443,10 @@ export namespace wm {
 		}
 
 		void ConstrainCursor(ConstrainCursorState state);
+
+		bool isButtonDown(MouseButton button) const {
+			return (GetKeyState((int)button) & 0x8000) != 0;
+		}
 	};
 
 	struct WindowConstruct {
@@ -445,6 +458,7 @@ export namespace wm {
 		friend LRESULT(::Wndproc)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 		static inline thread_local bool isThreadControlled = false;
+		static inline thread_local Window* currentThreadWindow = 0;
 
 		std::vector<std::shared_ptr<PeripheralDevice>> devices{};
 		HWND hwnd = 0;
@@ -570,10 +584,9 @@ export namespace wm {
 				this //create pointer
 			);
 			STAMPERROR(win == 0, "wm::Window::Window - create class failed");
-
+			currentThreadWindow = this;
 			creationTime = Timer::getTimeRaw();
 			MSG msg;
-			std::thread renderThread = std::thread{ &Window::Render, this };
 			std::thread updateThread = std::thread{ &Window::Update, this };
 
 			//filter out all necessary messages
@@ -584,6 +597,8 @@ export namespace wm {
 				DispatchMessageA(&msg);
 			}
 
+			HDC hdc = GetDC(hwnd);
+			wglMakeCurrent(hdc, glContext);
 			SetWindowState(wm::ShowWindowState::Focus);
 
 			long long prevTime = Timer::getTimeRaw();
@@ -621,6 +636,11 @@ export namespace wm {
 					DispatchMessageA(&msg);
 				}
 				if (!exsists) break;
+
+				//render
+				if (scene) scene->Render();
+				glFinish();
+				SwapBuffers(hdc);
 					 
 				{
 					std::unique_lock lk(syncMutex);
@@ -645,18 +665,6 @@ export namespace wm {
 				ThreadControl_Enter();
 
 				if(scene) scene->Update();
-				ThreadControl_Exit();
-			}
-		}
-		void Render() {
-			HDC hdc = GetDC(hwnd);
-			wglMakeCurrent(hdc, glContext);
-			while (exsists) {
-				ThreadControl_Enter();
-
-				if (scene) scene->Render();
-				SwapBuffers(hdc);
-
 				ThreadControl_Exit();
 			}
 		}
@@ -754,6 +762,7 @@ export namespace wm {
 		}
 
 		void ThreadControl_Enter() {
+			currentThreadWindow = this;
 			STAMPERROR(isThreadControlled, "wm::window::threadcontrol_enter - already thread controlled thread or did not exit thread control.");
 			isThreadControlled = true;
 			std::unique_lock lk(syncMutex);
@@ -819,7 +828,55 @@ export namespace wm {
 		~Window() {
 			Destroy();
 		}
+
+		friend Window* CurrentWindow();
 	};
+
+	Window* CurrentWindow() {
+		return Window::currentThreadWindow;
+	}
+
+	bool checkOpenGLErrors() {
+		GLenum error = glGetError();
+		bool k = false;
+		while (error != GL_NO_ERROR) {
+			k = true;
+			// Handle the error appropriately
+			std::cout << "OpenGL error: (" << error << ") ";
+			switch (error) {
+			case GL_INVALID_ENUM:
+				std::cout << "invalid enum";
+				break;
+			case GL_INVALID_VALUE:
+				std::cout << "invalid value";
+				break;
+			case GL_INVALID_OPERATION:
+				std::cout << "invalid operation";
+				break;
+			case GL_STACK_OVERFLOW:
+				std::cout << "stack overflow";
+				break;
+			case GL_STACK_UNDERFLOW:
+				std::cout << "stack underflow";
+				break;
+			case GL_OUT_OF_MEMORY:
+				std::cout << "out of memory";
+				break;
+			case GL_INVALID_FRAMEBUFFER_OPERATION:
+				std::cout << "invalid framebuffer operation";
+				break;
+			case GL_CONTEXT_LOST:
+				std::cout << "context lost";
+				break;
+			case GL_TABLE_TOO_LARGE:
+				std::cout << "table too large";
+				break;
+			}
+			std::cout << std::endl;
+			error = glGetError();
+		}
+		return k;
+	}
 }
 
 LRESULT WndprocSYSCMD(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {

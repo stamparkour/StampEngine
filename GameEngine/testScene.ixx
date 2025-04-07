@@ -19,37 +19,37 @@ class ControlComponent : public engine::Component {
     virtual void Start() {}
     //unsafe
     virtual void Update() {
-        math::Vec2f cursor = (math::Vec2f)engine::CurrentWindow()->Mouse()->GetVelocity();
+        math::Vec2f cursor = (math::Vec2f)wm::CurrentWindow()->Mouse()->GetVelocity();
         cursor *= 0.002;
         direction += cursor;
         GameObject()->transform.rotation = math::Quatf::RotationZXY(direction.y, direction.x,0);
         float speed = 5;
-        if (swm::isKeyHold(swm::VertKey::W)) {
-            GameObject()->transform.position += GameObject()->Forward() * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::W)) {
+            GameObject()->transform.position += GameObject()->Forward() * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyHold(swm::VertKey::S)) {
-            GameObject()->transform.position += GameObject()->Back() * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::S)) {
+            GameObject()->transform.position += GameObject()->Back() * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyHold(swm::VertKey::D)) {
-            GameObject()->transform.position += GameObject()->Right() * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::D)) {
+            GameObject()->transform.position += GameObject()->Right() * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyHold(swm::VertKey::A)) {
-            GameObject()->transform.position += GameObject()->Left() * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::A)) {
+            GameObject()->transform.position += GameObject()->Left() * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyHold(swm::VertKey::E)) {
-            GameObject()->transform.position += math::Vec3f(0,1,0) * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::E)) {
+            GameObject()->transform.position += math::Vec3f(0,1,0) * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyHold(swm::VertKey::Q)) {
-            GameObject()->transform.position += math::Vec3f(0, -1, 0) * swm::DeltaTime() * speed;
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::Q)) {
+            GameObject()->transform.position += math::Vec3f(0, -1, 0) * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (swm::isKeyDown(swm::VertKey::LeftMouse)) {
+        if (wm::CurrentWindow()->Mouse()->isButtonDown(wm::MouseButton::Left)) {
             GameObject()->transform.position += math::Vec3f(0, -1, 0) * speed;
         }
     }
     //gl context safe
     virtual void Render(engine::RenderLayer phase) {
         if(phase == engine::RenderLayer::MainScene)
-        if (swm::isKeyDown(swm::VertKey::F1)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F1)) {
             static bool k = true;
             if (k)
                 render::TriangleOutline();
@@ -60,15 +60,15 @@ class ControlComponent : public engine::Component {
     }
     //sync safe
     virtual void SyncUpdate() {
-        if (swm::isKeyDown(swm::VertKey::F2)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F2)) {
             engine::component::Camera::ResizeScreen(1024, 512);
         }
-        if (swm::isKeyDown(swm::VertKey::F3)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F3)) {
             swm::initScene<InitScene>();
         }
-        if (swm::isKeyDown(swm::VertKey::F4)) {
-            swm::setCursorVisibility(true);
-            swm::setCursorConstraint(swm::CursorConstraintState::Free);
+        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F4)) {
+            wm::CurrentWindow()->Mouse()->Visibility(true);
+            wm::CurrentWindow()->Mouse()->ConstrainCursor(wm::ConstrainCursorState::Free);
         }
     }
     //sync safe
@@ -104,11 +104,11 @@ class BoatComponent : public engine::Component {
         force += rudderForce;
         Torque -= math::Cross(rudderPos, rudderForce);
 
-        angularVelocity += Torque * swm::DeltaTime() / anglularInertia;
-        angularVelocity -= angularVelocity * swm::DeltaTime() * drag.x;
-        angle += angularVelocity * swm::DeltaTime();
-        velocity += force * swm::DeltaTime() / mass;
-        position += velocity * swm::DeltaTime();
+        angularVelocity += Torque * wm::CurrentWindow()->DeltaTime() / anglularInertia;
+        angularVelocity -= angularVelocity * wm::CurrentWindow()->DeltaTime() * drag.x;
+        angle += angularVelocity * wm::CurrentWindow()->DeltaTime();
+        velocity += force * wm::CurrentWindow()->DeltaTime() / mass;
+        position += velocity * wm::CurrentWindow()->DeltaTime();
         GameObject()->transform.position = math::Vec3f(position.x, 0, position.y);
         GameObject()->transform.rotation = math::Quatf::RotationY(angle);
 
@@ -161,8 +161,8 @@ public:
         using namespace engine;
         using namespace engine::component;
 
-        swm::setCursorVisibility(false);
-        swm::setCursorConstraint(swm::CursorConstraintState::Frozen);
+        wm::CurrentWindow()->Mouse()->Visibility(false);
+        wm::CurrentWindow()->Mouse()->ConstrainCursor(wm::ConstrainCursorState::Freeze);
 
         glClearColor(135.0f/255, 206.0f/255, 235.0f/255, 0.0f);
         glClearStencil(0);
