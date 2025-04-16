@@ -194,17 +194,12 @@ export namespace wm {
 		virtual void SyncUpdate() = 0;
 		virtual void Render();
 		virtual void Resize(long width, long height) = 0;
-
-		void SetFramebuffer(GLuint framebuffer, int width, int height, int colorAttachmentIndex = 0) {
-			this->framebuffer = framebuffer;
-			this->colorAttachmentWidth = width;
-			this->colorAttachmentHeight = height;
-			this->colorAttachmentIndex = colorAttachmentIndex;
-		}
 	public:
-		class Window* GetWindow() {
+		class Window* Window() {
 			return window;
 		}
+
+		void SetFramebuffer(GLuint framebuffer, int width, int height, int colorAttachmentIndex = 0);
 
 		virtual ~RawSceneBase() {}
 	};
@@ -358,7 +353,7 @@ export namespace wm {
 				//abs mouse
 			}
 			else {
-				nextRawVelocity += { mouse->lLastX, mouse->lLastY };
+				nextRawVelocity += { (double)mouse->lLastX, (double)mouse->lLastY };
 			}
 		}
 		void MouseMove(int x, int y);
@@ -453,11 +448,10 @@ export namespace wm {
 
 	};
 
-	class Window {
+	class Window : public std::enable_shared_from_this<Window> {
 		friend class PeripheralDevice;
 		friend LRESULT(::Wndproc)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
-		static inline thread_local bool isThreadControlled = false;
 		static inline thread_local Window* currentThreadWindow = 0;
 
 		std::vector<std::shared_ptr<PeripheralDevice>> devices{};
@@ -471,6 +465,10 @@ export namespace wm {
 		int windowY = 0;
 		int windowWidth = 0;
 		int windowHeight = 0;
+		int maxWindowWidth = 16384;
+		int maxWindowHeight = 16384;
+		int minWindowWidth = 160;
+		int minWindowHeight = 40;
 		bool active = false;
 		bool exsists = true;
 		bool initialized = false;
@@ -486,16 +484,13 @@ export namespace wm {
 		Mouse mouse{};
 
 		std::shared_ptr<RawSceneBase> scene = nullptr;
-		std::shared_ptr<RawSceneBase>(*sceneInstantiate)(Window* window) = 0;
+		std::shared_ptr<RawSceneBase> (*sceneInstantiate)(Window* window) = 0;
 
 		std::mutex closeMutex{};
 		std::condition_variable closeCV{};
 		std::mutex initializeMutex{};
 		std::condition_variable initializeCV{};
-		std::mutex syncMutex{};
-		std::condition_variable syncCV{};
-		std::thread controlThread;
-
+		std::thread::id controlThreadID;
 		std::string title;
 
 		static inline Window* activeWindow = 0;
@@ -518,8 +513,8 @@ export namespace wm {
 			STAMPERROR(wglMakeCurrent(displayContext, glContext) == FALSE, "Wndproc -> OnCreate - failed to opengl context");
 			std::cout << "[opengl] max version: " << glGetString(GL_VERSION) << std::endl;
 			GLMInit();
-			int value;
-			glGetIntegerv(GL_STENCIL_BITS, &value);
+			//int value;
+			//glGetIntegerv(GL_STENCIL_BITS, &value);
 			wglSwapIntervalEXT(1);
 
 			exsists = true;
@@ -605,6 +600,10 @@ export namespace wm {
 			while (exsists) {
 
 				//sync
+				long long t = Timer::getTimeRaw();
+				deltaTime = (t - prevTime) * Timer::TimeTickLength();
+				prevTime = t;
+
 				if (sceneInstantiate) {
 					if (scene) {
 						scene->End();
@@ -613,6 +612,8 @@ export namespace wm {
 					sceneInstantiate = 0;
 					scene->Start();
 				}
+
+				if (scene) scene->SyncUpdate();
 				
 				mouse.SyncUpdate();
 				keyboard.SyncUpdate();
@@ -620,14 +621,9 @@ export namespace wm {
 					devices[i]->SyncUpdate();
 				}
 
-				if(scene) scene->SyncUpdate();
 
-				{ //unlocking all threads
-					std::lock_guard lg{ syncMutex };
-					sync = false;
-					executeCount = 0;
-				}
-				syncCV.notify_all();
+				//parallel
+                std::thread update(&Window::Update, this);
 
 				for (int i = 0; PeekMessageA(&msg, hwnd, 0, 0, PM_REMOVE) != 0 && i < 128; i++) {
 					if (msg.message == WM_PAINT)
@@ -639,34 +635,17 @@ export namespace wm {
 
 				//render
 				if (scene) scene->Render();
-				glFinish();
+				glFlush();
 				SwapBuffers(hdc);
-					 
-				{
-					std::unique_lock lk(syncMutex);
-					syncCV.wait(lk, [this] { return executeCount == 0; });
-					sync = true;
-				}
-				syncCV.notify_all();
 
-				long long t = Timer::getTimeRaw();
-				deltaTime = (t - prevTime) * Timer::TimeTickLength();
-				prevTime = t;
+				update.join();
 			}
 
 		}
 		void Update() {
+			currentThreadWindow = this;
 			// double t = Timer::getTime();
-			while (exsists) {
-				// double k = Timer::getTime();
-				// std::cout << "update: " << (1 / (k-t)) << std::endl;
-				// t = k;
-
-				ThreadControl_Enter();
-
-				if(scene) scene->Update();
-				ThreadControl_Exit();
-			}
+			if (scene) scene->Update();
 		}
 
 		void AwaitInitialize() {
@@ -682,7 +661,7 @@ export namespace wm {
 		void SetGameRatio(float ratio) { 
 			gameRatio = ratio;
 		}
-		void SetClientSize(int width, int height) {
+		void SetClientSize(int width, int height, bool shouldMoveWindow = true) {
 			RECT desktop;
 			const HWND hDesktop = GetDesktopWindow();
 			GetWindowRect(hDesktop, &desktop);
@@ -690,17 +669,32 @@ export namespace wm {
 			height += windowHeight - clientHeight;
 			int x = desktop.right / 2 - width / 2;
 			int y = desktop.bottom / 2 - height / 2;
-			SetWindowPos(hwnd, HWND_TOP, x, y, width, height, 0);
+			ShowWindow(hwnd, SW_RESTORE);
+			SetWindowPos(hwnd, HWND_TOP, x, y, width, height, shouldMoveWindow ? 0 : SWP_NOMOVE);
 			fullscreen = false;
 		}
 		void SetPosition(int x, int y) {
 			SetWindowPos(hwnd, HWND_TOP, x, y, 0, 0, SWP_NOSIZE);
 		}
+		void SetMinSize(int width, int height) {
+			minWindowWidth = width + windowWidth - clientWidth;
+			minWindowHeight = height + windowHeight - clientHeight;
+		}
+		void SetMaxSize(int width, int height) {
+			maxWindowWidth = width + windowWidth - clientWidth;
+			maxWindowHeight = height + windowHeight - clientHeight;
+		}
+
+		void SetWindowName(std::string name) {
+			this->title = name;
+			SetWindowTextA(hwnd, (const char*)title.c_str());
+		}
+
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <returns>gets the rect for the game space in monitor space</returns>
-		Rect GetGameAbsRect() {
+		/// <returns>gets the rect for the game space in screen space</returns>
+		Rect GetGameScreenSpaceRect() {
 			Rect r = GetGameRect();
 			r.x += clientX;
 			r.y += clientY;
@@ -733,6 +727,18 @@ export namespace wm {
 
 			return r;
 		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns>gets the rect for the client space in screen space</returns>
+		Rect GetClientRect() {
+			Rect r{};
+			r.x = clientX;
+			r.x = clientY;
+			r.width = clientWidth;
+			r.height = clientHeight;
+			return r;
+		}
 
 		void SetWindowState(ShowWindowState state) {
 			if (state == ShowWindowState::Borderless) {
@@ -758,41 +764,26 @@ export namespace wm {
 
 		template<typename SCENE>
 		void SetScene() {
-			sceneInstantiate = [](wm::Window* window) {return new SCENE(window); };
+			sceneInstantiate = [](wm::Window* window) -> std::shared_ptr<RawSceneBase> {
+				auto k = std::make_shared<SCENE>(window);
+				return (std::shared_ptr<RawSceneBase>)k;
+			};
 		}
-
-		void ThreadControl_Enter() {
-			currentThreadWindow = this;
-			STAMPERROR(isThreadControlled, "wm::window::threadcontrol_enter - already thread controlled thread or did not exit thread control.");
-			isThreadControlled = true;
-			std::unique_lock lk(syncMutex);
-			syncCV.wait(lk, [this] { return !sync; });
-			executeCount++;
-		}
-		void ThreadControl_Exit() {
-			STAMPERROR(!isThreadControlled, "wm::window::threadcontrol_enter - not in thread controlled thread or did not enter thread control.");
-			{
-				std::lock_guard lk(syncMutex);
-				isThreadControlled = false;
-				executeCount--;
-			}
-			syncCV.notify_all();
-			{
-				std::unique_lock lk(syncMutex);
-				syncCV.wait(lk, [this] { return sync; });
-			}
-		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns>time since window creation</returns>
 		double Time() {
-			return (Timer::getTime() - creationTime) * Timer::TimeTickLength();
+			return (Timer::getTimeRaw() - creationTime) * Timer::TimeTickLength();
 		}
 		double DeltaTime() {
 			return deltaTime;
 		}
 
-		GLuint getInitFramebuffer() {
+		GLuint GetInitialFramebuffer() {
 			return initFBO;
 		}
-		HWND getWindow() {
+		HWND GetWindowHandle() {
 			return hwnd;
 		}
 		Keyboard* Keyboard() {
@@ -802,6 +793,9 @@ export namespace wm {
 			return &mouse;
 		}
 
+		bool isControlThread() {
+            return std::this_thread::get_id() == controlThreadID;
+		}
 		bool isActive() {
 			return active;
 		}
@@ -879,26 +873,6 @@ export namespace wm {
 	}
 }
 
-LRESULT WndprocSYSCMD(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-	wm::Window* window = (wm::Window*)GetWindowLongPtrA(hwnd, 0);
-	if (!window) return 0;
-	switch (wparam) {
-	case SC_CLOSE: {
-		PostMessageA(hwnd, WM_CLOSE, 0, 0);
-	} return 0;
-	case SC_MAXIMIZE: {
-		window->SetWindowState(wm::ShowWindowState::Maximize);
-	} return 0;
-	case SC_MINIMIZE: {
-		window->SetWindowState(wm::ShowWindowState::Minimize);
-	} return 0;
-	case SC_RESTORE: {
-		window->SetWindowState(wm::ShowWindowState::Restore);
-	} return 0;
-	}
-	return 0;
-}
-
 LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	wm::Window* window = (wm::Window*)GetWindowLongPtrA(hwnd, 0);
 	//std::cout << window << ": " << msg << std::endl;
@@ -915,35 +889,43 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		if (!window || window->Close()) DestroyWindow(hwnd);
 		return 0;
 	case WM_KEYDOWN:
-		if (window) window->keyboard.onKeyDown((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
+		if (window && window->active) window->keyboard.onKeyDown((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
 		return 0;
 	case WM_KEYUP:
-		if (window) window->keyboard.onKeyUp((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
+		if (window && window->active) window->keyboard.onKeyUp((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
 		return 0;
 	case WM_CHAR:
-		if (window) window->keyboard.onChar(wparam, lparam);
+		if (window && window->active) window->keyboard.onChar(wparam, lparam);
 		return 0;
 	case WM_NCMOUSEMOVE: {
 		int xPos = GET_X_LPARAM(lparam) - window->windowX;
 		int yPos = GET_Y_LPARAM(lparam) - (window->windowY + (window->windowHeight - window->clientHeight));
-		if (window) window->mouse.MouseMove(xPos, yPos);
+		if (window && window->active) window->mouse.MouseMove(xPos, yPos);
 	} return 0;
 	case WM_MOUSEMOVE: {
 		int xPos = GET_X_LPARAM(lparam);
 		int yPos = GET_Y_LPARAM(lparam);
-		if (window) window->mouse.MouseMove(xPos, yPos);
+		if (window && window->active) window->mouse.MouseMove(xPos, yPos);
 	} return 0;
 	case WM_INPUT:
 		if (GET_RAWINPUT_CODE_WPARAM(wparam) == RIM_INPUTSINK) return 0;
-		if (wm::Window::activeWindow) wm::Window::activeWindow->Input((HRAWINPUT)lparam);
+		if (wm::Window::activeWindow && wm::Window::activeWindow->active) wm::Window::activeWindow->Input((HRAWINPUT)lparam);
 		return 0;
 	case WM_ACTIVATE:
 		if (window) window->Active(LOWORD(wparam),HIWORD(wparam));
 		return 0;
 	case WM_GETMINMAXINFO: {
 		MINMAXINFO* minmax = (MINMAXINFO*)lparam;
-		minmax->ptMaxTrackSize.x = 16384;
-		minmax->ptMaxTrackSize.y = 16384;
+		if (!window || window->fullscreen) {
+			minmax->ptMaxTrackSize.x = 16384;
+			minmax->ptMaxTrackSize.y = 16384;
+		}
+		else {
+			minmax->ptMaxTrackSize.x = window->maxWindowWidth;
+			minmax->ptMaxTrackSize.y = window->maxWindowHeight;
+			minmax->ptMinTrackSize.x = window->minWindowWidth;
+			minmax->ptMinTrackSize.y = window->minWindowHeight;
+		}
 	} return 0;
 	case WM_WINDOWPOSCHANGED: {
 		if (!window) return 0;
@@ -962,8 +944,6 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		}
 		window->initializeCV.notify_all();
 	} return 0;
-	case WM_SYSCOMMAND: 
-		return WndprocSYSCMD(hwnd, msg, wparam, lparam);
 	}
 
 	return DefWindowProcA(hwnd, msg, wparam, lparam);
@@ -996,7 +976,7 @@ wm::Mouse::Mouse(wm::Window* window) {
 	devices[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
 	devices[0].usUsage = HID_USAGE_GENERIC_MOUSE;
 	devices[0].dwFlags = RIDEV_DEVNOTIFY;
-	devices[0].hwndTarget = window->getWindow();
+	devices[0].hwndTarget = window->GetWindowHandle();
 	RegisterRawInputDevices(devices, 1, sizeof(RAWINPUTDEVICE));
 }
 
@@ -1041,7 +1021,7 @@ void wm::Mouse::InternalConstrainCursor(ConstrainCursorState state) {
 	case ConstrainCursorState::Constrained: {
 		std::cout << "CONSTRAINED MOUSE" << std::endl;
 		RECT v{};
-		Rect k = window->GetGameAbsRect();
+		Rect k = window->GetGameScreenSpaceRect();
 		v.top = k.y;
 		v.left = k.x;
 		v.bottom = k.y + k.height;
@@ -1051,7 +1031,7 @@ void wm::Mouse::InternalConstrainCursor(ConstrainCursorState state) {
 	case ConstrainCursorState::Freeze: {
 		std::cout << "FREEZE MOUSE" << std::endl;
 		RECT v{};
-		Rect k = window->GetGameAbsRect();
+		Rect k = window->GetGameScreenSpaceRect();
 		v.top = v.bottom = k.y + k.height / 2;
 		v.left = v.right = k.x + k.width / 2;
 		ClipCursor(&v);
@@ -1098,17 +1078,28 @@ wm::Window::Window(std::string title, wm::WindowConstruct construct) {
 		return a;
 	}();
 
-	controlThread = std::thread{ &Window::Control, this };
+	std::thread controlThread = std::thread{ &Window::Control, this };
+	controlThreadID = controlThread.get_id();
 	controlThread.detach();
 	AwaitInitialize();
 }
 
 void wm::RawSceneBase::Render() {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, window->getInitFramebuffer());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, window->GetInitialFramebuffer());
 	glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
 	glDrawBuffer(GL_BACK_LEFT);
 	Rect r = window->GetGameRect();
 	glBlitFramebuffer(0, 0, colorAttachmentWidth, colorAttachmentHeight, r.x, r.y,
-		r.x + r.width, r.y + r.width, GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
+		r.x + r.width, r.y + r.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
+
+	GLSTAMPERROR;
+}
+
+void wm::RawSceneBase::SetFramebuffer(GLuint framebuffer, int width, int height, int colorAttachmentIndex) {
+	this->framebuffer = framebuffer;
+	this->colorAttachmentWidth = width;
+	this->colorAttachmentHeight = height;
+	this->colorAttachmentIndex = colorAttachmentIndex;
+	if (window) window->SetGameRatio((float)width / height);
 }

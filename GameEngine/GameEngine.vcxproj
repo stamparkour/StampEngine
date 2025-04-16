@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="AI.ixx" />
     <ClCompile Include="Economy.ixx" />
+    <ClCompile Include="SceneEditor.ixx" />
     <ClCompile Include="engine.ixx" />
     <ClCompile Include="gamerender.ixx" />
     <ClCompile Include="GLM.cpp" />

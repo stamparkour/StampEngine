@@ -42,14 +42,11 @@ class ControlComponent : public engine::Component {
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::Q)) {
             GameObject()->transform.position += math::Vec3f(0, -1, 0) * wm::CurrentWindow()->DeltaTime() * speed;
         }
-        if (wm::CurrentWindow()->Mouse()->isButtonDown(wm::MouseButton::Left)) {
-            GameObject()->transform.position += math::Vec3f(0, -1, 0) * speed;
-        }
     }
     //gl context safe
     virtual void Render(engine::RenderLayer phase) {
         if(phase == engine::RenderLayer::MainScene)
-        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F1)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F1)) {
             static bool k = true;
             if (k)
                 render::TriangleOutline();
@@ -57,16 +54,17 @@ class ControlComponent : public engine::Component {
                 render::TriangleFill();
             k = !k;
         }
+
     }
     //sync safe
     virtual void SyncUpdate() {
-        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F2)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F2)) {
             engine::component::Camera::ResizeScreen(1024, 512);
         }
-        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F3)) {
-            swm::initScene<InitScene>();
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F3)) {
+            wm::CurrentWindow()->SetScene<InitScene>();
         }
-        if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::F4)) {
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F4)) {
             wm::CurrentWindow()->Mouse()->Visibility(true);
             wm::CurrentWindow()->Mouse()->ConstrainCursor(wm::ConstrainCursorState::Free);
         }
@@ -154,7 +152,7 @@ public:
     } sails[8];
 };
 
-export class InitScene : public engine::SceneBase {
+export class InitScene : public engine::SceneBase, public std::shared_ptr<InitScene> {
 public:
     InitScene(wm::Window* window) : engine::SceneBase(window) {}
     virtual void Initialize() {
@@ -196,9 +194,10 @@ public:
         material->shader = render::RenderShaderProgram::ParseStream_glsl(shaderFile, { 0 }, { {"test"}});
 
         std::shared_ptr<GameObject> cameraObj = CreateObject("Camera");
-        std::shared_ptr<Camera> camera = cameraObj->AddComponent<Camera>(Camera::CameraType::Main);
+        std::shared_ptr<Camera> camera = cameraObj->AddComponent<Camera>();
+        camera->SetMainCamera();
         camera->isPerspective = true;
-        camera->scalePercent = 0.7;
+        camera->scalePercent = 1.3;
         std::shared_ptr<ControlComponent> controller = cameraObj->AddComponent<ControlComponent>();
         cameraObj->transform.position = { 0,0,-5 };
 
@@ -261,15 +260,18 @@ public:
         engine::SceneBase::Initialize();
     }
     virtual void Iterate() {
+        double t = this->Window()->DeltaTime();
+        int ms = (int)(t * 1000);
+        std::cout << ms << "ms" << std::endl;
     }
     virtual void PreRender(engine::RenderLayer renderLayer) {
+        engine::SceneBase::PreRender(renderLayer);
+
         if (renderLayer == engine::RenderLayer::MainScene) {
-            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
             //unsigned int clearColor[] = { engine::FloatToUN8(0.6f), engine::FloatToUN8(0.2f), engine::FloatToUN8(0.8f), engine::FloatToUN8(0.0f) };
             //glClearBufferuiv(GL_COLOR,0, clearColor);
             GLSTAMPERROR;
         }
-        engine::SceneBase::PreRender(renderLayer);
     }
     virtual void PostRender(engine::RenderLayer renderLayer) {
         engine::SceneBase::PostRender(renderLayer);

@@ -27,17 +27,18 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     //swm::sleepUntilWindowTerminate();
 
     wm::Window window("test window.", {});
-    wm::Window window2("test window2.", {});
+    //wm::Window window2("test window2.", {});
 
     //window.SetWindowState(wm::ShowWindowState::Borderless);
     window.SetClientSize(1200, 900);
-    window2.SetClientSize(1300, 900);
+    //window2.SetClientSize(1300, 900);
     //window.Mouse()->Visibility(false);
     //window.Mouse()->ConstrainCursor(wm::ConstrainCursorState::Freeze);
 
 	window.SetScene<InitScene>();
 
     window.AwaitClose();
-    window2.AwaitClose();
+    //window2.AwaitClose();
+
 }
 

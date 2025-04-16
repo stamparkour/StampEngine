@@ -20,13 +20,16 @@ enum struct State {
 	Destroying
 };
 
-
 enum struct EnableState {
 	Enabling,
 	Enabled,
 	Disabling,
 	Disabled
 };
+
+constexpr auto BITMASK(auto i) {
+	return (1 << (int)i);
+}
 
 export namespace engine {
 	constexpr auto FloatToUN8(float value) { return (uint8_t)(value * 256); }
@@ -38,8 +41,10 @@ export namespace engine {
 	enum struct RenderLayer {
 		MainScene,
 		GUI,
+		Debug,
 		Max,
 	};
+
 
 	//uimanager
 	//	--main uielement: screen
@@ -358,10 +363,10 @@ export namespace engine {
 		//fix update method to include it
 	};
 
-	class SceneBase : wm::RawSceneBase {
+	class SceneBase : public wm::RawSceneBase {
 		static thread_local inline SceneBase* currentScene{};
 		render::UniformBufferObject lightBuffer{};
-		int maxrenderLayers = (int)RenderLayer::Max;
+		int maxRenderLayers = (int)RenderLayer::Max;
 		std::vector<std::shared_ptr<GameObject>> objects{};
 		virtual void Start() {
 			currentScene = this;
@@ -398,16 +403,7 @@ export namespace engine {
 
 			//on object destroy
 		}
-		virtual void Render() {
-			currentScene = this;
-			for (int p = 0; p < maxrenderLayers; p++) {
-				PreRender((RenderLayer)p);
-				for (int i = 0; i < objects.size(); i++) {
-					objects[i]->Render((RenderLayer)p);
-				}
-				PostRender((RenderLayer)p);
-			}
-		}
+		virtual void Render();
 	public:
 		SceneBase(wm::Window* window) : wm::RawSceneBase(window) {
 			objects.reserve(4096);
@@ -442,9 +438,6 @@ export namespace engine {
 
 	SceneBase* CurrentScene() {
 		return SceneBase::currentScene;
-	}
-	wm::Window* CurrentWindow() {
-		return SceneBase::currentScene->GetWindow();
 	}
 
 	std::shared_ptr<render::Mesh> getUIMesh() {
@@ -523,22 +516,26 @@ export namespace engine::component{
 		friend engine::SceneBase;
 	public:
 		enum struct CameraType {
+			Secondary,
 			Main,
+			Editor,
 		};
 	private:
-		CameraType type{};
+		CameraType type = CameraType::Secondary;
 		math::Mat4f transform{};
-		static inline std::shared_ptr<Camera> mainCamera{};
-		virtual void Start() {
-			switch (type) {
-			case CameraType::Main: {
-				mainCamera = std::static_pointer_cast<Camera>(shared_from_this());
-			} break;
-			}
+		static inline std::vector<std::weak_ptr<Camera>> cameras {};
+		static inline int currentCameraIndex = 0;
+		static inline std::weak_ptr<Camera> mainCamera = {};
+		int renderLayerBitMask = BITMASK(engine::RenderLayer::MainScene) | BITMASK(engine::RenderLayer::Debug) | BITMASK(engine::RenderLayer::GUI);
+		int cameraIndex = -1;
 
+		virtual void Start() {
 			GLSTAMPERROR;
 			frameBuffer.ResizeToScreen(scalePercent);
 			GLSTAMPERROR;
+			if (!mainCamera.lock()) {
+				SetMainCamera();
+			}
 		}
 		virtual void Update() {}
 		virtual void Render(engine::RenderLayer renderLayer) {}
@@ -547,21 +544,44 @@ export namespace engine::component{
 			for (std::shared_ptr<engine::GameObject> p = GameObject()->Parent(); p; p = p->Parent()) {
 				transform = p->transform.toMatrixInverse() * transform;
 			}
+
+			auto c = mainCamera.lock();
+			if (type == CameraType::Main && c.get() != this) {
+				if (c) {
+					c->type = CameraType::Secondary;
+				}
+				c = std::static_pointer_cast<Camera>(shared_from_this());
+				engine::CurrentScene()->SetFramebuffer(frameBuffer.getId(),
+					frameBuffer.colorAttachments[0].Width(),
+					frameBuffer.colorAttachments[0].Height()
+				);
+				mainCamera = c;
+			}
 		}
 		virtual void OnEnable() {
 			cameraUniformObject.BindBuffer();
+			cameraIndex = cameras.size();
+			cameras.push_back(std::static_pointer_cast<Camera>(shared_from_this()));
 		}
 		virtual void OnDisable() {
 			cameraUniformObject.UnbindBuffer();
+			for (int i = 0; i < cameras.size(); i++) {
+				if (cameras[i].lock().get() == this) {
+					cameras.erase(cameras.begin() + i);
+					break;
+				}
+			}
+			cameraIndex = -1;
 		}
 		virtual void OnDestroy() {
-			if (mainCamera.get() == this) {
+			auto c = mainCamera.lock();
+			if (c.get() == this) {
 				mainCamera = {};
 			}
 		}
-		static void PreRender(RenderLayer renderLayer) {
+		void PreRender(RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::MainScene) return;
-			if (!mainCamera || !mainCamera->IsEnabled()) return;
+			if (!IsEnabled()) return;
 
 			struct Data {
 				math::GLmat4 transform{};
@@ -570,25 +590,24 @@ export namespace engine::component{
 				math::GLvec4 pos{};
 			};
 			Data k{};
-			k.pos = (math::Vec4f)(mainCamera->GameObject()->globalPosition());
-			k.transform = mainCamera->transform;
-			if (mainCamera->isPerspective)
-				k.perspective = math::Mat4f::Perspective(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+			k.pos = (math::Vec4f)(GameObject()->globalPosition());
+			k.transform = transform;
+			if (isPerspective)
+				k.perspective = math::Mat4f::Perspective(fov, GameRatio(), nearPlane, farPlane);
 			else
-				k.perspective = math::Mat4f::Orthographic(mainCamera->fov, GameRatio(), mainCamera->nearPlane, mainCamera->farPlane);
+				k.perspective = math::Mat4f::Orthographic(fov, GameRatio(), nearPlane, farPlane);
 			k.UI = math::Mat4f::Orthographic(1, 1, 0, 10);
-			mainCamera->cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
-			GLSTAMPERROR;
-		}
-		static void PostRender(RenderLayer renderLayer) {
-			if (!mainCamera || !mainCamera->IsEnabled()) return;
-			mainCamera->frameBuffer.CopyContentToScreen();
+			cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
+			frameBuffer.Bind();
 			GLSTAMPERROR;
 		}
 		static void OnResize(int width, int height) {
 		}
+		static void PostRender(RenderLayer renderLayer) {
+
+		}
 	public:
-		render::FrameBuffer2d frameBuffer{ {GL_RGBA8}, -1, -1 };
+		render::FrameBuffer2d frameBuffer{ {GL_RGBA8}};
 		render::UniformBufferObject cameraUniformObject{};
 		float fov = 60.0 * math::DEGTORAD;
 		float nearPlane = 0.1;
@@ -596,18 +615,19 @@ export namespace engine::component{
 		float scalePercent = 1.2;
 		bool isPerspective = true;
 
-		Camera(CameraType type) {
-			this->type = type;
+		Camera() {
+		}
+		static std::shared_ptr<Camera> CurrentCamera() {
+			return cameras[currentCameraIndex].lock();
 		}
 		static std::shared_ptr<Camera> MainCamera() {
-			return mainCamera;
+			return mainCamera.lock();
 		}
-
 		static int GameWidth() {
-			return mainCamera->frameBuffer.colorAttachments[0].Width();
+			return CurrentCamera()->frameBuffer.colorAttachments[0].Width();
 		}
 		static int GameHeight() {
-			return mainCamera->frameBuffer.colorAttachments[0].Height();
+			return CurrentCamera()->frameBuffer.colorAttachments[0].Height();
 		}
 		static float GameRatio() {
 			float height = GameHeight();
@@ -616,14 +636,22 @@ export namespace engine::component{
 		}
 		static void ResizeScreen(int width, int height) {
 			GLSTAMPERROR;
-			mainCamera->frameBuffer.Resize(width * mainCamera->scalePercent, height * mainCamera->scalePercent);
-			swm::setClientResolution(width, height, true);
+			CurrentCamera()->frameBuffer.Resize(width * CurrentCamera()->scalePercent, height * CurrentCamera()->scalePercent);
+			wm::CurrentWindow()->SetClientSize(width, height);
+			engine::CurrentScene()->SetFramebuffer(
+				CurrentCamera()->frameBuffer.getId(),
+				CurrentCamera()->frameBuffer.colorAttachments[0].Width(),
+				CurrentCamera()->frameBuffer.colorAttachments[0].Height()
+			);
 			GLSTAMPERROR;
 		}
 		void ResizeDrawToScreen() {
 			GLSTAMPERROR;
 			frameBuffer.ResizeToScreen(scalePercent);
 			GLSTAMPERROR;
+		}
+		void SetMainCamera() {
+			type = CameraType::Main;
 		}
 	};
 
@@ -636,9 +664,11 @@ export namespace engine::component{
 		virtual void Update() {}
 		//gl context safe
 		virtual void Render(engine::RenderLayer renderLayer) {
-			if (renderLayer != engine::RenderLayer::MainScene) return;
+			if (renderLayer != engine::RenderLayer::MainScene && renderLayer != engine::RenderLayer::Debug) return;
 			if (material && mesh) {
-				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+				material->Render(mesh.get(), 
+					(renderLayer == engine::RenderLayer::Debug ? math::Mat4f::Translate(0, -2, 0) : math::Mat4f::Identity()) * 
+					GameObject()->Transform(), & (Camera::CurrentCamera()->cameraUniformObject));
 			}
 		}
 		//sync safe
@@ -667,7 +697,7 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::MainScene) return;
 
-			ocean.Render(GameObject()->Transform(), Camera::MainCamera()->cameraUniformObject);
+			ocean.Render(GameObject()->Transform(), Camera::CurrentCamera()->cameraUniformObject);
 		}
 		//sync safe
 		virtual void SyncUpdate() {}
@@ -814,7 +844,7 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
-				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::CurrentCamera()->cameraUniformObject));
 			}
 		}
 		//sync safe
@@ -847,7 +877,7 @@ export namespace engine::component{
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
 				glEnable(GL_BLEND);
-				material->Render(&mesh, GameObject()->Transform(), &(Camera::MainCamera()->cameraUniformObject));
+				material->Render(&mesh, GameObject()->Transform(), &(Camera::CurrentCamera()->cameraUniformObject));
 				glDisable(GL_BLEND);
 			}
 		}
@@ -1005,13 +1035,35 @@ int engine::GetGameScreenRatio() {
 	return engine::component::Camera::GameRatio();
 }
 
+void engine::SceneBase::Render() {
+	currentScene = this;
+	for (int c = 0; c < engine::component::Camera::cameras.size(); c++) {
+		engine::component::Camera::currentCameraIndex = c;
+		for (int p = 0; p < maxRenderLayers; p++) {
+			if (!(engine::component::Camera::CurrentCamera()->renderLayerBitMask & BITMASK(p)))
+				continue;
+
+			PreRender((RenderLayer)p);
+			for (int i = 0; i < objects.size(); i++) {
+				objects[i]->Render((RenderLayer)p);
+			}
+			PostRender((RenderLayer)p);
+		}
+	}
+	engine::component::Camera::currentCameraIndex = engine::component::Camera::MainCamera()->cameraIndex;
+
+	wm::RawSceneBase::Render();
+}
+
 void engine::SceneBase::Initialize() {
 	
 }
 
 void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {
-	if (renderLayer == engine::RenderLayer::MainScene) {
+	engine::component::Camera::CurrentCamera()->PreRender(renderLayer);
 
+	if (renderLayer == engine::RenderLayer::MainScene) {
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 		std::vector<Light_t> light{};
 		light.append_range(engine::component::SunLight::GetLights());
 		size_t lightSize = sizeof(Light_t) * light.size();
@@ -1021,11 +1073,13 @@ void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {
 		memcpy(lightSupply->lights, light.begin()._Ptr, lightSize);
 		lightBuffer.Set(lightSupply.get(), lightSupplySize, render::BufferUsageHint::DynamicDraw);
 	}
+	else if (renderLayer == engine::RenderLayer::Debug) {
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	}
 	else if (renderLayer == engine::RenderLayer::GUI) {
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
-	engine::component::Camera::PreRender(renderLayer);
 }
 void engine::SceneBase::PostRender(engine::RenderLayer renderLayer) {
 	if (renderLayer == (engine::RenderLayer)((int)engine::RenderLayer::Max - 1)) {

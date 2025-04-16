@@ -186,7 +186,7 @@ export namespace render {
 	public:
 		Mesh(const Mesh& other) = delete;
 		Mesh() {
-			STAMPERROR(!swm::isRenderThread(),"render::Mesh - can only construct mesh in management thread.");
+			STAMPERROR(!wm::CurrentWindow()->isControlThread(), "render::Mesh - can only construct mesh in management thread.");
 			glGenBuffers(1, &vbo);
 		}
 		Mesh(Mesh&& other) noexcept {
@@ -200,14 +200,14 @@ export namespace render {
 			return *this;
 		}
 		void Bind() {
-			STAMPERROR(!swm::isRenderThread(),"render::Mesh::Bind - can only Bind mesh in management thread.");
+			STAMPERROR(!wm::CurrentWindow()->isControlThread(),"render::Mesh::Bind - can only Bind mesh in management thread.");
 			STAMPERROR(!isValid(),"render::Mesh::Bind - failed to Bind mesh: mesh does not have assigned buffers.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		}
 		template<typename T>
 		void set(const std::vector<T>& meshPoints, BufferUsageHint usageHint = BufferUsageHint::StaticDraw) {
 			if (meshPoints.size() == 0) return;
-			STAMPERROR(!swm::isRenderThread(), "render::Mesh::set - can only Bind mesh in management thread.");
+			STAMPERROR(!wm::CurrentWindow()->isControlThread(), "render::Mesh::set - can only Bind mesh in management thread.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			GLSTAMPERROR;
 			setMaterial = T::setMaterial;
@@ -236,7 +236,7 @@ export namespace render {
 			swap(a.setMaterial, b.setMaterial);
 		}
 		~Mesh() {
-			STAMPERROR(!swm::isRenderThread(),"render::Mesh::~Mesh - can only Bind mesh in management thread.");
+			STAMPERROR(!wm::CurrentWindow()->isControlThread(),"render::Mesh::~Mesh - can only Bind mesh in management thread.");
 			glDeleteBuffers(1, &vbo);
 			vbo = 0;
 		}
@@ -1498,9 +1498,9 @@ export namespace render {
 			glGenFramebuffers(1, &id);
 			this->colorAttachmentTypes = colorAttachmentTypes;
 			colorAttachments.resize (colorAttachmentTypes.size());
-			if(width != -1 || height != -1) Resize(width, height);
+			if(width != 0 && height != 0) Resize(width, height);
 			Bind();//0x8cdd - GL_FRAMEBUFFER_UNSUPPORTED is returned if the combination of internal formats of the attached images violates an implementation-dependent set of restrictions.
-			if (width != -1 || height != -1) STAMPERROR(!IsValid(), "render::FrameBuffer2d - failed creation: 0x" << std::hex << glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+			if (width != 0 && height != 0) STAMPERROR(!IsValid(), "render::FrameBuffer2d - failed creation: 0x" << std::hex << glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
 		}
 		FrameBuffer2d(const FrameBuffer2d& other) = delete;
 		FrameBuffer2d(FrameBuffer2d&& other) noexcept {
@@ -1524,12 +1524,14 @@ export namespace render {
 			id = 0;
 		}
 		void ResizeToScreen(float scale = 1) {
-			Resize(ceil(swm::getViewportWidth() * scale), ceil(swm::getViewportHeight() * scale));
+			wm::Rect rect = wm::CurrentWindow()->GetGameRect();
+			Resize(ceil(rect.width * scale), ceil(rect.height * scale));
 		}
 		void Resize(size_t width = 0, size_t height = 0) {
 			if (width == 0 || height == 0) {
-				width = swm::getWindowWidth();
-				height = swm::getWindowHeight();
+				wm::Rect rect = wm::CurrentWindow()->GetClientRect();
+				width = rect.width;
+				height = rect.height;
 			}
 			for (int i = 0; i < colorAttachments.size(); i++) {
 				colorAttachments[i] = SamplerTexture2d{width, height, 1, colorAttachmentTypes[i]};
@@ -1554,18 +1556,6 @@ export namespace render {
 		// void BindActive(int startUniformIndex) {
 		//
 		// }
-
-		void CopyContentToScreen(int colorAttachmentIndex = 0) {
-			GLSTAMPERROR;
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, id);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, getInitId());
-			glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
-			glDrawBuffer(swm::getScreenDrawBuffer());
-			glBlitFramebuffer(0, 0, colorAttachments[colorAttachmentIndex].Width(), colorAttachments[colorAttachmentIndex].Height(), swm::getViewportX(), swm::getViewportY(),
-				swm::getViewportX() + swm::getViewportWidth(), swm::getViewportY() + swm::getViewportHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
-			Bind();
-			GLSTAMPERROR;
-		}
 
 		bool IsValid() {
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
@@ -1637,7 +1627,7 @@ export namespace render {
 			Data d{};
 			d.scale = scale;
 			d.vertOffset = vertOffset;
-			d.time = swm::getTime();
+			d.time = wm::CurrentWindow()->Time();
 			d.width = width;
 			d.height = height;
 			d.Vy = 4 + 2 * height;

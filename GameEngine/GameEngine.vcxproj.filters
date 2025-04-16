@@ -65,6 +65,9 @@
     <ClCompile Include="WinManager.ixx">
       <Filter>Engine\StampEngine</Filter>
     </ClCompile>
+    <ClCompile Include="SceneEditor.ixx">
+      <Filter>Engine\StampEngine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug.h">

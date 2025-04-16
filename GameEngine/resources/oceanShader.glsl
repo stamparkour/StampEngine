@@ -23,7 +23,7 @@ layout(std140) uniform ST_Ocean {
 } ocean;
 
 float getHeight(vec2 v) {
-	return pow(texture(noise,v / 80 + vec2(0.01,0.02) * ocean.time).r,3) * 2 + texture(noise,v / 30 + vec2(0.2,0.07) + vec2(0.03,0.01) * ocean.time).g * 0.5 - 0.6;
+	return pow(texture(noise,v / 60 + vec2(0.01,0.02) * ocean.time).r,3) * 2 + texture(noise,v / 20 + vec2(0.2,0.07) + vec2(0.03,0.01) * ocean.time).g * 0.5 - 0.6;
 }
 
 vec3 getNormal(vec2 v) {
@@ -76,7 +76,7 @@ void main() {
 layout(location = 0) out vec4 diffuseColor;
 in vec3 worldPos;
 in vec3 localPos;
-const vec4 color = vec4(0.11,0.07,0.64,1);
+const vec4 color = vec4(0.11,0.17,0.74,1);
 void main() {
 	vec3 normal = getNormal(worldPos.xz);
 	vec3 viewNormal = normalize(worldPos - camera.position);
