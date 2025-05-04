@@ -14,12 +14,13 @@ namespace render {
 	class UniformBufferObject;
 	class ShaderStorageBufferObject;
 }
-static render::UniformBufferObject** uniformBlockBinds = 0;
-static render::ShaderStorageBufferObject** shaderBlockBinds = 0;
-static render::SamplerBase** textureBinds = 0;
+render::UniformBufferObject** uniformBlockBinds = 0;
+render::ShaderStorageBufferObject** shaderBlockBinds = 0;
+render::SamplerBase** textureBinds = 0;
 int maxTextureUnits = 0;
 int maxBlockUnits = 0;
 int initFBO = -1;
+int reservedSamplers = 1;
 
 export namespace render {
 
@@ -36,6 +37,8 @@ export namespace render {
 	constexpr auto ATTRIBPOINTER_NORMAL = 2;
 	constexpr auto ATTRIBPOINTER_UV = 3;
 	constexpr auto ATTRIBPOINTER_COLOR = 4;
+	constexpr auto ATTRIBPOINTER_TANGENT = 5;
+	constexpr auto ATTRIBPOINTER_BITANGENT = 6;
 	constexpr auto UNIFORM_TRANSFORM = 1;
 	constexpr auto UNIFORM_NORMALMAP = 10;
 	constexpr auto UNIFORM_TEXTURE0 = 20;
@@ -54,35 +57,45 @@ export namespace render {
 
 	class MaterialBase;
 
-	struct PointP3NUC final {
+	struct PointP3NTBUC final {
 		math::Vec3f pos;
 		math::Vec3f normal;
+		math::Vec3f tangent;
+		math::Vec3f bitangent;
 		math::Vec2f uv;
 		math::Vec4f color;
 
-		PointP3NUC() = default;
-		PointP3NUC(const math::Vec3f pos, const math::Vec3f normal, const math::Vec2f uv, const math::Vec4f color)
+		PointP3NTBUC() = default;
+		PointP3NTBUC(const math::Vec3f pos, const math::Vec3f normal, const math::Vec3f tangent, const math::Vec3f bitangent, const math::Vec2f uv, const math::Vec4f color)
+			: pos(pos), normal(normal), tangent(tangent), bitangent(bitangent), uv(uv), color(color) {
+		}
+		PointP3NTBUC(const math::Vec3f pos, const math::Vec3f normal, const math::Vec2f uv, const math::Vec4f color)
 			: pos(pos), normal(normal), uv(uv), color(color) {
 		}
 		static void setMaterial(MaterialBase& material) {
-			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, pos));
-			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, normal));
-			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, uv));
-			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(PointP3NUC), (void*)offsetof(PointP3NUC, color));
+			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, pos));
+			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, normal));
+			glVertexAttribPointer(ATTRIBPOINTER_TANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, tangent));
+			glVertexAttribPointer(ATTRIBPOINTER_BITANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, bitangent));
+			glVertexAttribPointer(ATTRIBPOINTER_UV, 2, GL_FLOAT, GL_FALSE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, uv));
+			glVertexAttribPointer(ATTRIBPOINTER_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, color));
 		}
 		static const GLenum renderMode = GL_TRIANGLES;
 
 		void Tranform(const math::Mat4f& transform) {
 			pos = (math::Vec3f)(transform * math::Vec4f(pos.x, pos.y, pos.z, 1));
+			tangent = (math::Vec3f)(transform * math::Vec4f(tangent.x, tangent.y, tangent.z, 0).Normal());
+			bitangent = (math::Vec3f)(transform * math::Vec4f(bitangent.x, bitangent.y, bitangent.z, 0).Normal());
 			normal = (math::Vec3f)(transform * math::Vec4f(normal.x, normal.y, normal.z, 0).Normal());
 		}
 
 		//text stream
-		static std::vector<PointP3NUC> ParseStream_obj(std::istream& data, const math::Mat4f* transform = 0) {
-			STAMPERROR(data.fail(), "PointP3NUC::ParseStream_obj - data stream is invalid.");
+		static std::vector<PointP3NTBUC> ParseStream_obj(std::istream& data, const math::Mat4f* transform = 0) {
+			STAMPERROR(data.fail(), "PointP3NTBUC::ParseStream_obj - data stream is invalid.");
 			auto spos = data.tellg();
 			std::vector<math::Vec3f> pos{};
 			std::vector<math::Vec3f> normal{};
+			std::vector<math::Vec3f> tangent{};
 			std::vector<math::Vec4f> color{};
 			std::vector<math::Vec2f> uv{};
 			bool k = false;
@@ -116,8 +129,8 @@ export namespace render {
 			}
 			data.clear();
 			data.seekg(spos);
-			std::vector<PointP3NUC> mesh{};
-			std::vector<PointP3NUC> points{};
+			std::vector<PointP3NTBUC> mesh{};
+			std::vector<PointP3NTBUC> points{};
 			while ((bool)data) {
 				data.getline(line, sizeof(line));
 				points.clear();
@@ -130,7 +143,7 @@ export namespace render {
 				char* d = line + 1;
 				while (sscanf_s(d, " %d/%d/%d%n", &p, &t, &n, &c) == 3) {
 					d += c;
-					PointP3NUC point{};
+					PointP3NTBUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -139,7 +152,7 @@ export namespace render {
 				}
 				while (sscanf_s(d, " %d//%d%n", &p, &n, &c) == 2) {
 					d += c;
-					PointP3NUC point{};
+					PointP3NTBUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.normal = normal[n - 1];
@@ -147,7 +160,7 @@ export namespace render {
 				}
 				while (sscanf_s(d, " %d/%d%n", &p, &t, &c) == 2) {
 					d += c;
-					PointP3NUC point{};
+					PointP3NTBUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					point.uv = uv[t - 1];
@@ -155,7 +168,7 @@ export namespace render {
 				}
 				while (sscanf_s(d, " %d%n", &p, &c) == 1) {
 					d += c;
-					PointP3NUC point{};
+					PointP3NTBUC point{};
 					point.pos = pos[p - 1];
 					point.color = color[p - 1];
 					points.push_back(point);
@@ -171,6 +184,46 @@ export namespace render {
 				for (int i = 0; i < mesh.size(); i++) {
 					mesh[i].Tranform(*transform);
 				}
+			}
+			//https://terathon.com/blog/tangent-space.html
+			for (int i = 0; i < mesh.size(); i+=3) {
+				long i1 = i;
+				long i2 = i + 1;
+				long i3 = i + 2;
+
+				const math::Vec3f& v1 = mesh[i1].pos;
+				const math::Vec3f& v2 = mesh[i2].pos;
+				const math::Vec3f& v3 = mesh[i3].pos;
+
+				const math::Vec2f& w1 = mesh[i1].uv;
+				const math::Vec2f& w2 = mesh[i2].uv;
+				const math::Vec2f& w3 = mesh[i3].uv;
+
+				float x1 = v2.x - v1.x;
+				float x2 = v3.x - v1.x;
+				float y1 = v2.y - v1.y;
+				float y2 = v3.y - v1.y;
+				float z1 = v2.z - v1.z;
+				float z2 = v3.z - v1.z;
+
+				float s1 = w2.x - w1.x;
+				float s2 = w3.x - w1.x;
+				float t1 = w2.y - w1.y;
+				float t2 = w3.y - w1.y;
+
+				float r = 1.0F / (s1 * t2 - s2 * t1);
+				math::Vec3f sdir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+					(t2 * z1 - t1 * z2) * r);
+				math::Vec3f tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+					(s1 * z2 - s2 * z1) * r);
+
+				mesh[i1].tangent = sdir;
+				mesh[i2].tangent = sdir;
+				mesh[i3].tangent = sdir;
+
+				mesh[i1].bitangent = tdir;
+				mesh[i2].bitangent = tdir;
+				mesh[i3].bitangent = tdir;
 			}
 
 			return mesh;
@@ -350,10 +403,40 @@ export namespace render {
 			if (textureBinds == 0) {
 				glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextureUnits);
 				textureBinds = new SamplerBase * [maxTextureUnits];
-				memset(textureBinds, 0, sizeof(void*) * maxTextureUnits);
+				memset(textureBinds, 0, sizeof(SamplerBase*) * maxTextureUnits);
 			}
 		}
-
+		void BindActive() {
+			STAMPERROR(activeIndex != 0, "render::TextureBase::BindActive - texture already active.");
+			if (activeIndex != 0) return;
+			STAMPERROR(textureID == 0, "render::TextureBase::BindActive - uninitialized texture, attempted access failed.");
+			int index = -1;
+			for (int i = reservedSamplers; i < maxTextureUnits; i++) {
+				if (textureBinds[i] == 0) {
+					index = i;
+					break;
+				}
+			}
+			if (index == -1) {
+				STAMPERROR(textureID == 0, "render::TextureBase::BindActive - no open texture locations.");
+				return;
+			}
+			glActiveTexture(GL_TEXTURE0 + index);
+			glBindTexture(target, textureID);
+			glActiveTexture(GL_TEXTURE0);
+			if (textureBinds[index]) textureBinds[index]->activeIndex = 0;
+			textureBinds[index] = this;
+			activeIndex = index;
+		}
+		void UnbindActive() {
+			if (textureBinds == 0 || textureID == 0) return;
+			//only need to uncomment to force texture to unload instead of replacing later.
+			//glActiveTexture(GL_TEXTURE0 + textureID);
+			//glBindTexture(target, 0);
+			//glActiveTexture(GL_TEXTURE0);
+			textureBinds[textureID] = nullptr;
+			activeIndex = 0;
+		}
 		virtual ~SamplerBase() {
 			if (textureID != 0) {
 				glDeleteTextures(1, &textureID);
@@ -363,36 +446,6 @@ export namespace render {
 				textureBinds[activeIndex] = nullptr;
 				activeIndex = 0;
 			}
-		}
-		void BindActive() {
-			if (activeIndex != 0) return;
-			STAMPERROR(textureID == 0,"render::TextureBase::BindActive - uninitialized texture, attempted access failed.");
-			int index = -1;
-			for(int i = 1; i < maxTextureUnits; i++) {
-				if (textureBinds[i] == 0) {
-					index = i;
-					break;
-				}
-			}
-			if(index == -1) {
-				STAMPERROR(textureID == 0,"render::TextureBase::BindActive - no open texture locations.");
-				return;
-			}
-			glActiveTexture(GL_TEXTURE0 + index);
-			glBindTexture(target, textureID);
-			glActiveTexture(GL_TEXTURE0);
-			if(textureBinds[index]) textureBinds[index]->activeIndex = 0;
-			textureBinds[index] = this;
-			activeIndex = index;
-		}
-		void UnbindActive() {
-			if(textureBinds == 0 || textureID == 0) return;
-			//only need to uncomment to force texture to unload instead of replacing later.
-			//glActiveTexture(GL_TEXTURE0 + textureID);
-			//glBindTexture(target, 0);
-			//glActiveTexture(GL_TEXTURE0);
-			textureBinds[textureID] = nullptr;
-			textureID = 0;
 		}
 		int GetTextureId() const {
 			return textureID;
@@ -470,7 +523,7 @@ export namespace render {
 			this->mipmapLevels = mipmaps;
 			this->target = GL_TEXTURE_2D;
 			Bind();
-			glTexStorage2D(GL_TEXTURE_2D, mipmapLevels, internalFormat, width, height);
+			glTexStorage2D(this->target, mipmapLevels, internalFormat, width, height);
 		}
 	public:
 		SamplerTexture2d() { }
@@ -495,7 +548,7 @@ export namespace render {
 			STAMPERROR(tex.Height() != Height(mipmapLevel),"render::ImageTexture2d::SetImage - height of mipmap layer not half, rounded down, of previous mipmap layer height");
 			Bind();
 			GLSTAMPERROR;
-			glTexSubImage2D(GL_TEXTURE_2D, mipmapLevel, 0, 0, tex.Width(), tex.Height(), format, type, tex.GetData());
+			glTexSubImage2D(this->target, mipmapLevel, 0, 0, tex.Width(), tex.Height(), format, type, tex.GetData());
 			GLSTAMPERROR;
 		}
 		void GenMipmaps() {
@@ -519,6 +572,8 @@ export namespace render {
 			swap(a.internalFormat, b.internalFormat);
 			swap((SamplerBase&)a, (SamplerBase&)b);
 		}
+
+		static std::shared_ptr<SamplerTexture2d> GetWhiteTexture();
 	};
 	class RawTexture2d4f final : public RawTexture2dBase<math::Vec4f, GL_RGBA, GL_FLOAT> {
 	public:
@@ -775,6 +830,7 @@ export namespace render {
 			glBufferData(GL_UNIFORM_BUFFER, size, ptr, (GLenum)usage);
 		}
 		void BindBuffer() {
+			STAMPERROR(blockIndex != 0, "render::UniformBufferObject::BindBuffer - buffer already bound.");
 			if (blockIndex != 0) return;
 			STAMPERROR(ubo == 0,"render::UniformBufferObject::BindBuffer - buffer unitialized.");
 			int index = -1;
@@ -1086,10 +1142,9 @@ export namespace render {
 			return program;
 		}
 		void Bind() {
-			if (currentProgram == 0 || currentProgram != program) {
-				glUseProgram(program);
-				currentProgram = program;
-			}
+			if (currentProgram == program) return;
+			glUseProgram(program);
+			currentProgram = program;
 		}
 		bool isValid() const {
 			return program != 0;
@@ -1324,7 +1379,9 @@ export namespace render {
 		virtual void UpdateMaterial() = 0;
 	public:
 		std::shared_ptr<ShaderProgramBase> shader{};
-		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) = 0;
+
+		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) = 0;
+
 		void UpdateMeshAttrib(Mesh* mesh) {
 			if (!mesh) return;
 			Bind();
@@ -1352,6 +1409,7 @@ export namespace render {
 	};
 	class SolidMaterial final : public MaterialBase {
 		int blockBindingCamera = -1;
+		int blockBindingObject = -1;
 
 		virtual void UpdateMaterial() {
 			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
@@ -1366,6 +1424,7 @@ export namespace render {
 			}
 
 			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
+			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
 			if (texture != 0) texture->BindActive();
 			if (normalMap != 0) normalMap->BindActive();
 		}
@@ -1385,18 +1444,19 @@ export namespace render {
 			using std::swap;
 			swap(*this, other);
 		}
-		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) {
+		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) {
 			Bind();
 			if (texture != 0) shader->Uniform(UNIFORM_TEXTURE0, texture.get());
 			if (normalMap != 0) shader->Uniform(UNIFORM_NORMALMAP, normalMap.get());
 			shader->UniformBuffer(blockBindingCamera, *camera);
-			shader->Uniform(UNIFORM_TRANSFORM, transform);
+			shader->UniformBuffer(blockBindingObject, *object);
 			mesh->RenderArray();
 		}
 		inline friend void swap(SolidMaterial& a, SolidMaterial& b) noexcept {
 			using std::swap;
 			swap((MaterialBase&)a, (MaterialBase&)b);
 			swap(a.blockBindingCamera, b.blockBindingCamera);
+			swap(a.blockBindingObject, b.blockBindingObject);
 			swap(a.color, b.color);
 			swap(a.useVertexColorValue, b.useVertexColorValue);
 			swap(a.texture, b.texture);
@@ -1406,6 +1466,7 @@ export namespace render {
 	};
 	class UIMaterial final : public MaterialBase {
 		int blockBindingCamera = -1;
+		int blockBindingObject = -1;
 		int blockBindingUIMaterial = -1;
 		UniformBufferObject ubo{};
 
@@ -1417,8 +1478,8 @@ export namespace render {
 			glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
 
 			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
+			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
 			blockBindingUIMaterial = shader->GetUniformBufferLocation("ST_UIMAT");
-			if (texture != 0) texture->BindActive();
 
 			struct UIMaterial_t {
 				GLboolean texture0;
@@ -1442,14 +1503,20 @@ export namespace render {
 			using std::swap;
 			swap(*this, other);
 		}
-		virtual void Render(Mesh* mesh, const math::Mat4f& transform, UniformBufferObject* camera) {
+		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) {
 			GLSTAMPERROR;
 			Bind();
-			if (texture != 0) shader->Uniform(UNIFORM_TEXTURE0, texture.get());
+			if (texture != 0) {
+				texture->BindActive();
+				shader->Uniform(UNIFORM_TEXTURE0, texture.get());
+			}
 			shader->UniformBuffer(blockBindingCamera, *camera);
+			shader->UniformBuffer(blockBindingObject, *object);
 			shader->UniformBuffer(blockBindingUIMaterial, ubo);
-			shader->Uniform(UNIFORM_TRANSFORM, transform);
 			glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
+			if (texture != 0) {
+				texture->UnbindActive();
+			}
 			mesh->RenderArray();
 			GLSTAMPERROR;
 		}
@@ -1457,6 +1524,7 @@ export namespace render {
 			using std::swap;
 			swap((MaterialBase&)a, (MaterialBase&)b);
 			swap(a.blockBindingCamera, b.blockBindingCamera);
+			swap(a.blockBindingObject, b.blockBindingObject);
 			swap(a.blockBindingUIMaterial, b.blockBindingUIMaterial);
 			swap(a.ubo, b.ubo);
 			swap(a.color, b.color);
@@ -1589,7 +1657,7 @@ export namespace render {
 
 	class OceanRenderObject : public std::enable_shared_from_this<OceanRenderObject> {
 		int blockBindingCamera = -1;
-		int blockBindingOcean = -1;
+		int blockBindingObject = -1;
 		GLuint vao = 0;
 	public:
 		int width = 40;
@@ -1604,16 +1672,16 @@ export namespace render {
 			glGenVertexArrays(1, &vao);
 		}
 		void UpdateRenderer() {
-			if (blockBindingCamera == -1) blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
-			if(blockBindingOcean == -1) blockBindingOcean = shader->GetUniformBufferLocation("ST_Ocean");
+			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
+			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
 
-
-			if (noiseTex != 0) noiseTex->BindActive();
 			glBindVertexArray(vao);
 		}
 
 		void Render(const math::Mat4f& transform, UniformBufferObject& camera) {
+			GLSTAMPERROR;
 			struct Data {
+				math::GLmat4 transform;
 				GLfloat time;
 				GLint width;
 				GLint height;
@@ -1625,6 +1693,7 @@ export namespace render {
 			};
 
 			Data d{};
+			d.transform = transform;
 			d.scale = scale;
 			d.vertOffset = vertOffset;
 			d.time = wm::CurrentWindow()->Time();
@@ -1634,12 +1703,14 @@ export namespace render {
 			d.count = d.Vy * width - 1;
 			d.origin = (math::Vec3f)(transform * math::Vec3f(0, 0, 0));
 			OceanObj.Set(&d, sizeof(Data), BufferUsageHint::StreamDraw);
-
 			glBindVertexArray(vao);
+			OceanObj.BindBuffer();
 			shader->UniformBuffer(blockBindingCamera, camera);
-			shader->UniformBuffer(blockBindingOcean, OceanObj);
-			shader->Uniform(UNIFORM_TRANSFORM, transform);
-			if (noiseTex != 0) shader->Uniform(UNIFORM_TEXTURE0, noiseTex.get());
+			shader->UniformBuffer(blockBindingObject, OceanObj);
+			if (noiseTex) {
+				noiseTex->BindActive();
+				shader->Uniform(UNIFORM_TEXTURE0, noiseTex.get());
+			}
 			shader->Bind();
 			if (!depthTest) {
 				glDepthMask(GL_FALSE);
@@ -1651,6 +1722,10 @@ export namespace render {
 				glDepthMask(GL_TRUE);
 			}
 			GLSTAMPERROR;
+			if (noiseTex) {
+				noiseTex->UnbindActive();
+			}
+			OceanObj.UnbindBuffer();
 		}
 		~OceanRenderObject() {
 			if (vao != 0) {
@@ -1794,3 +1869,17 @@ export namespace render {
 //text to mesh
 //mesh renderer
 //ui mesh renderer
+
+
+std::shared_ptr<render::SamplerTexture2d> render::SamplerTexture2d::GetWhiteTexture() {
+	static thread_local std::weak_ptr<SamplerTexture2d> whiteTexture = {};
+	std::shared_ptr<render::SamplerTexture2d> tex;
+	if (whiteTexture.expired()) {
+		tex = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d(1, 1) };
+		RawTexture2d4f rawTex{ 1,1 };
+		rawTex.SetPixel(0, 0, math::Vec4f{ 1,1,1,1 });
+		tex->SetImage(rawTex, 0);
+		whiteTexture = tex;
+	}
+	return whiteTexture.lock();
+}

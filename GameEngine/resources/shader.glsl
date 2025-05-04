@@ -2,7 +2,10 @@
 
 const vec3 lightSource = normalize(vec3(2,1,0));
 
-layout(location = 1) uniform mat4 transform;
+layout(std140) uniform ST_Object {
+	mat4 transform;
+} object;
+
 layout(std140) uniform ST_Camera {
 	mat4 transform;
 	mat4 perspective;
@@ -10,6 +13,10 @@ layout(std140) uniform ST_Camera {
 	vec3 position;
 } camera;
 
+#define CAMERA_UP vec3(camera.transform[0][1], camera.transform[1][1], camera.transform[2][1])
+#define CAMERA_RIGHT vec3(camera.transform[0][0], camera.transform[1][0], camera.transform[2][0])
+#define CAMERA_FORWARD vec3(camera.transform[0][2], camera.transform[1][2], camera.transform[2][2])
+#define TRANSFORM_POSITION vec3(object.transform[3][0], object.transform[3][1], object.transform[3][2])
 #ifdef VERTEX_SHADER
 
 layout(location = 1) in vec3 position_v;
@@ -21,10 +28,18 @@ out vec3 worldPos;
 out vec3 normal;
 
 void main() {
-	normal = (transform * vec4(normal_v, 0)).xyz;
-	vec4 wp = transform * vec4(position_v,1);
+	normal = (object.transform * vec4(normal_v, 0)).xyz;
+	vec4 wp = object.transform * vec4(position_v,1);
 	worldPos = wp.xyz;
 	gl_Position = camera.perspective * camera.transform * wp;
+
+	//billboard
+	// normal = (object.transform * vec4(normal_v, 0)).xyz;
+	// vec3 wp1 = TRANSFORM_POSITION + CAMERA_UP * position_v.y + CAMERA_RIGHT * position_v.x;
+	// vec4 wp = vec4(wp1, 1);
+	// worldPos = wp.xyz;
+	// gl_Position = camera.perspective * camera.transform * wp;
+
 }
 
 #endif

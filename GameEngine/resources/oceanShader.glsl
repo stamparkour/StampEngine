@@ -4,14 +4,8 @@ const float eps = 0.17;
 const vec3 lightSource = normalize(vec3(2,1,0));
 
 layout(location = 20) uniform sampler2D noise;
-layout(location = 1) uniform mat4 transform;
-layout(std140) uniform ST_Camera {
+layout(std140) uniform ST_Object {
 	mat4 transform;
-	mat4 perspective;
-	mat4 UI;
-	vec3 position;
-} camera;
-layout(std140) uniform ST_Ocean {
 	float time;
 	int width;
 	int height;
@@ -20,10 +14,16 @@ layout(std140) uniform ST_Ocean {
 	float scale;
 	float vertOffset;
 	vec3 origin;
-} ocean;
+} object;
+layout(std140) uniform ST_Camera {
+	mat4 transform;
+	mat4 perspective;
+	mat4 UI;
+	vec3 position;
+} camera;
 
 float getHeight(vec2 v) {
-	return pow(texture(noise,v / 60 + vec2(0.01,0.02) * ocean.time).r,3) * 2 + texture(noise,v / 20 + vec2(0.2,0.07) + vec2(0.03,0.01) * ocean.time).g * 0.5 - 0.6;
+	return pow(texture(noise,v / 60 + vec2(0.01,0.02) * object.time).r,3) * 2 + texture(noise,v / 20 + vec2(0.2,0.07) + vec2(0.03,0.01) * object.time).g * 0.5 - 0.6;
 }
 
 vec3 getNormal(vec2 v) {
@@ -40,18 +40,18 @@ out vec3 worldPos;
 out vec3 localPos;
 
 void main() {
-	vec2 position_v = vec2(-gl_VertexID/ocean.Vy + ocean.width / 2.0, - ocean.height / 2.0);
-	float k = mod(gl_VertexID, ocean.Vy);
-	if(abs(k - (ocean.Vy - 2)) < eps) {
-		position_v += vec2(-1,ocean.height);
+	vec2 position_v = vec2(-gl_VertexID/object.Vy + object.width / 2.0, - object.height / 2.0);
+	float k = mod(gl_VertexID, object.Vy);
+	if(abs(k - (object.Vy - 2)) < eps) {
+		position_v += vec2(-1,object.height);
 	}
-	else if(abs(k - (ocean.Vy - 1)) < eps) {
+	else if(abs(k - (object.Vy - 1)) < eps) {
 		position_v += vec2(-1,0);
 	}
 	else {
 		position_v += vec2(-mod(k, 2), floor(k / 2));
 	}
-	position_v *= ocean.scale;
+	position_v *= object.scale;
 
 
 	/*if(abs(position_v.x) >= curveLimit) {
@@ -61,11 +61,11 @@ void main() {
 		position_v.y = position_v.y * position_v.y * sign(position_v.y) / curveLimit;
 	}*/
 
-	vec4 wp = transform * vec4(position_v.x, 1, position_v.y,1);
+	vec4 wp = object.transform * vec4(position_v.x, 1, position_v.y,1);
 	
-	wp.y = getHeight(wp.xz) * wp.y + ocean.vertOffset;
+	wp.y = getHeight(wp.xz) * wp.y + object.vertOffset;
 	worldPos = wp.xyz;
-	localPos = wp.xyz - ocean.origin;
+	localPos = wp.xyz - object.origin;
 	gl_Position = camera.perspective * camera.transform * wp;
 }
 
@@ -83,10 +83,10 @@ void main() {
 	vec3 reflectionNormal = normalize(viewNormal - 2 * dot(viewNormal, normal) * normal);
 	float spectral = dot(reflectionNormal, lightSource);
 	float aura = max(0.4,dot(reflectionNormal, viewNormal));
-	spectral = (spectral - 0.989) / (0.996 - 0.989);
+	spectral = (spectral - 0.985) / (0.996 - 0.985);
 	spectral = clamp(spectral, 0, 1);
 	diffuseColor = color * aura + spectral; //* (localPos.y +  6.0 / 25) * 25 / 12;
-	if(ocean.scale < 64) diffuseColor.a = ( ocean.width * ocean.scale / 2 - length(localPos) ) ;
+	if(object.scale < 64) diffuseColor.a = ( object.width * object.scale / 2 - length(localPos) ) ;
 	else diffuseColor.a = 1;
 }
 

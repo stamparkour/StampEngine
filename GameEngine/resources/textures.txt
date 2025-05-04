@@ -1,0 +1,14 @@
+Texture stamp:ariel_24 {
+	path = resources\ariel_24.bmp
+	minFilter = linear mipmap nearest
+	magFilter = nearest
+}
+Texture stamp:perlin_noise {
+	path = resources\perlin_noise.bmp
+}
+Texture stamp:test {
+	path = resources\test.bmp
+}
+Texture stamp:sun {
+	path = resources\sun.bmp
+}

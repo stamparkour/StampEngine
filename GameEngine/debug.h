@@ -7,7 +7,7 @@
 //pauses console after error
 #define SWM_DEBUG_PAUSE
 
-#if defined(SWM_DEBUG) || defined(_DEBUG) 
+#if defined(SWM_DEBUG) 
 #ifdef SWM_DEBUG_PAUSE 
 #define STAMPSTACK() std::cout << std::to_string(std::stacktrace::current()) << std::endl
 #define STAMPDMSG(msg) std::cout << msg << std::endl; std::cin.get()

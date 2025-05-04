@@ -166,6 +166,9 @@ export namespace wm {
 	struct Rect {
 		int x, y, width, height;
 	};
+	struct RectF {
+		float x, y, width, height;
+	};
 
 	/*template <typename T>
 	class SharedX : public std::enable_shared_from_this<T> {
@@ -614,14 +617,13 @@ export namespace wm {
 				}
 
 				if (scene) scene->SyncUpdate();
-				
 				mouse.SyncUpdate();
 				keyboard.SyncUpdate();
 				for (int i = 0; i < devices.size(); i++) {
 					devices[i]->SyncUpdate();
 				}
-
-
+				if (sceneInstantiate) continue;
+				
 				//parallel
                 std::thread update(&Window::Update, this);
 
@@ -727,6 +729,15 @@ export namespace wm {
 
 			return r;
 		}
+		RectF GetNormalizedGameRect() {
+			Rect r = GetGameRect();
+			RectF l{};
+			l.x = (float)r.x / clientWidth * 2 - 1;
+			l.y = (float)r.y / clientHeight * 2 - 1;
+			l.width = (float)r.width / clientWidth * 2 - 1;
+			l.height = (float)r.height / clientHeight * 2 - 1;
+			return l;
+		}
 		/// <summary>
 		/// 
 		/// </summary>
@@ -756,6 +767,7 @@ export namespace wm {
 			else ShowWindow(hwnd, (int)state);
 		}
 		void Resizable(bool resizable) {}
+
 
 		void AwaitClose() {
 			std::unique_lock lk(closeMutex);
@@ -883,7 +895,7 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		return window->Create(hwnd, (CREATESTRUCT*)lparam) ? 0 : -1;
 	case WM_DESTROY:
 		if (window) window->Destroy();
-		PostQuitMessage(0);
+		//PostQuitMessage(0);
 		return 0;
 	case WM_CLOSE:
 		if (!window || window->Close()) DestroyWindow(hwnd);
@@ -1057,6 +1069,8 @@ wm::Window::Window(std::string title, wm::WindowConstruct construct) {
 		return k;
 	}();
 
+	std::cout << "[Window] created!" << std::endl;
+
 	static ATOM classAtom = []()->ATOM{
 		const WNDCLASSEXA wndClass{
 			.cbSize = sizeof(WNDCLASSEX),
@@ -1085,13 +1099,15 @@ wm::Window::Window(std::string title, wm::WindowConstruct construct) {
 }
 
 void wm::RawSceneBase::Render() {
+	GLSTAMPERROR;
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, window->GetInitialFramebuffer());
 	glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
 	glDrawBuffer(GL_BACK_LEFT);
 	Rect r = window->GetGameRect();
+	GLSTAMPERROR;
 	glBlitFramebuffer(0, 0, colorAttachmentWidth, colorAttachmentHeight, r.x, r.y,
-		r.x + r.width, r.y + r.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR
+		r.x + r.width, r.y + r.height, GL_COLOR_BUFFER_BIT, GL_SCALED_RESOLVE_NICEST_EXT);//GL_NEAREST  GL_LINEAR GL_SCALED_RESOLVE_FASTEST_EXT GL_SCALED_RESOLVE_NICEST_EXT
 
 	GLSTAMPERROR;
 }

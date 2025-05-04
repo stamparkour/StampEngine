@@ -2,6 +2,8 @@
 
 layout(std140) uniform ST_Object {
 	mat4 transform;
+	//scale
+	//position
 } object;
 layout(std140) uniform ST_Camera {
 	mat4 transform;
@@ -9,10 +11,6 @@ layout(std140) uniform ST_Camera {
 	mat4 UI;
 	vec3 position;
 } camera;
-
-layout(std140) uniform ST_UIMAT {
-	bool texture0;
-} uiMat;
 
 layout(location = 20) uniform sampler2D texture0;
 

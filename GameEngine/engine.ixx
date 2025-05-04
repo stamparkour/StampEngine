@@ -2,6 +2,10 @@ module;
 
 #include <stdint.h>
 #include "debug.h"
+#include "lua/lua.hpp"
+
+#define luaS_registermetatable(L, l, tname) (luaL_newmetatable(L, tname),luaL_setfuncs(L, l, 0),lua_setglobal(L, tname))
+#define luaS2_registermetatable(L, _class) (luaL_newmetatable((L), _class::TypeID.c_str()),luaL_setfuncs(L, _class::LuaReg, 0),lua_setglobal(L, _class::TypeID.c_str()))
 
 export module engine;
 
@@ -29,6 +33,497 @@ enum struct EnableState {
 
 constexpr auto BITMASK(auto i) {
 	return (1 << (int)i);
+}
+
+export namespace lua {
+	class LuaManager final {
+		static inline LuaManager* instance = 0;
+
+		LuaManager() {
+			instance = this;
+			L = luaL_newstate();
+			luaL_openlibs(L);
+			void* p = lua_getextraspace(L);
+			p = this;
+		}
+		void LoadFile(const char* filename) {
+			int error = luaL_dofile(L, filename);
+			if (error) {
+				STAMPSTACK();
+				STAMPDMSG("lua::luamanager::loadfile - error : " << lua_tostring(L, -1));
+				lua_pop(L, 1);
+			}
+		}
+	public:
+		lua_State* L = nullptr;
+
+		static LuaManager* Instance() {
+			if (!instance) {
+				instance = new LuaManager();
+			}
+			return instance;
+		}
+
+		LuaManager(LuaManager& other) = delete;
+		LuaManager& operator =(const LuaManager& other) = delete;
+		LuaManager(LuaManager&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		LuaManager& operator =(LuaManager&& other) noexcept {
+			using std::swap;
+			swap(*this, other);
+		}
+		friend void swap(LuaManager& a, LuaManager& b) noexcept {
+			using std::swap;
+			swap(a.L, b.L);
+		}
+
+		void LoadDefaultFiles() {
+			if (!std::filesystem::exists("./script/")) {
+				std::cout << "[LUA] lua script folder does not exist" << std::endl;
+				return;
+			}
+			for (auto const& entry : std::filesystem::directory_iterator("./script/")) {
+				if (entry.path().extension() == ".lua") {
+					std::cout << "[LUA] Loading lua file: " << entry.path().string() << std::endl;
+					LoadFile(entry.path().string().c_str());
+				}
+			}
+		}
+		void RegisterFunction(const std::string& name, lua_CFunction func) {
+			lua_register(L, name.c_str(), func);
+		}
+		~LuaManager() {
+			if (L) {
+				lua_close(L);
+				L = 0;
+			}
+		}
+	};
+}
+
+export namespace engine::resource {
+	class TextureResource {
+
+		std::weak_ptr<render::SamplerBase> tex{};
+		std::weak_ptr<render::RawTexture2d4f> rawTex{};
+	public:
+		static inline const std::string typeID = "Texture";
+		std::filesystem::path path{};
+		render::TextureMinFilter minFilter = render::TextureMinFilter::Linear;
+		render::TextureMagFilter magFilter = render::TextureMagFilter::Linear;
+
+		bool setValue(const std::string& key, const std::string& value) {
+			if (key == "path") {
+				path = value;
+				return true;
+			}
+			else if (key == "minFilter") {
+				if (value == "nearest") minFilter = render::TextureMinFilter::Nearest;
+				else if (value == "linear") minFilter = render::TextureMinFilter::Linear;
+				else if (value == "nearest mipmap nearest") minFilter = render::TextureMinFilter::NearestMipmapNearest;
+				else if (value == "linear mipmap nearest") minFilter = render::TextureMinFilter::LinearMipmapNearest;
+				else if (value == "nearest mipmap linear") minFilter = render::TextureMinFilter::NearestMipmapLinear;
+				else if (value == "linear mipmap linear") minFilter = render::TextureMinFilter::LinearMipmapLinear;
+				return true;
+			}
+			else if (key == "magFilter") {
+				if (value == "nearest") magFilter = render::TextureMagFilter::Nearest;
+				else if (value == "linear") magFilter = render::TextureMagFilter::Linear;
+				return true;
+			}
+			return false;
+		}
+
+		std::shared_ptr<render::RawTexture2d4f> getRawTexture2d4f() {
+			if (rawTex.expired()) {
+				std::fstream file{ path, std::ios::in | std::ios::binary };
+				auto rTex = std::make_shared<render::RawTexture2d4f>();
+				if (path.extension() == ".bmp") *rTex = render::RawTexture2d4f::ParseStream_bmp(file);
+				else return {};
+				rawTex = rTex;
+				return rTex;
+			}
+			return rawTex.lock();
+		}
+		std::shared_ptr<render::SamplerTexture2d> getSamplerTexture2d() {
+			if (tex.expired()) {
+				auto rTex = getRawTexture2d4f();
+				if (!rTex) return {};
+				auto sTex = std::make_shared<render::SamplerTexture2d>(rTex->Width(), rTex->Height());
+				sTex->SetImage(*rTex);
+				sTex->SetMinFilter(minFilter);
+				sTex->SetMagFilter(magFilter);
+				tex = sTex;
+				return sTex;
+			}
+			return std::static_pointer_cast<render::SamplerTexture2d>(tex.lock());
+		}
+	};
+
+	class MeshResource {
+		std::weak_ptr<std::vector<render::PointP3NTBUC>> rawmesh{};
+		std::weak_ptr<render::Mesh> mesh{};
+	public:
+		static inline const std::string typeID = "Mesh";
+		std::filesystem::path path{};
+		std::string material{};
+
+		bool setValue(const std::string& key, const std::string& value) {
+			if (key == "path") {
+				path = value;
+				return true;
+			}
+			else if (key == "material") {
+				material = value;
+				return true;
+			}
+			return false;
+		}
+		std::shared_ptr<std::vector<render::PointP3NTBUC>> getRawMesh() {
+			if (rawmesh.expired()) {
+				std::fstream file{ path, std::ios::in };
+				auto rMesh = std::make_shared<std::vector<render::PointP3NTBUC>>();
+				if (path.extension() == ".obj" || path.extension() == ".mesh") *rMesh = render::PointP3NTBUC::ParseStream_obj(file);
+				else return {};
+				rawmesh = rMesh;
+				return rMesh;
+			}
+			return rawmesh.lock();
+		}
+		std::shared_ptr<render::Mesh> GetMesh() {
+			if (mesh.expired()) {
+				auto m = std::make_shared<render::Mesh>();
+				auto rMesh = getRawMesh();
+				if (!rMesh) return {};
+				m->set(*rMesh);
+				mesh = m;
+				return m;
+			}
+			return mesh.lock();
+		}
+	};
+
+	class EntityBaseResource;
+
+	class ResourceManager {
+		static inline std::map<std::string, MeshResource> meshes;
+		static inline std::map<std::string, TextureResource> textures;
+		static inline std::map<std::string, EntityBaseResource*> entities;
+		static inline std::map<std::string, std::filesystem::path> shaders;
+		static inline std::map<std::string, std::filesystem::path> materials;
+		static inline std::map<std::string, std::filesystem::path> fontMaps;
+
+		template<typename T>
+		static bool parseResource(T& outT, const std::string& body) {
+			enum State {
+				None,
+				Comment,
+				Key,
+				Value,
+			};
+			std::string key = {};
+			std::string value = {};
+			State state = None;
+			int i = 0;
+			while (i < body.size()) {
+				switch (state) {
+				case None:
+					if (body[i] == '#') state = Comment;
+					else if (body[i] == '\n' || body[i] == '\t' || body[i] == ' ') {
+						i++;
+					}
+					else state = Key;
+					break;
+				case Comment:
+					if (body[i] == '\n') state = None;
+					i++;
+					break;
+				case Key:
+					for (; i < body.size(); i++) {
+						if (body[i] == '=') {
+							state = Value;
+							i++;
+							break;
+						}
+						if (body[i] == ' ' || body[i] == '\t') continue;
+						key += body[i];
+					}
+					break;
+				case Value:
+					for (; i < body.size(); i++) {
+						if (body[i] == ';' || body[i] == '\n') {
+							state = None;
+							break;
+						}
+						value += body[i];
+					}
+					for (; i < body.size() && (body[i] == ' ' || body[i] == '\t' || body[i] == '\n' || body[i] == ';'); i++);
+					value = std::regex_replace(value, std::regex("^ +| +$|( ) +"), "$1");
+					outT.setValue(key, value);
+					key.clear();
+					value.clear();
+					break;
+				}
+			}
+			return true;
+		}
+		static bool ParseBody(const std::string& type, const std::string& typeID, const std::string& body) {
+			if (type == TextureResource::typeID) {
+				TextureResource v;
+				if (!parseResource<TextureResource>(v, body)) {
+					STAMPSTACK();
+					STAMPDMSG("resource::ResourceManager::Initialize - failed to parse item: " << type);
+					return false;
+				}
+				std::string t = typeID;
+				textures[t] = v;
+			}
+			else if (type == MeshResource::typeID) {
+				MeshResource v;
+				if (!parseResource<MeshResource>(v, body)) {
+					STAMPSTACK();
+					STAMPDMSG("resource::ResourceManager::Initialize - failed to parse item: " << type);
+					return false;
+				}
+				std::string t = typeID;
+				meshes[t] = v;
+			}
+			else {
+				STAMPSTACK();
+				STAMPDMSG("resource::ResourceManager::Initialize - failed to parse item: " << type);
+			}
+
+			return true;
+		}
+		static void LoadFile(std::string& file) {
+			enum State {
+				None,
+				Comment,
+				Type,
+				TypeID,
+				Body,
+			};
+
+			std::string body = {};
+			std::string type{};
+			std::string typeID{};
+			State state = None;
+			int i = 0;
+			while (i < file.size()) {
+				switch (state) {
+				case None:
+					if (file[i] == '#') state = Comment;
+					else if (file[i] == '\n' || file[i] == '\t' || file[i] == ' ') {
+						i++;
+					}
+					else state = Type;
+					break;
+				case Comment:
+					if (file[i] == '\n') state = None;
+					i++;
+					break;
+				case Type:
+					for (; i < file.size(); i++) {
+						if (file[i] == ' ' || file[i] == '\t') {
+							state = TypeID;
+							break;
+						}
+						type += file[i];
+					}
+					for (; i < file.size() && (file[i] == ' ' || file[i] == '\t'); i++);
+					break;
+				case TypeID:
+					for (; i < file.size(); i++) {
+						if (file[i] == ' ' || file[i] == '\t') {
+							state = Body;
+							break;
+						}
+						typeID += file[i];
+					}
+					for (; i < file.size() && (file[i] == ' ' || file[i] == '\t' || file[i] == '\n' || file[i] == '{'); i++);
+					break;
+				case Body: {
+					int nesting = 1;
+					for (; i < file.size(); i++) {
+						if (file[i] == '{') {
+							nesting++;
+						}
+						else if (file[i] == '}') {
+							nesting--;
+							if (nesting == 0) {
+								state = None;
+								i++;
+								break;
+							}
+						}
+						body += file[i];
+					}
+					if (!ParseBody(type, typeID, body)) return;
+					type = {};
+					typeID = {};
+					body = {};
+				} break;
+				}
+			}
+		}
+	public:
+		static void Initialize() {
+			if (!std::filesystem::exists("./resources/")) {
+				std::cout << "[RESOURCE] resource script folder does not exist" << std::endl;
+				return;
+			}
+			std::string buffer;
+			for (auto const& entry : std::filesystem::recursive_directory_iterator("./resources/")) {
+				if (entry.path().extension() == ".txt") {
+					std::cout << "[RESOURCE] Loading resource file: " << entry.path().string() << std::endl;
+					{
+						std::fstream stream(entry.path().string(), std::ios::in);
+						if (!stream) continue;
+						stream.seekg(0, std::ios::end);
+						size_t size = stream.tellg();
+						buffer = std::string(size, ' ');
+						stream.seekg(0, std::ios::beg);
+						stream.read(&buffer[0], size);
+					}
+					LoadFile(buffer);
+				}
+			}
+		}
+		static inline TextureResource* GetTexture(const std::string& typeID) {
+			TextureResource* tex = nullptr;
+			for (auto& texture : textures) {
+				if (texture.first == typeID) {
+					tex = &texture.second;
+					break;
+				}
+			}
+			STAMPERROR(tex == nullptr, "resource::ResourceManager::GetTexture - texture not found.");
+			return tex;
+		}
+		template<typename T>
+		static inline T* GetEntity(const std::string& typeID) {
+			EntityBaseResource* entity = nullptr;
+			for (auto& v : entities) {
+				if (v.first == typeID) {
+					entity = v.second;
+					break;
+				}
+			}
+			STAMPERROR(entity == nullptr, "resource::ResourceManager::GetEntity - entity not found.");
+			return (T*)entity;
+		}
+		template<typename T>
+		static inline T* RegisterEntity(const std::string& typeID) {
+			T* entity = nullptr;
+			for (auto& v : entities) {
+				if (v.first == typeID) {
+					entity = (T*)v.second;
+					break;
+				}
+			}
+			if (entity == nullptr) {
+				entity = (T*)(entities[typeID] = new T(typeID));
+			}
+			return entity;
+		}
+		static inline MeshResource* GetMesh(const std::string& typeID) {
+			MeshResource* mesh = nullptr;
+			for (auto& v : meshes) {
+				if (v.first == typeID) {
+					mesh = &v.second;
+					break;
+				}
+			}
+			STAMPERROR(mesh == nullptr, "resource::ResourceManager::GetMesh - texture not found.");
+			return mesh;
+		}
+		static std::shared_ptr<render::ShaderProgramBase> GetShader(const std::string& typeID);
+		static std::shared_ptr<render::FontMap> GetFontMap(const std::string& typeID);
+	};
+
+	class EntityBaseResource {
+	public:
+		static inline const std::string TypeID = "EntityBase";
+		float mass = 1;
+		bool isDynamic = true;
+		std::string meshID{};
+		std::string typeID{};
+
+		EntityBaseResource(const std::string& typeID) : typeID(typeID) { }
+	
+		virtual int Index(lua_State* L) {
+			std::string arg{ lua_tostring(L, 2) };
+			if (arg == "mass") lua_pushnumber(L, mass);
+			else if (arg == "isDynamic") lua_pushboolean(L, isDynamic);
+			else if (arg == "mesh") lua_pushstring(L, meshID.c_str());
+			else if (arg == "typeID") lua_pushstring(L, typeID.c_str());
+			else return 0;
+			return 1;
+		}
+		virtual int NewIndex(lua_State* L) {
+			std::string arg{ lua_tostring(L, 2) };
+			if (arg == "mass") mass = lua_tonumber(L, -1);
+			else if (arg == "isDynamic") isDynamic = lua_toboolean(L, -1);
+			else if (arg == "mesh") meshID = lua_tostring(L, -1);
+			else return 0;
+			return 1;
+		}
+
+		static inline int Register(lua_State* L) {
+			if (lua_gettop(L) != 2) {
+				luaL_error(L, "EntityBaseResource::Register - invalid number of arguments");
+				return 0;
+			}
+			std::string arg{ lua_tostring(L, 2) };
+
+			auto obj = (EntityBaseResource**)lua_newuserdata(L, sizeof(void*));
+			*obj = ResourceManager::RegisterEntity<EntityBaseResource>(arg);
+			lua_pushvalue(L, 1);
+			lua_setmetatable(L, -2);
+			return 1;
+		}
+		static inline int __index(lua_State* L) {
+			if (lua_gettop(L) != 2) {
+				luaL_error(L, "EntityBaseResource::__index - invalid number of arguments");
+				return 0;
+			}
+			auto obj = (EntityBaseResource**)lua_touserdata(L, 1);
+
+			if (!obj) {
+				luaL_error(L, "EntityBaseResource::__index - invalid object");
+				return 0;
+			}
+			return (*obj)->Index(L);
+		}
+		static inline int __newindex(lua_State* L) {
+			if (lua_gettop(L) != 3) {
+				luaL_error(L, "EntityBaseResource::__newindex - invalid number of arguments");
+				return 0;
+			}
+			auto obj = (EntityBaseResource**)lua_touserdata(L, 1);
+
+			if (!obj) {
+				luaL_error(L, "EntityBaseResource::__newindex - invalid object");
+				return 0;
+			}
+			return (*obj)->NewIndex(L);
+		}
+
+		static inline const luaL_Reg LuaReg[] = {
+			{ "register", engine::resource::EntityBaseResource::Register},
+			{ "__index", engine::resource::EntityBaseResource::__index},
+			{ "__newindex", engine::resource::EntityBaseResource::__newindex},
+			{ 0, 0 }
+		};
+
+		std::shared_ptr<render::Mesh> GetMesh() {
+			auto ptr = engine::resource::ResourceManager::GetMesh(typeID);
+			if (!ptr) return 0;
+			return ptr->GetMesh();
+		}
+	};
 }
 
 export namespace engine {
@@ -192,6 +687,13 @@ export namespace engine {
 			QuerySyncTransform();
 		}
 		void OnDestroy() {
+			if (IsEnabled()) {
+				for (int i = 0; i < components.size(); i++) {
+					if ((components[i]->enableState == EnableState::Enabling || components[i]->enableState == EnableState::Enabled) && components[i]->state == State::Running) {
+						components[i]->OnDisable();
+					}
+				}
+			}
 			if (components.size() > 0) {
 				for (int i = 0; i < components.size(); i++) {
 					components[i]->OnDestroy();
@@ -240,13 +742,14 @@ export namespace engine {
 
 	protected:
 		GameObject() {}
+
 	public:
 		//only change in sync update, onenable, ondisable.
 		std::string name{};
 		render::Transform transform;
 		template<typename T, typename... P>
 		std::shared_ptr<T> AddComponent(P... param) {
-			std::shared_ptr<T> component{ new T(param...) };
+			std::shared_ptr<T> component = std::make_shared<T>(param...);
 			component->gameObject = std::shared_ptr<GameObject>{ shared_from_this()};
 			components.push_back(component);
 			if (!IsEnabled()) {
@@ -368,6 +871,12 @@ export namespace engine {
 		render::UniformBufferObject lightBuffer{};
 		int maxRenderLayers = (int)RenderLayer::Max;
 		std::vector<std::shared_ptr<GameObject>> objects{};
+		std::shared_ptr<render::MaterialBase> blitMat{};
+
+		render::UniformBufferObject blitCamera;
+		render::UniformBufferObject blitObject;
+
+
 		virtual void Start() {
 			currentScene = this;
 			Initialize();
@@ -404,7 +913,7 @@ export namespace engine {
 			//on object destroy
 		}
 		virtual void Render();
-	public:
+	protected:
 		SceneBase(wm::Window* window) : wm::RawSceneBase(window) {
 			objects.reserve(4096);
 		}
@@ -414,7 +923,7 @@ export namespace engine {
 		virtual void PostRender(RenderLayer renderLayer);
 		virtual void Resize(long width, long height);
 		static std::shared_ptr<GameObject> CreateObject(std::string name, std::shared_ptr<GameObject> parent = nullptr) {
-			std::shared_ptr<GameObject> obj(new GameObject());
+			std::shared_ptr<GameObject> obj{ new GameObject()};
 			obj->name = name;
 			obj->SetParent(parent);
 			currentScene->objects.push_back(obj);
@@ -432,8 +941,13 @@ export namespace engine {
 			return &(currentScene->lightBuffer);
 		}
 
+		void SetPostProcessShader();
+		void SetBlitMaterial(std::shared_ptr<render::MaterialBase> material) {
+			blitMat = material;
+		}
+
 		friend SceneBase* CurrentScene();
-		friend wm::Window* CurrentWindow();
+		//friend wm::Window* CurrentWindow();
 	};
 
 	SceneBase* CurrentScene() {
@@ -441,43 +955,43 @@ export namespace engine {
 	}
 
 	std::shared_ptr<render::Mesh> getUIMesh() {
-		static std::weak_ptr<render::Mesh> UIMesh{ };
+		static thread_local std::weak_ptr<render::Mesh> UIMesh{ };
 		std::shared_ptr<render::Mesh> mesh;
 		if (UIMesh.expired()) {
-			mesh = std::shared_ptr<render::Mesh>{ new render::Mesh() };
-			std::vector<render::PointP3NUC> points{};
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{-0.5,-0.5,0},
+			mesh = std::make_shared<render::Mesh>();
+			std::vector<render::PointP3NTBUC> points{};
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{-1,-1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{0,0},
 				math::Vec4f{1,1,1,1},
 				});
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{0.5,0.5,0},
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{1,1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{1,1},
 				math::Vec4f{1,1,1,1},
 				});
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{0.5,-0.5,0},
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{1,-1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{1,0},
 				math::Vec4f{1,1,1,1},
 				});
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{-0.5,-0.5,0},
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{-1,-1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{0,0},
 				math::Vec4f{1,1,1,1},
 				});
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{-0.5,0.5,0},
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{-1,1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{0,1},
 				math::Vec4f{1,1,1,1},
 				});
-			points.push_back(render::PointP3NUC{
-				math::Vec3f{0.5,0.5,0},
+			points.push_back(render::PointP3NTBUC{
+				math::Vec3f{1,1,0},
 				math::Vec3f{0,0,-1},
 				math::Vec2f{1,1},
 				math::Vec4f{1,1,1,1},
@@ -656,6 +1170,7 @@ export namespace engine::component{
 	};
 
 	class MeshRenderer final : public engine::Component {
+		render::UBObject renderObject{};
 		//sync safe
 		virtual void Start() {
 			UpdateRenderer();
@@ -664,15 +1179,21 @@ export namespace engine::component{
 		virtual void Update() {}
 		//gl context safe
 		virtual void Render(engine::RenderLayer renderLayer) {
-			if (renderLayer != engine::RenderLayer::MainScene && renderLayer != engine::RenderLayer::Debug) return;
+			if (renderLayer != engine::RenderLayer::MainScene) return;
 			if (material && mesh) {
-				material->Render(mesh.get(), 
-					(renderLayer == engine::RenderLayer::Debug ? math::Mat4f::Translate(0, -2, 0) : math::Mat4f::Identity()) * 
-					GameObject()->Transform(), & (Camera::CurrentCamera()->cameraUniformObject));
+				renderObject.BindBuffer();
+				material->Render(mesh.get(), &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
+				renderObject.UnbindBuffer();
 			}
 		}
 		//sync safe
-		virtual void SyncUpdate() {}
+		virtual void SyncUpdate() {
+			struct MeshRenderer_t {
+				math::GLmat4 transform;
+			} mr;
+			mr.transform = GameObject()->Transform();
+			renderObject.Set(&mr, sizeof(mr));
+		}
 		//sync safe
 		virtual void OnEnable() {}
 		//sync safe
@@ -683,7 +1204,9 @@ export namespace engine::component{
 		std::shared_ptr<render::Mesh> mesh;
 		std::shared_ptr<render::MaterialBase> material;
 		void UpdateRenderer() {
+			renderObject.BindBuffer();
 			material->UpdateMeshAttrib(mesh.get());
+			renderObject.UnbindBuffer();
 		}
 	};
 	class OceanRenderer final : public engine::Component {
@@ -702,13 +1225,9 @@ export namespace engine::component{
 		//sync safe
 		virtual void SyncUpdate() {}
 		//sync safe
-		virtual void OnEnable() {
-			ocean.OceanObj.BindBuffer();
-		}
+		virtual void OnEnable() {}
 		//sync safe
-		virtual void OnDisable() {
-			ocean.OceanObj.UnbindBuffer();
-		}
+		virtual void OnDisable() {}
 		//sync safe
 		virtual void OnDestroy() {}
 	public:
@@ -717,18 +1236,25 @@ export namespace engine::component{
 
 	class BillboardRenderer final : public engine::Component {
 		std::shared_ptr<render::Mesh> mesh{};
-		render::UBObject billboardUBO{};
+		render::UBObject renderObject{};
 		//sync safe
 		virtual void Start() {
 			mesh = engine::getUIMesh();
-			UpdateAttrib();
+			UpdateRenderer();
 		}
 		//unsafe
 		virtual void Update() {}
 		//gl context safe
 		virtual void Render(engine::RenderLayer renderLayer) {}
 		//sync safe
-		virtual void SyncUpdate() {}
+		virtual void SyncUpdate() {
+			struct Billboard_t {
+				GLfloat depthLayer;
+			};
+			Billboard_t billboard{};
+
+			renderObject.Set(&billboard, sizeof(Billboard_t), render::BufferUsageHint::DynamicDraw);
+		}
 		//sync safe
 		virtual void OnEnable() {}
 		//sync safe
@@ -750,16 +1276,8 @@ export namespace engine::component{
 		float width = 1;
 		float height = 1;
 
-		void UpdateMaterial() {
-
-		}
-		void UpdateAttrib() {
-			struct Billboard_t {
-				GLfloat depthLayer;
-			};
-			Billboard_t billboard{};
-
-			billboardUBO.Set(&billboard, sizeof(Billboard_t), render::BufferUsageHint::DynamicDraw);
+		void UpdateRenderer() {
+			material->UpdateMeshAttrib(mesh.get());
 		}
 	};
 
@@ -806,8 +1324,8 @@ export namespace engine::component{
 			}
 			float X = alignX;
 			float Y = alignY;
-			X += (offsetX + width / 2 - (pivotX + 1) / 2 * width) / (right - left);
-			Y += (offsetY + height / 2 - (pivotY + 1) / 2 * height) / (top - bottom);
+			X += (offsetX + width / 2 - (pivotX + 1) / 2 * width) / (right - left) * 2;
+			Y += (offsetY + height / 2 - (pivotY + 1) / 2 * height) / (top - bottom) * 2;
 			GameObject()->transform.position = { X,Y,0.01 };
 			GameObject()->transform.scale = { width / (right - left) , height / (top - bottom), 1 };
 
@@ -833,6 +1351,7 @@ export namespace engine::component{
 
 	class ImageRendererUI final : public engine::Component {
 		std::shared_ptr<render::Mesh> mesh{};
+		render::UBObject renderObject{};
 		//sync safe
 		virtual void Start() {
 			mesh = engine::getUIMesh();
@@ -844,11 +1363,19 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
-				material->Render(mesh.get(), GameObject()->Transform(), &(Camera::CurrentCamera()->cameraUniformObject));
+				renderObject.BindBuffer();
+				material->Render(mesh.get(), &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
+				renderObject.UnbindBuffer();
 			}
 		}
 		//sync safe
-		virtual void SyncUpdate() {}
+		virtual void SyncUpdate() {
+			struct MeshRenderer_t {
+				math::GLmat4 transform;
+			} mr;
+			mr.transform = GameObject()->Transform();
+			renderObject.Set(&mr, sizeof(mr));
+		}
 		//sync safe
 		virtual void OnEnable() {}
 		//sync safe
@@ -865,6 +1392,7 @@ export namespace engine::component{
 	class TextRendererUI final : public engine::Component {
 		render::Mesh mesh{};
 		std::shared_ptr<TransformUI> transform;
+		render::UBObject renderObject{};
 		//sync safe
 		virtual void Start() {
 			transform = GameObject()->GetComponent<TransformUI>();
@@ -876,13 +1404,22 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
+				renderObject.BindBuffer();
 				glEnable(GL_BLEND);
-				material->Render(&mesh, GameObject()->Transform(), &(Camera::CurrentCamera()->cameraUniformObject));
+				material->Render(&mesh, &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
 				glDisable(GL_BLEND);
+				renderObject.UnbindBuffer();
 			}
 		}
 		//sync safe
-		virtual void SyncUpdate() {}
+		//sync safe
+		virtual void SyncUpdate() {
+			struct MeshRenderer_t {
+				math::GLmat4 transform;
+			} mr;
+			mr.transform = GameObject()->Transform();
+			renderObject.Set(&mr, sizeof(mr));
+		}
 		//sync safe
 		virtual void OnEnable() {}
 		//sync safe
@@ -892,18 +1429,17 @@ export namespace engine::component{
 	public:
 
 		std::shared_ptr<render::UIMaterial> material{};
-		std::u8string text = u8"UI Textij!\n012345678901234";
+		std::u8string text = u8"UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU";
 		std::shared_ptr<render::FontMap> fontMap{};
 		int textAlign;
-		float scale = 2;
+		float scale = 1;
 		int lineHoriGap = 0;
 		int lineVertGap = 2;
 		float horiAlign = 0;
 		float vertAlign = 1;
 		void UpdateRenderer() {
 			material->texture = fontMap->texture;
-			fontMap->texture->BindActive();
-			std::vector<render::PointP3NUC> points{};
+			std::vector<render::PointP3NTBUC> points{};
 			size_t index = 0;
 			float lineHeight = (lineVertGap + fontMap->LineHeight()) * scale;
 			int linePointStart = 0;
@@ -936,37 +1472,37 @@ export namespace engine::component{
 				float y = (transform->height / 2 - lineY - item.yOffset * scale) / transform->height;
 				float w = item.width / transform->width * scale;
 				float h = item.height / transform->height * scale;
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x,y,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTL},
 					math::Vec4f{1,1,1,1},
 					});
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x + w,y + h,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBR},
 					math::Vec4f{1,1,1,1},
 					});
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x + w,y,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTR},
 					math::Vec4f{1,1,1,1},
 					});
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x,y,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTL},
 					math::Vec4f{1,1,1,1},
 					});
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x,y + h,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBL},
 					math::Vec4f{1,1,1,1},
 					});
-				points.push_back(render::PointP3NUC{
+				points.push_back(render::PointP3NTBUC{
 					math::Vec3f{x + w,y + h,0},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBR},
@@ -983,18 +1519,20 @@ export namespace engine::component{
 			for (int i = 0; i < points.size(); i++) {
 				points[i].pos.y -= std::floor(((transform->height - lineY) * (1 - vertAlign) / 2)) / transform->height;
 			}
-
+			for (int i = 0; i < points.size(); i++) {
+				points[i].pos *= 2;
+			}
 			mesh.set(points, render::BufferUsageHint::DynamicDraw);
 			material->UpdateMeshAttrib(&mesh);
 		}
 	};
 
 	class SunLight final : public engine::Component {
-		static inline std::vector<std::shared_ptr<SunLight>> sunlights {};
+		static inline std::vector<std::weak_ptr<SunLight>> sunlights {};
 
 		friend engine::SceneBase;
 		static std::vector<Light_t> GetLights() {
-			std::vector<Light_t> lights{};
+			/*std::vector<Light_t> lights{};
 			for (int i = 0; i < sunlights.size(); i++) {
 				Light_t v{};
 				v.color = sunlights[i]->color;
@@ -1002,7 +1540,8 @@ export namespace engine::component{
 				v.magnitude = sunlights[i]->intensity;
 				lights.push_back(v);
 			}
-			return lights;
+			return lights;*/
+			return {};
 		}
 
 		//sync safe
@@ -1037,6 +1576,7 @@ int engine::GetGameScreenRatio() {
 
 void engine::SceneBase::Render() {
 	currentScene = this;
+	GLSTAMPERROR;
 	for (int c = 0; c < engine::component::Camera::cameras.size(); c++) {
 		engine::component::Camera::currentCameraIndex = c;
 		for (int p = 0; p < maxRenderLayers; p++) {
@@ -1050,20 +1590,51 @@ void engine::SceneBase::Render() {
 			PostRender((RenderLayer)p);
 		}
 	}
+	GLSTAMPERROR;
 	engine::component::Camera::currentCameraIndex = engine::component::Camera::MainCamera()->cameraIndex;
+
+
+	auto m = engine::getUIMesh();
+	auto rect = this->Window()->GetNormalizedGameRect();
+	math::Mat4f mat = math::Mat4f::Scale(rect.width, rect.height, 1);
+	math::Mat4f cam = math::Mat4f::Identity();
+
 
 	wm::RawSceneBase::Render();
 }
 
 void engine::SceneBase::Initialize() {
-	
+	resource::ResourceManager::Initialize();
+	lua::LuaManager::Instance();
+
+	bool init = []() -> bool {
+		auto L = lua::LuaManager::Instance()->L;
+
+		const luaL_Reg engineReg[] = {
+			{ "DeltaTime", [](lua_State* L) -> int {
+				lua_pushnumber(L, wm::CurrentWindow()->DeltaTime());
+				return 1;
+			}},
+			{ 0, 0}
+		};
+		luaL_newlib(L, engineReg);
+		lua_setglobal(L, "Engine");
+
+		
+		luaS2_registermetatable(L, engine::resource::EntityBaseResource);
+
+		lua::LuaManager::Instance()->LoadDefaultFiles();
+		return true;
+	}();
 }
 
 void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {
 	engine::component::Camera::CurrentCamera()->PreRender(renderLayer);
 
+	GLSTAMPERROR;
 	if (renderLayer == engine::RenderLayer::MainScene) {
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		GLSTAMPERROR;
 		std::vector<Light_t> light{};
 		light.append_range(engine::component::SunLight::GetLights());
 		size_t lightSize = sizeof(Light_t) * light.size();

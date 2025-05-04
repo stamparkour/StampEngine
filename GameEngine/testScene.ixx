@@ -152,12 +152,17 @@ public:
     } sails[8];
 };
 
-export class InitScene : public engine::SceneBase, public std::shared_ptr<InitScene> {
+export class InitScene : public engine::SceneBase {
 public:
     InitScene(wm::Window* window) : engine::SceneBase(window) {}
     virtual void Initialize() {
+        engine::SceneBase::Initialize();
+
         using namespace engine;
         using namespace engine::component;
+        int maxUBO = 0;
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUBO);
+        std::cout << "max ubo: " << maxUBO << std::endl;
 
         wm::CurrentWindow()->Mouse()->Visibility(false);
         wm::CurrentWindow()->Mouse()->ConstrainCursor(wm::ConstrainCursorState::Freeze);
@@ -176,20 +181,11 @@ public:
         glDepthMask(GL_TRUE);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        std::fstream imageFile{ "resources\\test.bmp", std::fstream::in | std::ios::binary };
-        render::RawTexture2d4f texture = render::RawTexture2d4f::ParseStream_bmp(imageFile);
-
-        std::fstream imageNoiseFile{ "resources\\noiseTexture.bmp", std::fstream::in | std::ios::binary };
-        render::RawTexture2d4f noiseTex = render::RawTexture2d4f::ParseStream_bmp(imageNoiseFile);
-
-        std::fstream imageFontFile{ "resources\\ariel_24.bmp", std::fstream::in | std::ios::binary };
-        render::RawTexture2d4f fontTex = render::RawTexture2d4f::ParseStream_bmp(imageFontFile);
-        std::fstream ariel_24{ "resources\\ariel_24.fmp", std::fstream::in };
+        std::fstream ariel_24 = std::fstream{ "resources\\ariel_24.fmp", std::ios::in };
         std::shared_ptr<render::FontMap> fontmap = render::FontMap::Parse_fmp(ariel_24);
-        fontmap->texture = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d{fontTex.Width(), fontTex.Height()}};
-        fontmap->texture->SetImage(fontTex);
+        fontmap->texture = engine::resource::ResourceManager::GetTexture("stamp:ariel_24")->getSamplerTexture2d();
 
-        std::shared_ptr<render::SolidMaterial> material{ new render::SolidMaterial() };
+        std::shared_ptr<render::SolidMaterial> material = std::make_shared<render::SolidMaterial>();
         std::fstream shaderFile{ "resources\\shader.glsl" };
         material->shader = render::RenderShaderProgram::ParseStream_glsl(shaderFile, { 0 }, { {"test"}});
 
@@ -197,17 +193,14 @@ public:
         std::shared_ptr<Camera> camera = cameraObj->AddComponent<Camera>();
         camera->SetMainCamera();
         camera->isPerspective = true;
-        camera->scalePercent = 1.3;
+        camera->scalePercent = 1;
         std::shared_ptr<ControlComponent> controller = cameraObj->AddComponent<ControlComponent>();
         cameraObj->transform.position = { 0,0,-5 };
 
         std::shared_ptr<GameObject> testObj = CreateObject("TestMesh");
         std::shared_ptr<MeshRenderer> meshRenderer = testObj->AddComponent<MeshRenderer>();
         auto boatController = testObj->AddComponent<BoatComponent>();
-        meshRenderer->mesh = std::shared_ptr<render::Mesh>( new render::Mesh() );
-        std::fstream meshFile{"resources\\mesh.mesh"};
-        math::Mat4f meshTmpTranform = math::Mat4f::RotationY(-math::DEGTORAD * 90);
-        meshRenderer->mesh->set(render::PointP3NUC::ParseStream_obj(meshFile, &meshTmpTranform));
+		meshRenderer->mesh = engine::resource::ResourceManager::GetMesh("stamp:boat")->GetMesh();
         meshRenderer->material = material;
 
         std::shared_ptr<GameObject> oceanObj = CreateObject("Ocean", testObj);
@@ -219,10 +212,7 @@ public:
         oceanRenderer2->ocean.width = oceanRenderer2->ocean.height = 6;
         oceanRenderer2->ocean.vertOffset = -0.4;
 
-        oceanRenderer2->ocean.noiseTex = oceanRenderer1->ocean.noiseTex = std::shared_ptr<render::SamplerTexture2d>(new render::SamplerTexture2d(noiseTex.Width(), noiseTex.Height()));
-        oceanRenderer1->ocean.noiseTex->SetImage(noiseTex);
-        oceanRenderer1->ocean.noiseTex->SetMagFilter(render::TextureMagFilter::Linear);
-        oceanRenderer1->ocean.noiseTex->SetMinFilter(render::TextureMinFilter::Linear);
+		oceanRenderer2->ocean.noiseTex = oceanRenderer1->ocean.noiseTex = engine::resource::ResourceManager::GetTexture("stamp:perlin_noise")->getSamplerTexture2d();
 
         std::shared_ptr<GameObject> uiObj = CreateObject("uiThingy");
         std::shared_ptr<TransformUI> transformUI = uiObj->AddComponent<TransformUI>();
@@ -230,14 +220,12 @@ public:
         transformUI->alignY = 1;
         transformUI->pivotX = -1;
         transformUI->pivotY = 1;
-        transformUI->offsetX = -50;
-        transformUI->offsetY = 100;
-        std::shared_ptr<render::UIMaterial> uiMat { new render::UIMaterial() };
+        transformUI->offsetX = 200;
+        transformUI->offsetY = -200;
+        std::shared_ptr<render::UIMaterial> uiMat = std::make_shared<render::UIMaterial>();
         std::fstream shaderUIFile{ "resources\\shaderUI.glsl" };
         uiMat->shader = render::RenderShaderProgram::ParseStream_glsl(shaderUIFile, { 0 }, {});
-        uiMat->texture = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d(texture.Width(),texture.Height())};
-        uiMat->texture->BindActive();
-        uiMat->texture->SetImage(texture);
+		uiMat->texture = engine::resource::ResourceManager::GetTexture("stamp:test")->getSamplerTexture2d();
         std::shared_ptr<ImageRendererUI> imageRendererUI = uiObj->AddComponent<ImageRendererUI>();
         imageRendererUI->material = uiMat;
 
@@ -246,23 +234,22 @@ public:
         transformUI2->alignX = 1;
         transformUI2->pivotX = 1;
         transformUI2->pivotY = 1;
-        transformUI2->offsetX = -50;
+        transformUI2->offsetX = 0;
         transformUI2->offsetY = 100;
         transformUI2->height = 700;
         std::shared_ptr<TextRendererUI> textRen = textObj->AddComponent<TextRendererUI>();
         textRen->fontMap = fontmap;
-        std::shared_ptr<render::UIMaterial> uiMat2{ new render::UIMaterial() };
+        std::shared_ptr<render::UIMaterial> uiMat2 = std::make_shared<render::UIMaterial>();
         uiMat2->shader = uiMat->shader;
         uiMat2->color = math::Vec4f(0.5,0.1,0.2,1);
         textRen->material = uiMat2;
 
 
-        engine::SceneBase::Initialize();
     }
     virtual void Iterate() {
-        double t = this->Window()->DeltaTime();
+        /*double t = this->Window()->DeltaTime();
         int ms = (int)(t * 1000);
-        std::cout << ms << "ms" << std::endl;
+        std::cout << ms << "ms" << std::endl;*/
     }
     virtual void PreRender(engine::RenderLayer renderLayer) {
         engine::SceneBase::PreRender(renderLayer);
