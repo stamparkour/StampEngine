@@ -470,7 +470,7 @@ export namespace math {
 	template<Quantity T>
 	float Vec3<T>::Magnitude() const noexcept {
 		if (x == 0 && y == 0 && z == 0) return 0;
-		return sqrtf(x * x + y * y + z * z);
+		return (T)sqrt(x * x + y * y + z * z);
 	}
 	template<Quantity T>
 	Vec3<T> Vec3<T>::Normal() const noexcept {

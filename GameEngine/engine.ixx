@@ -205,6 +205,11 @@ export namespace engine::resource {
 		}
 	};
 
+	class MaterialResource {
+		std::weak_ptr<render::MaterialBase> material{};
+	public:
+	};
+
 	class EntityBaseResource;
 
 	class ResourceManager {
@@ -620,6 +625,9 @@ export namespace engine {
 		bool IsEnabled() {
 			return enable && cascadeEnable && state != State::Destroying && state != State::Creating;
 		}
+		bool IsActive() {
+			return state == State::Running;
+		}
 		bool IsDestroyed() {
 			return state == State::Destroying;
 		}
@@ -872,7 +880,8 @@ export namespace engine {
 		int maxRenderLayers = (int)RenderLayer::Max;
 		std::vector<std::shared_ptr<GameObject>> objects{};
 		std::shared_ptr<render::MaterialBase> blitMat{};
-
+		std::shared_ptr<render::SamplerBase> whiteTex{};
+		std::shared_ptr<render::SamplerBase> normTex{};
 		render::UniformBufferObject blitCamera;
 		render::UniformBufferObject blitObject;
 
@@ -1073,12 +1082,10 @@ export namespace engine::component{
 			}
 		}
 		virtual void OnEnable() {
-			cameraUniformObject.BindBuffer();
 			cameraIndex = cameras.size();
 			cameras.push_back(std::static_pointer_cast<Camera>(shared_from_this()));
 		}
 		virtual void OnDisable() {
-			cameraUniformObject.UnbindBuffer();
 			for (int i = 0; i < cameras.size(); i++) {
 				if (cameras[i].lock().get() == this) {
 					cameras.erase(cameras.begin() + i);
@@ -1112,6 +1119,7 @@ export namespace engine::component{
 				k.perspective = math::Mat4f::Orthographic(fov, GameRatio(), nearPlane, farPlane);
 			k.UI = math::Mat4f::Orthographic(1, 1, 0, 10);
 			cameraUniformObject.Set(&k, sizeof(k), render::BufferUsageHint::StreamDraw);
+			cameraUniformObject.BindBuffer(render::UBO_CAMERA);
 			frameBuffer.Bind();
 			GLSTAMPERROR;
 		}
@@ -1180,10 +1188,10 @@ export namespace engine::component{
 		//gl context safe
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::MainScene) return;
+			GLSTAMPERROR
 			if (material && mesh) {
-				renderObject.BindBuffer();
-				material->Render(mesh.get(), &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
-				renderObject.UnbindBuffer();
+				renderObject.BindBuffer(render::UBO_OBJECT);
+				material->Render(mesh.get());
 			}
 		}
 		//sync safe
@@ -1204,9 +1212,8 @@ export namespace engine::component{
 		std::shared_ptr<render::Mesh> mesh;
 		std::shared_ptr<render::MaterialBase> material;
 		void UpdateRenderer() {
-			renderObject.BindBuffer();
+			renderObject.BindBuffer(render::UBO_OBJECT);
 			material->UpdateMeshAttrib(mesh.get());
-			renderObject.UnbindBuffer();
 		}
 	};
 	class OceanRenderer final : public engine::Component {
@@ -1220,7 +1227,7 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::MainScene) return;
 
-			ocean.Render(GameObject()->Transform(), Camera::CurrentCamera()->cameraUniformObject);
+			ocean.Render(GameObject()->Transform());
 		}
 		//sync safe
 		virtual void SyncUpdate() {}
@@ -1363,9 +1370,8 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
-				renderObject.BindBuffer();
-				material->Render(mesh.get(), &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
-				renderObject.UnbindBuffer();
+				renderObject.BindBuffer(render::UBO_OBJECT);
+				material->Render(mesh.get());
 			}
 		}
 		//sync safe
@@ -1396,7 +1402,7 @@ export namespace engine::component{
 		//sync safe
 		virtual void Start() {
 			transform = GameObject()->GetComponent<TransformUI>();
-			UpdateRenderer();
+			UpdateText();
 		}
 		//unsafe
 		virtual void Update() {}
@@ -1404,11 +1410,10 @@ export namespace engine::component{
 		virtual void Render(engine::RenderLayer renderLayer) {
 			if (renderLayer != engine::RenderLayer::GUI) return;
 			if (material && mesh) {
-				renderObject.BindBuffer();
+				renderObject.BindBuffer(render::UBO_OBJECT);
 				glEnable(GL_BLEND);
-				material->Render(&mesh, &(Camera::CurrentCamera()->cameraUniformObject), &renderObject);
+				material->Render(&mesh);
 				glDisable(GL_BLEND);
-				renderObject.UnbindBuffer();
 			}
 		}
 		//sync safe
@@ -1429,7 +1434,7 @@ export namespace engine::component{
 	public:
 
 		std::shared_ptr<render::UIMaterial> material{};
-		std::u8string text = u8"UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU";
+		std::string text = (const char*)u8"Test message.";
 		std::shared_ptr<render::FontMap> fontMap{};
 		int textAlign;
 		float scale = 1;
@@ -1437,7 +1442,8 @@ export namespace engine::component{
 		int lineVertGap = 2;
 		float horiAlign = 0;
 		float vertAlign = 1;
-		void UpdateRenderer() {
+		void UpdateText() {
+			if (!this->IsActive()) return;
 			material->texture = fontMap->texture;
 			std::vector<render::PointP3NTBUC> points{};
 			size_t index = 0;
@@ -1626,6 +1632,9 @@ void engine::SceneBase::Initialize() {
 		lua::LuaManager::Instance()->LoadDefaultFiles();
 		return true;
 	}();
+
+	whiteTex = render::SamplerTexture2d::GetDefaultTexture();
+	normTex = render::SamplerTexture2d::GetDefaultNormalMap();
 }
 
 void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {

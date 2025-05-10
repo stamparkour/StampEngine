@@ -3,8 +3,8 @@
 const float eps = 0.2;
 const vec3 lightSource = normalize(vec3(2,1,0));
 
-layout(binding = 1) uniform sampler2D noise;
-layout(std140, binding = 1) uniform ST_Object {
+layout(location = 20) uniform sampler2D noise;
+layout(std140) uniform ST_Object {
 	mat4 transform;
 	float time;
 	int width;
@@ -15,7 +15,7 @@ layout(std140, binding = 1) uniform ST_Object {
 	float vertOffset;
 	vec3 origin;
 } object;
-layout(std140, binding = 0) uniform ST_Camera {
+layout(std140) uniform ST_Camera {
 	mat4 transform;
 	mat4 perspective;
 	mat4 UI;
@@ -63,8 +63,7 @@ void main() {
 
 	vec4 wp = object.transform * vec4(position_v.x, 1, position_v.y,1);
 	
-	if(object.scale < 64) wp.y = getHeight(wp.xz) * wp.y + object.vertOffset;
-	else wp.y = 0;
+	wp.y = getHeight(wp.xz) * wp.y + object.vertOffset;
 	worldPos = wp.xyz;
 	localPos = wp.xyz - object.origin;
 	gl_Position = camera.perspective * camera.transform * wp;

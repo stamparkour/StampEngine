@@ -14,11 +14,6 @@ namespace render {
 	class UniformBufferObject;
 	class ShaderStorageBufferObject;
 }
-render::UniformBufferObject** uniformBlockBinds = 0;
-render::ShaderStorageBufferObject** shaderBlockBinds = 0;
-render::SamplerBase** textureBinds = 0;
-int maxTextureUnits = 0;
-int maxBlockUnits = 0;
 int initFBO = -1;
 int reservedSamplers = 1;
 
@@ -39,9 +34,10 @@ export namespace render {
 	constexpr auto ATTRIBPOINTER_COLOR = 4;
 	constexpr auto ATTRIBPOINTER_TANGENT = 5;
 	constexpr auto ATTRIBPOINTER_BITANGENT = 6;
-	constexpr auto UNIFORM_TRANSFORM = 1;
-	constexpr auto UNIFORM_NORMALMAP = 10;
-	constexpr auto UNIFORM_TEXTURE0 = 20;
+	constexpr auto UBO_OBJECT = 1;
+	constexpr auto UBO_CAMERA = 0;
+	constexpr auto TEXTUREBIND_NORMALMAP = 0;
+	constexpr auto TEXTUREBIND_TEXTURE0 = 1;
 
 	enum struct BufferUsageHint : GLenum {
 		StreamDraw = GL_STREAM_DRAW,
@@ -73,6 +69,7 @@ export namespace render {
 			: pos(pos), normal(normal), uv(uv), color(color) {
 		}
 		static void setMaterial(MaterialBase& material) {
+			//glEnableVertexAttribArray
 			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, pos));
 			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, normal));
 			glVertexAttribPointer(ATTRIBPOINTER_TANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, tangent));
@@ -216,7 +213,8 @@ export namespace render {
 					(t2 * z1 - t1 * z2) * r);
 				math::Vec3f tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
 					(s1 * z2 - s2 * z1) * r);
-
+				sdir = sdir.Normal();
+				tdir = tdir.Normal();
 				mesh[i1].tangent = sdir;
 				mesh[i2].tangent = sdir;
 				mesh[i3].tangent = sdir;
@@ -399,52 +397,20 @@ export namespace render {
 		//runtime conversiion between raw and texture
 		//copy
 		//assignemnt
-		SamplerBase() {
-			if (textureBinds == 0) {
-				glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextureUnits);
-				textureBinds = new SamplerBase * [maxTextureUnits];
-				memset(textureBinds, 0, sizeof(SamplerBase*) * maxTextureUnits);
-			}
-		}
-		void BindActive() {
-			STAMPERROR(activeIndex != 0, "render::TextureBase::BindActive - texture already active.");
-			if (activeIndex != 0) return;
-			STAMPERROR(textureID == 0, "render::TextureBase::BindActive - uninitialized texture, attempted access failed.");
-			int index = -1;
-			for (int i = reservedSamplers; i < maxTextureUnits; i++) {
-				if (textureBinds[i] == 0) {
-					index = i;
-					break;
-				}
-			}
-			if (index == -1) {
-				STAMPERROR(textureID == 0, "render::TextureBase::BindActive - no open texture locations.");
-				return;
-			}
+		SamplerBase() { }
+		void BindTexture(int index) {
+			GLSTAMPERROR;
+			STAMPERROR(textureID == 0, "render::TextureBase::BindTexture - uninitialized texture, attempted access failed.");
+			STAMPERROR(index < 0, "render::TextureBase::BindTexture - attempted bind to invalid index.");
 			glActiveTexture(GL_TEXTURE0 + index);
 			glBindTexture(target, textureID);
 			glActiveTexture(GL_TEXTURE0);
-			if (textureBinds[index]) textureBinds[index]->activeIndex = 0;
-			textureBinds[index] = this;
-			activeIndex = index;
-		}
-		void UnbindActive() {
-			if (textureBinds == 0 || textureID == 0) return;
-			//only need to uncomment to force texture to unload instead of replacing later.
-			//glActiveTexture(GL_TEXTURE0 + textureID);
-			//glBindTexture(target, 0);
-			//glActiveTexture(GL_TEXTURE0);
-			textureBinds[textureID] = nullptr;
-			activeIndex = 0;
+			GLSTAMPERROR;
 		}
 		virtual ~SamplerBase() {
 			if (textureID != 0) {
 				glDeleteTextures(1, &textureID);
 				textureID = 0;
-			}
-			if(activeIndex) {
-				textureBinds[activeIndex] = nullptr;
-				activeIndex = 0;
 			}
 		}
 		int GetTextureId() const {
@@ -459,10 +425,6 @@ export namespace render {
 		void Bind() const {
 			STAMPERROR(textureID == 0,"render::TextureBase::Bind - uninitialized texture, attempted access failed.");
 			glBindTexture(target, textureID);
-		}
-		bool isActive() const {
-			if (!isValid() || textureBinds == 0 || activeIndex == 0) return false;
-			return textureBinds[activeIndex] == this;
 		}
 
 		void SetMinFilter(TextureMinFilter minFilter) {
@@ -573,7 +535,8 @@ export namespace render {
 			swap((SamplerBase&)a, (SamplerBase&)b);
 		}
 
-		static std::shared_ptr<SamplerTexture2d> GetWhiteTexture();
+		static std::shared_ptr<SamplerTexture2d> GetDefaultTexture();
+		static std::shared_ptr<SamplerTexture2d> GetDefaultNormalMap();
 	};
 	class RawTexture2d4f final : public RawTexture2dBase<math::Vec4f, GL_RGBA, GL_FLOAT> {
 	public:
@@ -829,40 +792,15 @@ export namespace render {
 			Bind();
 			glBufferData(GL_UNIFORM_BUFFER, size, ptr, (GLenum)usage);
 		}
-		void BindBuffer() {
-			STAMPERROR(blockIndex != 0, "render::UniformBufferObject::BindBuffer - buffer already bound.");
-			if (blockIndex != 0) return;
+		void BindBuffer(int index) {
+			//STAMPERROR(blockIndex != 0, "render::UniformBufferObject::BindBuffer - buffer already bound.");
+			GLSTAMPERROR;
 			STAMPERROR(ubo == 0,"render::UniformBufferObject::BindBuffer - buffer unitialized.");
-			int index = -1;
-			for(int i = 1; i < maxBlockUnits; i++) {
-				if (uniformBlockBinds[i] == 0) {
-					index = i;
-					break;
-				}
-			}
-			if(index == -1) {
-				STAMPERROR(blockIndex == 0,"render::UniformBufferObject::BindBuffer - no free buffer.");
-				return;
-			}
+			STAMPERROR(index < 0, "render::UniformBufferObject::BindBuffer - attempted bind to invalid index.");
 			glBindBufferBase(GL_UNIFORM_BUFFER, index, ubo);
-			if(uniformBlockBinds[index]) uniformBlockBinds[index]->blockIndex = 0;
-			uniformBlockBinds[index] = this;
-			blockIndex = index;
-		}
-		void UnbindBuffer() {
-			if(uniformBlockBinds == 0 || blockIndex == 0) return;
-			//only need to uncomment to force texture to unload instead of replacing later.
-			//glBindBufferBase(GL_UNIFORM_BUFFER, blockIndex, 0);
-			uniformBlockBinds[blockIndex] = nullptr;
-			blockIndex = 0;
+			GLSTAMPERROR;
 		}
 		UniformBufferObject() {
-			if (uniformBlockBinds == 0) {
-				glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxBlockUnits);
-				uniformBlockBinds = new UniformBufferObject * [maxBlockUnits];
-				memset(uniformBlockBinds, 0, sizeof(void*) * maxBlockUnits);
-			}
-
 			glGenBuffers(1, &ubo);
 		}
 		UniformBufferObject(const UniformBufferObject& other) = delete;
@@ -876,25 +814,21 @@ export namespace render {
 			swap(*this, other);
 		}
 		void Bind() {
-			STAMPERROR(!isValid(),"render::UniformBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
+			STAMPERROR(!IsValid(),"render::UniformBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
 			glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-		}
-		bool isActive() const {
-			if (!isValid() || uniformBlockBinds == 0 || blockIndex == 0) return false;
-			return uniformBlockBinds[blockIndex] == this;
 		}
 		int getUniformBlockId() {
 			return blockIndex;
 		}
 
-		bool isValid() const {
+		bool IsValid() const {
 			return ubo != 0;
 		}
 		explicit operator bool() {
-			return isValid();
+			return IsValid();
 		}
 		bool operator!() {
-			return !isValid();
+			return !IsValid();
 		}
 		inline friend void swap(UniformBufferObject& a, UniformBufferObject& b) {
 			using std::swap;
@@ -904,10 +838,6 @@ export namespace render {
 			if(ubo) {
 				glDeleteBuffers(1, &ubo);
 				ubo = 0;
-			}
-			if(textureBinds && blockIndex) {
-				uniformBlockBinds[blockIndex] = nullptr;
-				blockIndex = 0;
 			}
 		}
 	};
@@ -923,39 +853,14 @@ export namespace render {
 			Bind();
 			glBufferData(GL_SHADER_STORAGE_BUFFER, size, ptr, (GLenum)usage);
 		}
-		void BindBuffer() {
-			if (blockIndex != 0) return;
+		void BindBuffer(int index) {
+			GLSTAMPERROR;
 			STAMPERROR(ssbo == 0, "render::ShaderStorageBufferObject::BindBuffer - buffer unitialized.");
-			int index = -1;
-			for (int i = 1; i < maxBlockUnits; i++) {
-				if (shaderBlockBinds[i] == 0) {
-					index = i;
-					break;
-				}
-			}
-			if (index == -1) {
-				STAMPERROR(blockIndex == 0, "render::ShaderStorageBufferObject::BindBuffer - no free buffer.");
-				return;
-			}
+			STAMPERROR(index < 0, "render::ShaderStorageBufferObject::BindBuffer - attempted bind to invalid index.");
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, ssbo);
-			if (shaderBlockBinds[index]) shaderBlockBinds[index]->blockIndex = 0;
-			shaderBlockBinds[index] = this;
-			blockIndex = index;
-		}
-		void UnbindBuffer() {
-			if (shaderBlockBinds == 0 || blockIndex == 0) return;
-			//only need to uncomment to force texture to unload instead of replacing later.
-			//glBindBufferBase(GL_UNIFORM_BUFFER, blockIndex, 0);
-			shaderBlockBinds[blockIndex] = nullptr;
-			blockIndex = 0;
+			GLSTAMPERROR;
 		}
 		ShaderStorageBufferObject() {
-			if (shaderBlockBinds == 0) {
-				glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maxBlockUnits);
-				shaderBlockBinds = new ShaderStorageBufferObject * [maxBlockUnits];
-				memset(shaderBlockBinds, 0, sizeof(void*) * maxBlockUnits);
-			}
-
 			glGenBuffers(1, &ssbo);
 		}
 		ShaderStorageBufferObject(const ShaderStorageBufferObject& other) = delete;
@@ -971,10 +876,6 @@ export namespace render {
 		void Bind() {
 			STAMPERROR(!isValid(), "render::ShaderStorageBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-		}
-		bool isActive() const {
-			if (!isValid() || shaderBlockBinds == 0 || blockIndex == 0) return false;
-			return shaderBlockBinds[blockIndex] == this;
 		}
 		int getUniformBlockId() {
 			return blockIndex;
@@ -998,10 +899,6 @@ export namespace render {
 			if (ssbo) {
 				glDeleteBuffers(1, &ssbo);
 				ssbo = 0;
-			}
-			if (textureBinds && blockIndex) {
-				shaderBlockBinds[blockIndex] = nullptr;
-				blockIndex = 0;
 			}
 		}
 	};
@@ -1150,8 +1047,11 @@ export namespace render {
 			return program != 0;
 		}
 		void Uniform(GLint location, const SamplerBase* value) {
-			STAMPERROR(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
+			STAMPDMSG("render::ShaderProgramBase::Uniform - function not implemented");
+			//STAMPERROR(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
 			glProgramUniform1i(program, location, value->GetActiveTextureIndex());
+			std::cout << "render::ShaderProgramBase::uniformD - index: " << value->GetActiveTextureIndex() << " loc: " << location << " prog: " << program << std::endl;
+			GLSTAMPERROR;
 		}
 		void Uniform(GLint location, int value) {
 			glProgramUniform1i(program, location, value);
@@ -1286,7 +1186,8 @@ export namespace render {
 			glProgramUniformMatrix4dv(program, location, count, false, (const double*)value);
 		}
 		void UniformBuffer(GLint location, const UniformBufferObject& value) {
-			STAMPERROR(!value.isActive(), "render::ShaderProgramBase::uniformBuffer - UBO is not active");
+			STAMPDMSG("render::ShaderProgramBase::uniformBuffer - function not implemented");
+			//STAMPERROR(!value.isActive(), "render::ShaderProgramBase::uniformBuffer - UBO is not active");
 			glUniformBlockBinding(program, location, value.blockIndex);
 		}
 		//void ShaderStorageBuffer(GLint location, const ShaderStorageBufferObject& value) {
@@ -1380,7 +1281,7 @@ export namespace render {
 	public:
 		std::shared_ptr<ShaderProgramBase> shader{};
 
-		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) = 0;
+		virtual void Render(Mesh* mesh) = 0;
 
 		void UpdateMeshAttrib(Mesh* mesh) {
 			if (!mesh) return;
@@ -1408,26 +1309,8 @@ export namespace render {
 		}
 	};
 	class SolidMaterial final : public MaterialBase {
-		int blockBindingCamera = -1;
-		int blockBindingObject = -1;
 
-		virtual void UpdateMaterial() {
-			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
-			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
-			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
-			if (useVertexColorValue) {
-				glEnableVertexAttribArray(ATTRIBPOINTER_COLOR);
-			}
-			else {
-				glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
-				glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
-			}
-
-			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
-			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
-			if (texture != 0) texture->BindActive();
-			if (normalMap != 0) normalMap->BindActive();
-		}
+		virtual void UpdateMaterial() { }
 	public:
 		math::Vec4f color{ 0.8f,0.8f,0.8f,1 };
 		bool useVertexColorValue = false;
@@ -1444,19 +1327,39 @@ export namespace render {
 			using std::swap;
 			swap(*this, other);
 		}
-		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) {
+		virtual void Render(Mesh* mesh) {
 			Bind();
-			if (texture != 0) shader->Uniform(UNIFORM_TEXTURE0, texture.get());
-			if (normalMap != 0) shader->Uniform(UNIFORM_NORMALMAP, normalMap.get());
-			shader->UniformBuffer(blockBindingCamera, *camera);
-			shader->UniformBuffer(blockBindingObject, *object);
+
+			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
+			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
+			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
+			glEnableVertexAttribArray(ATTRIBPOINTER_TANGENT);
+			glEnableVertexAttribArray(ATTRIBPOINTER_BITANGENT);
+			if (useVertexColorValue) {
+				glEnableVertexAttribArray(ATTRIBPOINTER_COLOR);
+			}
+			else {
+				glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
+				glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
+			}
+
+			std::shared_ptr<SamplerBase> tex;
+			std::shared_ptr<SamplerBase> norm;
+
+			GLSTAMPERROR;
+			if (texture) tex = texture;
+			else tex = SamplerTexture2d::GetDefaultTexture();
+			if (normalMap) norm = normalMap;
+			else norm = SamplerTexture2d::GetDefaultNormalMap();
+
+			tex->BindTexture(TEXTUREBIND_TEXTURE0);
+			norm->BindTexture(TEXTUREBIND_NORMALMAP);
 			mesh->RenderArray();
+			GLSTAMPERROR;
 		}
 		inline friend void swap(SolidMaterial& a, SolidMaterial& b) noexcept {
 			using std::swap;
 			swap((MaterialBase&)a, (MaterialBase&)b);
-			swap(a.blockBindingCamera, b.blockBindingCamera);
-			swap(a.blockBindingObject, b.blockBindingObject);
 			swap(a.color, b.color);
 			swap(a.useVertexColorValue, b.useVertexColorValue);
 			swap(a.texture, b.texture);
@@ -1465,33 +1368,11 @@ export namespace render {
 		virtual ~SolidMaterial() {}
 	};
 	class UIMaterial final : public MaterialBase {
-		int blockBindingCamera = -1;
-		int blockBindingObject = -1;
-		int blockBindingUIMaterial = -1;
-		UniformBufferObject ubo{};
 
-		virtual void UpdateMaterial() {
-			GLSTAMPERROR;
-			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
-			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
-			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
-			glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
-
-			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
-			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
-			blockBindingUIMaterial = shader->GetUniformBufferLocation("ST_UIMAT");
-
-			struct UIMaterial_t {
-				GLboolean texture0;
-			} uimat{};
-			uimat.texture0 = texture != 0;
-			ubo.Set(&uimat, sizeof(uimat), render::BufferUsageHint::DynamicDraw);
-			ubo.BindBuffer();
-			GLSTAMPERROR;
-		}
+		virtual void UpdateMaterial() { }
 	public:
 		math::Vec4f color{ 0.8f,0.8f,0.8f,1 };
-		std::shared_ptr<SamplerTexture2d> texture;
+		std::shared_ptr<SamplerTexture2d> texture{};
 		UIMaterial() {}
 		UIMaterial(const UIMaterial& other) = delete;
 		UIMaterial(UIMaterial&& other) noexcept {
@@ -1503,30 +1384,28 @@ export namespace render {
 			using std::swap;
 			swap(*this, other);
 		}
-		virtual void Render(Mesh* mesh, UniformBufferObject* camera, UniformBufferObject* object) {
+		virtual void Render(Mesh* mesh) {
 			GLSTAMPERROR;
 			Bind();
-			if (texture != 0) {
-				texture->BindActive();
-				shader->Uniform(UNIFORM_TEXTURE0, texture.get());
-			}
-			shader->UniformBuffer(blockBindingCamera, *camera);
-			shader->UniformBuffer(blockBindingObject, *object);
-			shader->UniformBuffer(blockBindingUIMaterial, ubo);
+
+			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
+			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
+			glDisableVertexAttribArray(ATTRIBPOINTER_COLOR);
 			glVertexAttrib4fv(ATTRIBPOINTER_COLOR, (const float*)color);
-			if (texture != 0) {
-				texture->UnbindActive();
-			}
+
+			std::shared_ptr<SamplerBase> tex;
+
+			GLSTAMPERROR;
+			if (texture) tex = texture;
+			else tex = SamplerTexture2d::GetDefaultTexture();
+
+			tex->BindTexture(TEXTUREBIND_TEXTURE0);
 			mesh->RenderArray();
 			GLSTAMPERROR;
 		}
 		inline friend void swap(UIMaterial& a, UIMaterial& b) noexcept {
 			using std::swap;
 			swap((MaterialBase&)a, (MaterialBase&)b);
-			swap(a.blockBindingCamera, b.blockBindingCamera);
-			swap(a.blockBindingObject, b.blockBindingObject);
-			swap(a.blockBindingUIMaterial, b.blockBindingUIMaterial);
-			swap(a.ubo, b.ubo);
 			swap(a.color, b.color);
 			swap(a.texture, b.texture);
 		}
@@ -1656,8 +1535,6 @@ export namespace render {
 	};*/
 
 	class OceanRenderObject : public std::enable_shared_from_this<OceanRenderObject> {
-		int blockBindingCamera = -1;
-		int blockBindingObject = -1;
 		GLuint vao = 0;
 	public:
 		int width = 40;
@@ -1666,19 +1543,17 @@ export namespace render {
 		bool depthTest = true;
 		float vertOffset = 0;
 		std::shared_ptr<ShaderProgramBase> shader;
-		std::shared_ptr<SamplerTexture2d> noiseTex;
+		std::shared_ptr<SamplerTexture2d> noiseTexture;
 		UniformBufferObject OceanObj{};
 		OceanRenderObject() {
 			glGenVertexArrays(1, &vao);
 		}
 		void UpdateRenderer() {
-			blockBindingCamera = shader->GetUniformBufferLocation("ST_Camera");
-			blockBindingObject = shader->GetUniformBufferLocation("ST_Object");
 
 			glBindVertexArray(vao);
 		}
 
-		void Render(const math::Mat4f& transform, UniformBufferObject& camera) {
+		void Render(const math::Mat4f& transform) {
 			GLSTAMPERROR;
 			struct Data {
 				math::GLmat4 transform;
@@ -1704,13 +1579,11 @@ export namespace render {
 			d.origin = (math::Vec3f)(transform * math::Vec3f(0, 0, 0));
 			OceanObj.Set(&d, sizeof(Data), BufferUsageHint::StreamDraw);
 			glBindVertexArray(vao);
-			OceanObj.BindBuffer();
-			shader->UniformBuffer(blockBindingCamera, camera);
-			shader->UniformBuffer(blockBindingObject, OceanObj);
-			if (noiseTex) {
-				noiseTex->BindActive();
-				shader->Uniform(UNIFORM_TEXTURE0, noiseTex.get());
-			}
+			OceanObj.BindBuffer(UBO_OBJECT);
+			std::shared_ptr<SamplerTexture2d> noise;
+			if (noiseTexture) noise = noiseTexture;
+			else noise = SamplerTexture2d::GetDefaultTexture();
+			noise->BindTexture(TEXTUREBIND_TEXTURE0);
 			shader->Bind();
 			if (!depthTest) {
 				glDepthMask(GL_FALSE);
@@ -1722,10 +1595,7 @@ export namespace render {
 				glDepthMask(GL_TRUE);
 			}
 			GLSTAMPERROR;
-			if (noiseTex) {
-				noiseTex->UnbindActive();
-			}
-			OceanObj.UnbindBuffer();
+
 		}
 		~OceanRenderObject() {
 			if (vao != 0) {
@@ -1829,13 +1699,14 @@ export namespace render {
 				stream >> yOffset;
 				if (!stream.good()) break;
 
-				map->fontMap.insert({ character, FontMapEntry{
+				std::pair<int, FontMapEntry> entry = { character, FontMapEntry{
 					(unsigned short)X,
 					(unsigned short)Y,
 					(unsigned char)width,
 					(unsigned char)height,
 					(unsigned char)yOffset
-				} });
+				} };
+				map->fontMap.insert(entry);
 			}
 			return map;
 		}
@@ -1871,13 +1742,25 @@ export namespace render {
 //ui mesh renderer
 
 
-std::shared_ptr<render::SamplerTexture2d> render::SamplerTexture2d::GetWhiteTexture() {
+std::shared_ptr<render::SamplerTexture2d> render::SamplerTexture2d::GetDefaultTexture() {
 	static thread_local std::weak_ptr<SamplerTexture2d> whiteTexture = {};
 	std::shared_ptr<render::SamplerTexture2d> tex;
 	if (whiteTexture.expired()) {
 		tex = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d(1, 1) };
 		RawTexture2d4f rawTex{ 1,1 };
 		rawTex.SetPixel(0, 0, math::Vec4f{ 1,1,1,1 });
+		tex->SetImage(rawTex, 0);
+		whiteTexture = tex;
+	}
+	return whiteTexture.lock();
+}
+std::shared_ptr<render::SamplerTexture2d> render::SamplerTexture2d::GetDefaultNormalMap() {
+	static thread_local std::weak_ptr<SamplerTexture2d> whiteTexture = {};
+	std::shared_ptr<render::SamplerTexture2d> tex;
+	if (whiteTexture.expired()) {
+		tex = std::shared_ptr<render::SamplerTexture2d>{ new render::SamplerTexture2d(1, 1) };
+		RawTexture2d4f rawTex{ 1,1 };
+		rawTex.SetPixel(0, 0, math::Vec4f{ 0.5,0.5,1,1 });
 		tex->SetImage(rawTex, 0);
 		whiteTexture = tex;
 	}

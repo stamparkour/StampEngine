@@ -23,24 +23,25 @@ class ControlComponent : public engine::Component {
         cursor *= 0.002;
         direction += cursor;
         GameObject()->transform.rotation = math::Quatf::RotationZXY(direction.y, direction.x,0);
-        float speed = 5;
+        float dt = 1.0 / 60;//wm::CurrentWindow()->DeltaTime();
+        float speed = 3;
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::W)) {
-            GameObject()->transform.position += GameObject()->Forward() * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += GameObject()->Forward() * dt * speed;
         }
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::S)) {
-            GameObject()->transform.position += GameObject()->Back() * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += GameObject()->Back() * dt * speed;
         }
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::D)) {
-            GameObject()->transform.position += GameObject()->Right() * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += GameObject()->Right() * dt * speed;
         }
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::A)) {
-            GameObject()->transform.position += GameObject()->Left() * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += GameObject()->Left() * dt * speed;
         }
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::E)) {
-            GameObject()->transform.position += math::Vec3f(0,1,0) * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += math::Vec3f(0,1,0) * dt * speed;
         }
         if (wm::CurrentWindow()->Keyboard()->isKeyDown(wm::VertKey::Q)) {
-            GameObject()->transform.position += math::Vec3f(0, -1, 0) * wm::CurrentWindow()->DeltaTime() * speed;
+            GameObject()->transform.position += math::Vec3f(0, -1, 0) * dt * speed;
         }
     }
     //gl context safe
@@ -68,6 +69,15 @@ class ControlComponent : public engine::Component {
             wm::CurrentWindow()->Mouse()->Visibility(true);
             wm::CurrentWindow()->Mouse()->ConstrainCursor(wm::ConstrainCursorState::Free);
         }
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F5)) {
+            wm::CurrentWindow()->SetTimeScale(wm::CurrentWindow()->GetTimeScale() / 2);
+        }
+        if (wm::CurrentWindow()->Keyboard()->isKeyPress(wm::VertKey::F6)) {
+            STAMPSTACK();
+			STAMPDMSG("dt: " << wm::CurrentWindow()->DeltaTime());
+        }
+		text->text = std::to_string(direction.x) + ", " + std::to_string(direction.y);
+        text->UpdateText();
     }
     //sync safe
     virtual void OnEnable() {}
@@ -75,6 +85,9 @@ class ControlComponent : public engine::Component {
     virtual void OnDisable() {}
     //sync safe
     virtual void OnDestroy() {}
+
+public:
+	std::shared_ptr<engine::component::TextRendererUI> text;
 };
 
 class BoatComponent : public engine::Component {
@@ -188,6 +201,7 @@ public:
         std::shared_ptr<render::SolidMaterial> material = std::make_shared<render::SolidMaterial>();
         std::fstream shaderFile{ "resources\\shader.glsl" };
         material->shader = render::RenderShaderProgram::ParseStream_glsl(shaderFile, { 0 }, { {"test"}});
+		material->normalMap = engine::resource::ResourceManager::GetTexture("stamp:normal")->getSamplerTexture2d();
 
         std::shared_ptr<GameObject> cameraObj = CreateObject("Camera");
         std::shared_ptr<Camera> camera = cameraObj->AddComponent<Camera>();
@@ -212,7 +226,7 @@ public:
         oceanRenderer2->ocean.width = oceanRenderer2->ocean.height = 6;
         oceanRenderer2->ocean.vertOffset = -0.4;
 
-		oceanRenderer2->ocean.noiseTex = oceanRenderer1->ocean.noiseTex = engine::resource::ResourceManager::GetTexture("stamp:perlin_noise")->getSamplerTexture2d();
+		oceanRenderer2->ocean.noiseTexture = oceanRenderer1->ocean.noiseTexture = engine::resource::ResourceManager::GetTexture("stamp:perlin_noise")->getSamplerTexture2d();
 
         std::shared_ptr<GameObject> uiObj = CreateObject("uiThingy");
         std::shared_ptr<TransformUI> transformUI = uiObj->AddComponent<TransformUI>();
@@ -220,8 +234,10 @@ public:
         transformUI->alignY = 1;
         transformUI->pivotX = -1;
         transformUI->pivotY = 1;
-        transformUI->offsetX = 200;
-        transformUI->offsetY = -200;
+        transformUI->width = 100;
+        transformUI->height = 100;
+        transformUI->offsetX = 100;
+        transformUI->offsetY = -100;
         std::shared_ptr<render::UIMaterial> uiMat = std::make_shared<render::UIMaterial>();
         std::fstream shaderUIFile{ "resources\\shaderUI.glsl" };
         uiMat->shader = render::RenderShaderProgram::ParseStream_glsl(shaderUIFile, { 0 }, {});
@@ -244,7 +260,7 @@ public:
         uiMat2->color = math::Vec4f(0.5,0.1,0.2,1);
         textRen->material = uiMat2;
 
-
+		controller->text = textObj->GetComponent<TextRendererUI>();
     }
     virtual void Iterate() {
         /*double t = this->Window()->DeltaTime();

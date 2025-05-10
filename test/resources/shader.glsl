@@ -2,19 +2,19 @@
 
 const vec3 lightSource = normalize(vec3(2,1,0));
 
-layout(std140, binding = 1) uniform ST_Object {
+layout(std140) uniform ST_Object {
 	mat4 transform;
 } object;
 
-layout(std140, binding = 0) uniform ST_Camera {
+layout(std140) uniform ST_Camera {
 	mat4 transform;
 	mat4 perspective;
 	mat4 UI;
 	vec3 position;
 } camera;
 
-layout(binding = 0) uniform sampler2D normalMap;
-layout(binding = 1) uniform sampler2D texture0;
+layout(location = 10) uniform sampler2D normalMap;
+layout(location = 20) uniform sampler2D texture0;
 
 #define CAMERA_UP vec3(camera.transform[0][1], camera.transform[1][1], camera.transform[2][1])
 #define CAMERA_RIGHT vec3(camera.transform[0][0], camera.transform[1][0], camera.transform[2][0])

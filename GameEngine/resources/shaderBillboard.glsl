@@ -1,18 +1,18 @@
 #version 450
 
-layout(std140) uniform ST_Object {
+layout(std140, binding = 1) uniform ST_Object {
 	mat4 transform;
 	//scale
 	//position
 } object;
-layout(std140) uniform ST_Camera {
+layout(std140, binding = 0) uniform ST_Camera {
 	mat4 transform;
 	mat4 perspective;
 	mat4 UI;
 	vec3 position;
 } camera;
 
-layout(location = 20) uniform sampler2D texture0;
+layout(binding = 1) uniform sampler2D texture0;
 
 #ifdef VERTEX_SHADER
 

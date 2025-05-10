@@ -485,6 +485,7 @@ export namespace wm {
 		GLint initFBO = -1;
 		Keyboard keyboard{};
 		Mouse mouse{};
+		float timeScale = 1;
 
 		std::shared_ptr<RawSceneBase> scene = nullptr;
 		std::shared_ptr<RawSceneBase> (*sceneInstantiate)(Window* window) = 0;
@@ -686,6 +687,13 @@ export namespace wm {
 			maxWindowWidth = width + windowWidth - clientWidth;
 			maxWindowHeight = height + windowHeight - clientHeight;
 		}
+		void SetTimeScale(float scale) {
+			creationTime = Timer::getTimeRaw() - (Timer::getTimeRaw() - creationTime) * timeScale / scale;
+			timeScale = scale;
+		}
+		float GetTimeScale() {
+			return timeScale;
+		}
 
 		void SetWindowName(std::string name) {
 			this->title = name;
@@ -786,10 +794,10 @@ export namespace wm {
 		/// </summary>
 		/// <returns>time since window creation</returns>
 		double Time() {
-			return (Timer::getTimeRaw() - creationTime) * Timer::TimeTickLength();
+			return (Timer::getTimeRaw() - creationTime) * Timer::TimeTickLength() * timeScale;
 		}
 		double DeltaTime() {
-			return deltaTime;
+			return deltaTime * timeScale;
 		}
 
 		GLuint GetInitialFramebuffer() {
