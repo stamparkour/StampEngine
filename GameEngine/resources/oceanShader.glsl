@@ -23,7 +23,7 @@ layout(std140, binding = 0) uniform ST_Camera {
 } camera;
 
 float getHeight(vec2 v) {
-	return pow(texture(noise,v / 82 + vec2(0.01,0.02) * object.time).r,3) * 2 + texture(noise,v / 19 + vec2(0.2,0.07) + vec2(0.03,0.01) * object.time).g * 0.4 - 0.6;
+	return pow(texture(noise,v / 82 + vec2(0.01,0.02) * object.time).r,3) * 2 + texture(noise,v / 23 + vec2(0.2,0.07) + vec2(0.03,0.01) * object.time).g * 0.6 - 0.6;
 }
 
 vec3 getNormal(vec2 v) {
@@ -64,7 +64,7 @@ void main() {
 	vec4 wp = object.transform * vec4(position_v.x, 1, position_v.y,1);
 	
 	if(object.scale < 64) wp.y = getHeight(wp.xz) * wp.y + object.vertOffset;
-	else wp.y = 0;
+	else wp.y = -0.5;
 	worldPos = wp.xyz;
 	localPos = wp.xyz - object.origin;
 	gl_Position = camera.perspective * camera.transform * wp;

@@ -1,6 +1,7 @@
 module;
 
 #include <stdint.h>
+#include "jolt.h"
 #include "debug.h"
 #include "lua/lua.hpp"
 
@@ -16,6 +17,13 @@ import std;
 import gamerender;
 import winmanager;
 import math;
+import physics;
+import VirtualDrive;
+
+//UI layer
+constexpr auto UI_TRANSFORMLAYER = 1;
+constexpr auto UI_IMAGE = 0;
+constexpr auto UI_TEXTUI = 0.1;
 
 
 enum struct State {
@@ -35,7 +43,7 @@ constexpr auto BITMASK(auto i) {
 	return (1 << (int)i);
 }
 
-export namespace lua {
+export namespace engine::lua {
 	class LuaManager final {
 		static inline LuaManager* instance = 0;
 
@@ -43,6 +51,7 @@ export namespace lua {
 			instance = this;
 			L = luaL_newstate();
 			luaL_openlibs(L);
+			LoadEngineLib();
 			void* p = lua_getextraspace(L);
 			p = this;
 		}
@@ -54,6 +63,7 @@ export namespace lua {
 				lua_pop(L, 1);
 			}
 		}
+		void LoadEngineLib();
 	public:
 		lua_State* L = nullptr;
 
@@ -73,6 +83,7 @@ export namespace lua {
 		LuaManager& operator =(LuaManager&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		friend void swap(LuaManager& a, LuaManager& b) noexcept {
 			using std::swap;
@@ -104,6 +115,7 @@ export namespace lua {
 }
 
 export namespace engine::resource {
+
 	class TextureResource {
 
 		std::weak_ptr<render::SamplerBase> tex{};
@@ -116,7 +128,7 @@ export namespace engine::resource {
 
 		bool setValue(const std::string& key, const std::string& value) {
 			if (key == "path") {
-				path = value;
+				path = virtualdrive::GetAbsolutePath({ value });
 				return true;
 			}
 			else if (key == "minFilter") {
@@ -172,7 +184,7 @@ export namespace engine::resource {
 
 		bool setValue(const std::string& key, const std::string& value) {
 			if (key == "path") {
-				path = value;
+				path = virtualdrive::GetAbsolutePath(std::filesystem::path(value));
 				return true;
 			}
 			else if (key == "material") {
@@ -181,12 +193,16 @@ export namespace engine::resource {
 			}
 			return false;
 		}
-		std::shared_ptr<std::vector<render::PointP3NTBUC>> getRawMesh() {
+		std::shared_ptr<std::vector<render::PointP3NTBUC>> GetRawMesh() {
 			if (rawmesh.expired()) {
-				std::fstream file{ path, std::ios::in };
+				std::fstream file(path, std::ios::in);
 				auto rMesh = std::make_shared<std::vector<render::PointP3NTBUC>>();
 				if (path.extension() == ".obj" || path.extension() == ".mesh") *rMesh = render::PointP3NTBUC::ParseStream_obj(file);
-				else return {};
+				else {
+					STAMPSTACK();
+					STAMPDMSG("engine::resource::MeshResource::GetRawMesh - failed to parse data: " << path.string());
+					return {};
+				}
 				rawmesh = rMesh;
 				return rMesh;
 			}
@@ -195,9 +211,13 @@ export namespace engine::resource {
 		std::shared_ptr<render::Mesh> GetMesh() {
 			if (mesh.expired()) {
 				auto m = std::make_shared<render::Mesh>();
-				auto rMesh = getRawMesh();
-				if (!rMesh) return {};
-				m->set(*rMesh);
+				auto rMesh = GetRawMesh();
+				if (!rMesh) {
+					STAMPSTACK();
+					STAMPDMSG("engine::resource::MeshResource::GetMesh - failed to parse data");
+					return {};
+				}
+				m->SetMeshData(*rMesh);
 				mesh = m;
 				return m;
 			}
@@ -213,12 +233,14 @@ export namespace engine::resource {
 	class EntityBaseResource;
 
 	class ResourceManager {
-		static inline std::map<std::string, MeshResource> meshes;
-		static inline std::map<std::string, TextureResource> textures;
-		static inline std::map<std::string, EntityBaseResource*> entities;
-		static inline std::map<std::string, std::filesystem::path> shaders;
-		static inline std::map<std::string, std::filesystem::path> materials;
-		static inline std::map<std::string, std::filesystem::path> fontMaps;
+
+		static inline std::map<std::string, MeshResource> meshes{};
+		static inline std::map<std::string, TextureResource> textures{};
+		static inline std::map<std::string, EntityBaseResource*> entities{};
+		static inline std::map<std::string, std::filesystem::path> shaders{};
+		static inline std::map<std::string, std::filesystem::path> materials{};
+		static inline std::map<std::string, std::filesystem::path> fontMaps{};
+		static inline std::vector<std::filesystem::path> gameDirectories{};
 
 		template<typename T>
 		static bool parseResource(T& outT, const std::string& body) {
@@ -374,27 +396,37 @@ export namespace engine::resource {
 			}
 		}
 	public:
+
+		static void AddGameDirectory(const std::string& directory) {
+			gameDirectories.push_back(directory);
+		}
 		static void Initialize() {
-			if (!std::filesystem::exists("./resources/")) {
-				std::cout << "[RESOURCE] resource script folder does not exist" << std::endl;
-				return;
-			}
-			std::string buffer;
-			for (auto const& entry : std::filesystem::recursive_directory_iterator("./resources/")) {
-				if (entry.path().extension() == ".txt") {
-					std::cout << "[RESOURCE] Loading resource file: " << entry.path().string() << std::endl;
-					{
-						std::fstream stream(entry.path().string(), std::ios::in);
-						if (!stream) continue;
-						stream.seekg(0, std::ios::end);
-						size_t size = stream.tellg();
-						buffer = std::string(size, ' ');
-						stream.seekg(0, std::ios::beg);
-						stream.read(&buffer[0], size);
+			gameDirectories = {};
+			gameDirectories.push_back(std::filesystem::current_path());
+			for (auto& p : gameDirectories) {
+				//std::filesystem::current_path(p);
+				if (!std::filesystem::exists(p / "resources/")) {
+					STAMPDMSG("[RESOURCE] resource script folder does not exist: " << (p / "resources/"));
+					return;
+				}
+				std::string buffer;
+				for (auto const& entry : std::filesystem::recursive_directory_iterator(p / "resources/")) {
+					if (entry.path().extension() == ".txt") {
+						std::cout << "[RESOURCE] Loading resource file: " << entry.path().string() << std::endl;
+						{
+							std::fstream stream(entry.path().string(), std::ios::in);
+							if (!stream) continue;
+							stream.seekg(0, std::ios::end);
+							size_t size = stream.tellg();
+							buffer = std::string(size, ' ');
+							stream.seekg(0, std::ios::beg);
+							stream.read(&buffer[0], size);
+						}
+						LoadFile(buffer);
 					}
-					LoadFile(buffer);
 				}
 			}
+			//std::filesystem::current_path(gameDirectories[0]);
 		}
 		static inline TextureResource* GetTexture(const std::string& typeID) {
 			TextureResource* tex = nullptr;
@@ -532,6 +564,9 @@ export namespace engine::resource {
 }
 
 export namespace engine {
+	float RandomFloat(float min, float max) {
+		return min + ((float)rand() / RAND_MAX) * (max - min);
+	}
 	constexpr auto FloatToUN8(float value) { return (uint8_t)(value * 256); }
 
 	int GetGameScreenWidth();
@@ -898,6 +933,10 @@ export namespace engine {
 			objects.resize(0);
 		}
 		virtual void Update() {
+			auto* window = wm::CurrentWindow();
+			auto physicsThread = std::thread{ [window]() {
+				::physics::PhysicsManager::instance->Itterate(window->DeltaTime());
+			} };
 			currentScene = this;
 			for (int i = 0; i < objects.size(); i++) {
 				if (!objects[i]->destroying) {
@@ -905,6 +944,7 @@ export namespace engine {
 				}
 			}
 			Iterate();
+			physicsThread.join();
 		}
 		virtual void SyncUpdate() {
 			currentScene = this;
@@ -927,7 +967,7 @@ export namespace engine {
 			objects.reserve(4096);
 		}
 		virtual void Initialize();
-		virtual void Iterate() = 0;
+		virtual void Iterate();
 		virtual void PreRender(RenderLayer renderLayer);
 		virtual void PostRender(RenderLayer renderLayer);
 		virtual void Resize(long width, long height);
@@ -1005,7 +1045,7 @@ export namespace engine {
 				math::Vec2f{1,1},
 				math::Vec4f{1,1,1,1},
 				});
-			mesh->set(points);
+			mesh->SetMeshData(points);
 			UIMesh = mesh;
 		}
 		
@@ -1030,8 +1070,48 @@ struct LightSupply {
 	Light_t lights[0];
 };
 
-export namespace engine::UI {
-	
+export namespace engine::physics {
+	enum struct MovementType {
+		Static = JPH::EMotionType::Static,
+		Kinematic = JPH::EMotionType::Kinematic,
+		Dynamic = JPH::EMotionType::Dynamic
+	};
+	enum struct Layer {
+		NonMoving = ::physics::PhysicsLayer::NonMoving,
+		Moving = ::physics::PhysicsLayer::Moving,
+		//FineDetail,
+		MAX
+	};
+
+	class RayCastResult {
+		friend RayCastResult Raycast(const math::Vec3f& start, const math::Vec3f& direction);
+		math::Vec3f position;
+		bool isHit;
+	public:
+		math::Vec3f Position() const {
+			return position;
+		}
+		math::Vec3f Normal() const {
+			return {};
+		}
+		bool IsHit() const {
+			return isHit;
+		}
+	};
+
+	RayCastResult Raycast(const math::Vec3f& start, const math::Vec3f& direction) {
+		JPH::RVec3 s = JPH::Vec3{ start.x, start.y, start.z };
+		JPH::RVec3 d = JPH::Vec3{ direction.x, direction.y, direction.z };
+		JPH::RRayCast rayCast{ s, d };
+		JPH::RayCastResult result{};
+		bool hit = ::physics::PhysicsManager::instance->physicsSystem.GetNarrowPhaseQuery().CastRay(
+			rayCast, result);
+
+		RayCastResult rayResult{};
+		rayResult.isHit = hit;
+		rayResult.position = start + direction * (hit ? result.mFraction : 1);
+		return rayResult;
+	}
 }
 
 export namespace engine::component{
@@ -1209,10 +1289,10 @@ export namespace engine::component{
 		//sync safe
 		virtual void OnDestroy() {}
 	public:
-		std::shared_ptr<render::Mesh> mesh;
-		std::shared_ptr<render::MaterialBase> material;
+		std::shared_ptr<render::Mesh> mesh{};
+		std::shared_ptr<render::MaterialBase> material{};
 		void UpdateRenderer() {
-			renderObject.BindBuffer(render::UBO_OBJECT);
+			STAMPERROR(!material, "engine::component::MeshRenderer - material needs to be bound to mesh renderer.");
 			material->UpdateMeshAttrib(mesh.get());
 		}
 	};
@@ -1291,7 +1371,9 @@ export namespace engine::component{
 	class TransformUI final : public engine::Component {
 		bool calculated = false;
 		//sync safe
-		virtual void Start() {}
+		virtual void Start() {
+			CalcTransform();
+		}
 		//unsafe
 		virtual void Update() {
 			CalcTransform();
@@ -1333,7 +1415,7 @@ export namespace engine::component{
 			float Y = alignY;
 			X += (offsetX + width / 2 - (pivotX + 1) / 2 * width) / (right - left) * 2;
 			Y += (offsetY + height / 2 - (pivotY + 1) / 2 * height) / (top - bottom) * 2;
-			GameObject()->transform.position = { X,Y,0.01 };
+			GameObject()->transform.position = { X,Y,UI_TRANSFORMLAYER };
 			GameObject()->transform.scale = { width / (right - left) , height / (top - bottom), 1 };
 
 			return { height / 2, width / 2 };
@@ -1354,6 +1436,16 @@ export namespace engine::component{
 		//pixels
 		float offsetY = 0;
 
+		wm::RectF GetRect() {
+			return { GameObject()->globalPosition().x * engine::GetGameScreenWidth() / 2 - width / 2, 
+				GameObject()->globalPosition().y * engine::GetGameScreenHeight() / 2 - height / 2,
+				width, height };
+		}
+		wm::RectF GetRectNormalized() {
+			return { GameObject()->globalPosition().x - width / engine::GetGameScreenWidth(),
+				-GameObject()->globalPosition().y - height / engine::GetGameScreenHeight(),
+				width * 2 / engine::GetGameScreenWidth(), height * 2 / engine::GetGameScreenHeight() };
+		}
 	};
 
 	class ImageRendererUI final : public engine::Component {
@@ -1393,6 +1485,65 @@ export namespace engine::component{
 		void UpdateRenderer() {
 			material->UpdateMeshAttrib(mesh.get());
 		}
+	};
+
+	class ButtonUI final : public engine::Component {
+		std::shared_ptr<engine::component::ImageRendererUI> image{};
+		std::shared_ptr<engine::component::TransformUI> transformUI{};
+
+		bool hover = false;
+		bool prevHover = false;
+		bool hold = false;
+		bool prevHold = false;
+
+		virtual void Start() {
+			image = GameObject()->GetComponent<engine::component::ImageRendererUI>();
+			transformUI = GameObject()->GetComponent<engine::component::TransformUI>();
+		}
+		//unsafe
+		virtual void Update() {
+			prevHover = hover;
+			prevHold = hold;
+			auto rect = transformUI->GetRectNormalized();
+			auto cursor = wm::CurrentWindow()->Mouse()->GetGameSpacePosition();
+			
+			hover = cursor.x >= rect.x && cursor.x <= rect.x + rect.width &&
+				cursor.y >= rect.y && cursor.y <= rect.y + rect.height;
+			if (hover) {
+				hold = wm::CurrentWindow()->Controls()->isActionDown(actionID);
+			}
+
+			if (onHoverOver && hover && !prevHover) onHoverOver(this);
+			if (onHover && hover) onHover(this);
+			if (onHoverEnd && !hover && prevHover) onHoverEnd(this);
+			if (onMouseDown && hold && !prevHold) onMouseDown(this);
+			if (onHold && hold) onHold(this);
+			if (onMouseUp && !hold && prevHold) onMouseUp(this);
+		}
+		//gl context safe
+		virtual void Render(engine::RenderLayer renderLayer) {
+		}
+		//sync safe
+		virtual void SyncUpdate() {
+		}
+		//sync safe
+		virtual void OnEnable() {}
+		//sync safe
+		virtual void OnDisable() {}
+		//sync safe
+		virtual void OnDestroy() {}
+	public:
+		int actionID = -1;
+		std::function<void(ButtonUI*)> onHoverOver = nullptr;
+		std::function<void(ButtonUI*)> onHover = nullptr;
+		std::function<void(ButtonUI*)> onHoverEnd = nullptr;
+		std::function<void(ButtonUI*)> onMouseDown = [](ButtonUI* button) {
+			std::cout << "mouse down" << std::endl;
+			};
+		std::function<void(ButtonUI*)> onHold = nullptr;
+		std::function<void(ButtonUI*)> onMouseUp = [](ButtonUI* button) {
+			std::cout << "mouse up" << std::endl;
+			};
 	};
 
 	class TextRendererUI final : public engine::Component {
@@ -1479,37 +1630,37 @@ export namespace engine::component{
 				float w = item.width / transform->width * scale;
 				float h = item.height / transform->height * scale;
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x,y,0},
+					math::Vec3f{x,y,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTL},
 					math::Vec4f{1,1,1,1},
 					});
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x + w,y + h,0},
+					math::Vec3f{x + w,y + h,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBR},
 					math::Vec4f{1,1,1,1},
 					});
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x + w,y,0},
+					math::Vec3f{x + w,y,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTR},
 					math::Vec4f{1,1,1,1},
 					});
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x,y,0},
+					math::Vec3f{x,y,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvTL},
 					math::Vec4f{1,1,1,1},
 					});
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x,y + h,0},
+					math::Vec3f{x,y + h,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBL},
 					math::Vec4f{1,1,1,1},
 					});
 				points.push_back(render::PointP3NTBUC{
-					math::Vec3f{x + w,y + h,0},
+					math::Vec3f{x + w,y + h,UI_TEXTUI},
 					math::Vec3f{0,0,0},
 					math::Vec2f{item.uvBR},
 					math::Vec4f{1,1,1,1},
@@ -1528,7 +1679,7 @@ export namespace engine::component{
 			for (int i = 0; i < points.size(); i++) {
 				points[i].pos *= 2;
 			}
-			mesh.set(points, render::BufferUsageHint::DynamicDraw);
+			mesh.SetMeshData(points, render::BufferUsageHint::DynamicDraw);
 			material->UpdateMeshAttrib(&mesh);
 		}
 	};
@@ -1567,6 +1718,124 @@ export namespace engine::component{
 	public:
 		math::Vec3f color;
 		float intensity;
+	};
+
+
+	class MeshRigidBody final : public engine::Component, ::physics::PhysicsObject {
+		virtual void Start() {
+			auto shape = GenShape();
+			Initialize(shape.GetPtr(), mass,
+				{ GameObject()->transform.position.x, GameObject()->transform.position.y, GameObject()->transform.position.z },
+				{ GameObject()->transform.rotation.x, GameObject()->transform.rotation.y, GameObject()->transform.rotation.z, GameObject()->transform.rotation.w },
+				(JPH::EMotionType)movementType,
+				(JPH::ObjectLayer)layer
+			);
+			UpdateTransform();
+		}
+		//unsafe
+		virtual void Update() {}
+		//gl context safe
+		virtual void Render(engine::RenderLayer renderLayer) {}
+		//sync safe
+		virtual void SyncUpdate() {
+			auto rot = body->GetRotation();
+			auto pos = body->GetPosition();
+			auto vel = body->GetLinearVelocity();
+			auto& t = GameObject()->transform;
+			velocity = { vel.GetX(), vel.GetY(), vel.GetZ() };
+			t.position = { pos.GetX(), pos.GetY(), pos.GetZ() };
+			t.rotation = { rot.GetW(), rot.GetX(), rot.GetY(), rot.GetZ()};
+		}
+		//sync safe
+		virtual void OnEnable() {
+			EnableBody();
+		}
+		//sync safe
+		virtual void OnDisable() {
+			DisableBody();
+		}
+		//sync safe
+		virtual void OnDestroy() {
+			Destroy();
+		}
+
+		JPH::Ref<JPH::Shape> GenShape() {
+			auto scale = GameObject()->transform.scale;
+			if (isConvex) {
+				JPH::Array<JPH::Vec3> points{ mesh->size() };
+				for (int i = 0; i < points.size(); i++) {
+					math::Vec3 v1 = (*mesh)[i].pos;
+					points[i] = JPH::Vec3(v1.x * scale.x, v1.y * scale.y, v1.z * scale.z);
+				}
+				JPH::ConvexHullShapeSettings settings{ points };
+				auto shape = settings.Create();
+				STAMPERROR(!shape.IsValid(), "engine::component::MeshRigidBody - convex mesh shape failed to create: " << shape.GetError());
+				return shape.Get();
+			}
+			else {
+				JPH::TriangleList triangles{ mesh->size() / 3 };
+				for (int i = 0; i < triangles.size(); i++) {
+					math::Vec3 v1 = (*mesh)[3 * i + 0].pos;
+					math::Vec3 v2 = (*mesh)[3 * i + 1].pos;
+					math::Vec3 v3 = (*mesh)[3 * i + 2].pos;
+					triangles[i] = JPH::Triangle{ 
+						JPH::Vec3(v1.x * scale.x, v1.y * scale.y, v1.z * scale.z),
+						JPH::Vec3(v2.x * scale.x, v2.y * scale.y, v2.z * scale.z),
+						JPH::Vec3(v3.x * scale.x, v3.y * scale.y, v3.z * scale.z) };
+				}
+				JPH::MeshShapeSettings settings{ triangles };
+				auto shape = settings.Create();
+				STAMPERROR(!shape.IsValid(), "engine::component::MeshRigidBody - mesh shape failed to create: " << shape.GetError());
+				return shape.Get();
+			}
+		}
+	public:
+		math::Vec3f velocity = { 0, 0, 0 };
+		std::shared_ptr<std::vector<render::PointP3NTBUC>> mesh{};
+		bool isConvex = true;
+		bool gyroscopicForce = false;
+		float mass = 1.0f;
+		engine::physics::MovementType movementType = engine::physics::MovementType::Dynamic;
+		engine::physics::Layer layer = engine::physics::Layer::Moving;
+
+		//only call these in sync phase (Start, SyncUpdate, OnEnable, OnDisable, OnDestroy)
+		void UpdateShape(bool shouldActivate = false) {
+			auto shape = GenShape();
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			bodyInterface.SetShape(body->GetID(), shape.GetPtr(), true, shouldActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate);
+		}
+		void UpdateVelocity(bool shouldActivate = false) {
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			JPH::Vec3 vel{ velocity.x, velocity.y, velocity.z };
+			body->SetLinearVelocityClamped(vel);
+			if(shouldActivate) bodyInterface.ActivateBody(body->GetID());
+		}
+		void UpdateTransform(bool shouldActivate = false) {
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			JPH::Vec3 pos{ GameObject()->transform.position.x, GameObject()->transform.position.y, GameObject()->transform.position.z };
+			JPH::Quat rot{ GameObject()->transform.rotation.x, GameObject()->transform.rotation.y, GameObject()->transform.rotation.z, GameObject()->transform.rotation.w };
+			if (movementType == engine::physics::MovementType::Static || !shouldActivate) {
+				bodyInterface.SetPositionAndRotation(body->GetID(), pos, rot, shouldActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate);
+			}
+			else {
+				bodyInterface.MoveKinematic(body->GetID(), pos, rot, wm::CurrentWindow()->DeltaTime());
+			}
+		}
+		void AddForce(const math::Vec3f& force) {
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			JPH::Vec3 f{ force.x, force.y, force.z };
+			bodyInterface.AddForce(body->GetID(), f, JPH::EActivation::Activate);
+		}
+		void AddImpulse(const math::Vec3f& force) {
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			JPH::Vec3 f{ force.x, force.y, force.z };
+			bodyInterface.AddImpulse(body->GetID(), f);
+		}
+		void UpdateMovementState(bool shouldActivate = false) {
+			auto& bodyInterface = ::physics::PhysicsManager::instance->physicsSystem.GetBodyInterface();
+			body->GetMotionProperties()->ScaleToMass(mass);
+			bodyInterface.SetMotionType(body->GetID(), (JPH::EMotionType)movementType, shouldActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate);
+		}
 	};
 }
 
@@ -1610,26 +1879,13 @@ void engine::SceneBase::Render() {
 }
 
 void engine::SceneBase::Initialize() {
-	resource::ResourceManager::Initialize();
-	lua::LuaManager::Instance();
 
-	bool init = []() -> bool {
-		auto L = lua::LuaManager::Instance()->L;
-
-		const luaL_Reg engineReg[] = {
-			{ "DeltaTime", [](lua_State* L) -> int {
-				lua_pushnumber(L, wm::CurrentWindow()->DeltaTime());
-				return 1;
-			}},
-			{ 0, 0}
-		};
-		luaL_newlib(L, engineReg);
-		lua_setglobal(L, "Engine");
-
-		
-		luaS2_registermetatable(L, engine::resource::EntityBaseResource);
-
+	//run once
+	static bool init = []() -> bool {
+		resource::ResourceManager::Initialize();
+		lua::LuaManager::Instance();
 		lua::LuaManager::Instance()->LoadDefaultFiles();
+		::physics::PhysicsManager::Initialize();
 		return true;
 	}();
 
@@ -1661,6 +1917,9 @@ void engine::SceneBase::PreRender(engine::RenderLayer renderLayer) {
 	}
 
 }
+void engine::SceneBase::Iterate() {
+	
+}
 void engine::SceneBase::PostRender(engine::RenderLayer renderLayer) {
 	if (renderLayer == (engine::RenderLayer)((int)engine::RenderLayer::Max - 1)) {
 		engine::component::Camera::PostRender(renderLayer);
@@ -1668,4 +1927,70 @@ void engine::SceneBase::PostRender(engine::RenderLayer renderLayer) {
 }
 void engine::SceneBase::Resize(long width, long height) {
 	engine::component::Camera::OnResize(width, height);
+}
+
+void engine::lua::LuaManager::LoadEngineLib() {
+	auto L = lua::LuaManager::Instance()->L;
+
+	const luaL_Reg engineReg[] = {
+		//Engine.DeltaTime()
+		{ "DeltaTime", [](lua_State* L) -> int {
+			lua_pushnumber(L, wm::CurrentWindow()->DeltaTime());
+			return 1;
+		}},
+		//Engine.BindAction(index, {key=VertKey, ignoreMod c=bool, alt=bool, shift=bool, control=bool})
+		{ "BindAction", [](lua_State* L) -> int {
+			int n = lua_gettop(L);
+			if (n != 2) {
+				luaL_error(L, "engine::BindAction - expected 2 arguments, got %d", n);
+				return 0;
+			}
+			int isValid = 0;
+			int index = lua_tonumberx(L, 1, &isValid);
+			if (!isValid) {
+				luaL_error(L, "engine::BindAction - first argument must be a number.");
+				return 0;
+			}
+			wm::Controls::InputAction action{};
+			if (!lua_istable(L,2)) {
+				luaL_error(L, "engine::BindAction - second argument must be a table {key=VertKey, ignoreMod=bool, alt=bool, shift=bool, control=bool}.");
+				return 0;
+			}
+			lua_pushstring(L, "key");//param2.key
+			lua_gettable(L, 2);
+			action.key = (wm::VertKey)lua_tonumberx(L, lua_gettop(L), &isValid);
+			if (!isValid) {
+				luaL_error(L, "engine::BindAction - second argument, key must be a number.");
+				return 0;
+			}
+			//param2.ignoreMod
+			lua_pushstring(L, "ignoreMod");
+			lua_gettable(L, 2);
+			//action.ignoreMod = NIL==param2.ignoreMod || param2.ignoreMod
+			if (lua_isnil(L, lua_gettop(L))) action.ignoreMod = true;
+			else action.ignoreMod = lua_toboolean(L, lua_gettop(L));
+			if (!action.ignoreMod) {
+				//param2.alt
+				lua_pushstring(L, "alt");
+				lua_gettable(L, 2);
+				action.alt = lua_toboolean(L, lua_gettop(L));
+				//param2.shift
+				lua_pushstring(L, "shift");
+				lua_gettable(L, 2);
+				action.shift = lua_toboolean(L, lua_gettop(L));
+				//param2.control
+				lua_pushstring(L, "control");
+				lua_gettable(L, 2);
+				action.shift = lua_toboolean(L, lua_gettop(L));
+			}
+			wm::CurrentWindow()->Controls()->BindAction(index, action);
+			return 0;
+		}},
+		{ 0, 0}
+	};
+	luaL_newlib(L, engineReg);
+	lua_setglobal(L, "Engine");
+
+
+	luaS2_registermetatable(L, engine::resource::EntityBaseResource);
 }

@@ -31,6 +31,7 @@ layout(location = 5) in vec3 tangent_v;
 layout(location = 6) in vec3 bitangent_v;
 
 out vec3 worldPos;
+out vec3 localPos;
 out vec2 uv;
 out vec3 normal;
 out vec3 tangent;
@@ -42,6 +43,7 @@ void main() {
 	tangent = (object.transform * vec4(tangent_v, 0)).xyz;
 	bitangent = (object.transform * vec4(bitangent_v, 0)).xyz;
 	vec4 wp = object.transform * vec4(position_v,1);
+	localPos = position_v;
 	worldPos = wp.xyz;
 	gl_Position = camera.perspective * camera.transform * wp;
 
@@ -60,6 +62,7 @@ void main() {
 
 layout(location = 0) out vec4 diffuseColor;
 in vec3 worldPos;
+in vec3 localPos;
 in vec2 uv;
 in vec3 normal;
 in vec3 tangent;
@@ -78,7 +81,7 @@ void main() {
 	spectral = clamp(spectral, 0, 1);
 	spectral *= 0.05;
 	float diffuse = max(dot(localNormal, lightSource),0) * 0.8 + 0.2;
-	diffuse *= max(min(worldPos.y + 0.2, 1),0.2);
+	diffuse *= max(min(localPos.y + 0.2, 1),0.2);
 	diffuseColor = color * diffuse + spectral; //* (localPos.y +  6.0 / 25) * 25 / 12;
 	//diffuseColor = vec4(localNormal,0);
 }

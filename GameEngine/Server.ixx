@@ -69,7 +69,7 @@ static inline void reverseBytes(void* begin, void* end, void* dest) {
 	}
 }
 static inline void endianFix(void* source, void* dest, int length) {
-	if (std::endian::native == std::endian::big) {
+	if (std::endian::native == std::endian::little) {
 		memcpy_s(dest, length, source, length);
 	}
 	else {
@@ -150,6 +150,36 @@ public:
 			if (!(v & 0x80)) break;
 			o <<= 7;
 		}
+		return o;
+	}
+	uint8_t Uint8() {
+		STAMPERROR(data.size() - dataIndex <= sizeof(int8_t), "Packet::GetInt8 - out of bounds.");
+		uint8_t k = data[dataIndex];
+		dataIndex += sizeof(int8_t);
+		return k;
+	}
+	uint16_t Uint16() {
+		STAMPERROR(data.size() - dataIndex <= sizeof(int16_t), "Packet::GetInt16 - out of bounds.");
+		uint16_t k = *(int16_t*)(data.data() + dataIndex);
+		uint16_t o;
+		dataIndex += sizeof(int16_t);
+		endianFix(&k, &o, sizeof(int16_t));
+		return o;
+	}
+	uint32_t Uint32() {
+		STAMPERROR(data.size() - dataIndex <= sizeof(int), "Packet::GetInt32 - out of bounds.");
+		uint32_t k = *(int32_t*)(data.data() + dataIndex);
+		uint32_t o;
+		dataIndex += sizeof(int32_t);
+		endianFix(&k, &o, sizeof(int32_t));
+		return o;
+	}
+	uint64_t Uint64() {
+		STAMPERROR(data.size() - dataIndex <= sizeof(int64_t), "Packet::GetInt64 - out of bounds.");
+		uint64_t k = *(int64_t*)(data.data() + dataIndex);
+		uint64_t o;
+		dataIndex += sizeof(int64_t);
+		endianFix(&k, &o, sizeof(int64_t));
 		return o;
 	}
 	int8_t Int8() {
@@ -409,7 +439,9 @@ class TCPServer {
 		}
 	}
 protected:
-	virtual int PacketRecieve(TCPServerClient& client, Packet& packet) { }
+	virtual int PacketRecieve(TCPServerClient& client, Packet& packet) { 
+		return 0;
+	}
 	virtual void OnConnect(TCPServerClient& client) { }
 	virtual void OnDisconnect(TCPServerClient& client) { }
 	virtual void OnError(TCPServerClient& client, int errorCode) { }
@@ -437,7 +469,6 @@ public:
 	void SendToAll(Packet& packet) {
 
 	}
-
 	virtual ~TCPServer() {
 		delete &thread;
 		thread = {};
@@ -469,6 +500,8 @@ class TCPServerClient final {
 		return ClientRecieveState::OK;
 	}
 
+	//recieve packet function, auto allocates memory for packet
+
 	static inline void ClientThread(TCPServerClient* self) {
 		self->server->OnConnect(*self);
 		uint32_t lenBuf = 0;
@@ -493,14 +526,13 @@ class TCPServerClient final {
 		thread = std::thread{ ClientThread, this };
 		this->server = server;
 	}
-
-public:
-	int ID() {
-		return id;
-	}
 	void SendPacket(std::vector<uint8_t>& packet) {
 		std::lock_guard _{ lock };
 		int iSendResult = send(socket, (char*)packet.data(), packet.size(), 0);
+	}
+public:
+	int ID() {
+		return id;
 	}
 	bool IsClosed() {
 		return isClosed;

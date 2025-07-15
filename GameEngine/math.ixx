@@ -233,6 +233,9 @@ export namespace math {
 		T y;
 		T z;
 
+		Quat() noexcept : w(1), x(0), y(0), z(0) {}
+		Quat(T w, T x, T y, T z) noexcept : w(w), x(x), y(y), z(z) {}
+
 		Quat<T> Conjugate() const noexcept;
 		T NormSquared() const noexcept;
 		T Norm() const noexcept;

@@ -3,6 +3,7 @@ module;
 #include <windows.h>
 #include <windowsx.h>
 #include <hidusage.h>
+#include <xaudio2.h>
 #include "debug.h"
 #include "glm.h"
 
@@ -36,20 +37,13 @@ export namespace wm {
 		}
 	};
 
-	enum struct MouseButton {
-		Left = 0x01,
-		Right = 0x02,
-		Middle = 0x04,
-		X1 = 0x05,
-		X2 = 0x06,
-	};
-
 	enum struct VertKey {
-		//LeftMouse = 0x01,
-		//RightMouse = 0x02,
-		//MiddleMouse = 0x04,
-		//X1Mouse = 0x05,
-		//X2Mouse = 0x06,
+		None = 0,
+		LeftMouse = 0x01,
+		RightMouse = 0x02,
+		MiddleMouse = 0x04,
+		X1Mouse = 0x05,
+		X2Mouse = 0x06,
 		Backspace = 0x08,
 		Tab = 0x09,
 		Enter = 0x0D,
@@ -148,6 +142,15 @@ export namespace wm {
 		OEM_Period = 0xbe,
 	};
 
+	enum struct MouseButton {
+		None = 0,
+		LeftMouse = 0x01,
+		RightMouse = 0x02,
+		MiddleMouse = 0x04,
+		X1Mouse = 0x05,
+		X2Mouse = 0x06,
+	};
+
 	enum struct ShowWindowState {
 		Borderless = -1,
 		Maximize = SW_MAXIMIZE,
@@ -219,7 +222,9 @@ export namespace wm {
 		virtual void InputDeviceChange(RAWINPUT* input) = 0;
 		virtual void SyncUpdate() = 0;
 
-		bool isValid() {}
+		bool isValid() {
+			return false;
+		}
 
 		bool isDevice(HANDLE h);
 
@@ -228,7 +233,11 @@ export namespace wm {
 	}; 
 
 	class Keyboard : public std::enable_shared_from_this<Keyboard> {
+	public:
+	private:
 		friend class Window;
+		friend class Mouse;
+		friend class Controls;
 		friend LRESULT(::Wndproc)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 		class Window* window = 0;
@@ -329,6 +338,7 @@ export namespace wm {
 
 	class Mouse {
 		friend Window;
+		friend class Controls;
 		friend LRESULT(::Wndproc)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 		Window* window = 0;
@@ -340,25 +350,21 @@ export namespace wm {
 		math::Vec2d gameVelocity = { 0,0 };
 		math::Vec2i screenVelocity = { 0,0 };
 		math::Vec2d nextRawVelocity = { 0,0 };
+		math::Vec2d scrollVelocity = { 0,0 };
 		double sensitivity = 1.0f;
+		double scrollSenitivity = 1.0f;
 		bool isShown = true;
 		bool currentlyShown = true;
 		
+		std::bitset<6> mouseButtons;
+		std::bitset<6> prevMouseButtons;
+
 		ConstrainCursorState constrainState = ConstrainCursorState::Free;
 		ConstrainCursorState prevConstrainState = ConstrainCursorState::Free;
 		Mouse() {}
 		Mouse(Window* window);
 		
-		void Input(RAWINPUT* input) {
-			if (input->header.dwType != RIM_TYPEMOUSE) return;
-			RAWMOUSE* mouse = &input->data.mouse;
-			if (mouse->usFlags & MOUSE_MOVE_ABSOLUTE) {
-				//abs mouse
-			}
-			else {
-				nextRawVelocity += { (double)mouse->lLastX, (double)mouse->lLastY };
-			}
-		}
+		void Input(RAWINPUT* input);
 		void MouseMove(int x, int y);
 		void SyncUpdate();
 
@@ -375,6 +381,18 @@ export namespace wm {
 		void InternalConstrainCursor(ConstrainCursorState state);
 
 	public:
+		bool isKeyDown(MouseButton key) const {
+			return mouseButtons[(int)key];
+		}
+		bool isKeyUp(MouseButton key) const {
+			return !mouseButtons[(int)key];
+		}
+		bool isKeyPress(MouseButton key) const {
+			return mouseButtons[(int)key] && !prevMouseButtons[(int)key];
+		}
+		bool isKeyRelease(MouseButton key) const {
+			return !mouseButtons[(int)key] && prevMouseButtons[(int)key];
+		}
 		/// <summary>
 		/// 
 		/// </summary>
@@ -431,6 +449,13 @@ export namespace wm {
 		void setSensitivity(double sensitivity) {
 			this->sensitivity = sensitivity;
 		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sensitivity"> - multiplier for <see cref="GetInputVelocity()"/></param>
+		void setScrollSensitivity(double sensitivity) {
+			this->scrollSenitivity = sensitivity;
+		}
 
 		/// <summary>
 		/// sets the visibility of the cursor.
@@ -441,9 +466,52 @@ export namespace wm {
 		}
 
 		void ConstrainCursor(ConstrainCursorState state);
+	};
 
-		bool isButtonDown(MouseButton button) const {
-			return (GetKeyState((int)button) & 0x8000) != 0;
+	class Controls : public std::enable_shared_from_this<Controls> {
+		friend Window;
+	public:
+		static const size_t MAX_ACTIONS = 512;
+		struct InputAction {
+			VertKey key;
+			bool ignoreMod;
+			bool shift;
+			bool control;
+			bool alt;
+		};
+	private:
+		class Window* window = 0;
+		InputAction actions[MAX_ACTIONS];
+		Controls() {}
+		Controls(Window* window) {
+			this->window = window;
+		}
+	public:
+		void BindAction(int index, InputAction& action) {
+			if (index < 0 || index >= MAX_ACTIONS) return;
+			actions[index] = action;
+		}
+
+		bool isActionDown(int index) const;
+		bool isActionUp(int index) const;
+		bool isActionPress(int index) const;
+		bool isActionRelease(int index) const;
+	};
+
+	class AudioManager final : public std::enable_shared_from_this<AudioManager> {
+		friend class Window;
+		Window* window;
+		AudioManager() = default;
+		AudioManager(Window* window) : window(window){ 
+			IXAudio2* m_xAudio2{};
+			::XAudio2Create(&m_xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+		}
+	public:
+
+
+
+		~AudioManager() {
+
 		}
 	};
 
@@ -483,9 +551,13 @@ export namespace wm {
 		long long creationTime = 0;
 		double deltaTime = 0;
 		GLint initFBO = -1;
+		float timeScale = 1;
+		bool vsync = false;
+
 		Keyboard keyboard{};
 		Mouse mouse{};
-		float timeScale = 1;
+		Controls controls{};
+		AudioManager audioManager{};
 
 		std::shared_ptr<RawSceneBase> scene = nullptr;
 		std::shared_ptr<RawSceneBase> (*sceneInstantiate)(Window* window) = 0;
@@ -502,6 +574,9 @@ export namespace wm {
 		bool Create(HWND hwnd, CREATESTRUCT* createStruct) {
 			this->hwnd = hwnd;
 
+			HRESULT hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+			if (FAILED(hr)) return hr;
+
 			HDC displayContext = GetDC(hwnd);
 			PIXELFORMATDESCRIPTOR pfd = {
 				sizeof(PIXELFORMATDESCRIPTOR), 1,
@@ -514,7 +589,10 @@ export namespace wm {
 			if (SetPixelFormat(displayContext, iPixelFormat, &pfd2) == FALSE)
 				return false;
 			glContext = wglCreateContext(displayContext);
-			STAMPERROR(wglMakeCurrent(displayContext, glContext) == FALSE, "Wndproc -> OnCreate - failed to opengl context");
+			if (!wglMakeCurrent(displayContext, glContext)) {
+				STAMPSTACK();
+				STAMPDMSG("Wndproc -> OnCreate - failed to opengl context");
+			}
 			std::cout << "[opengl] max version: " << glGetString(GL_VERSION) << std::endl;
 			GLMInit();
 			//int value;
@@ -527,6 +605,8 @@ export namespace wm {
 
 			keyboard = { this };
 			mouse = { this };
+			controls = { this };
+			audioManager = { this };
 			return exsists;
 		}
 		bool Close() {
@@ -639,7 +719,7 @@ export namespace wm {
 				//render
 				if (scene) scene->Render();
 				glFlush();
-				SwapBuffers(hdc);
+				if (vsync) SwapBuffers(hdc);
 
 				update.join();
 			}
@@ -656,7 +736,7 @@ export namespace wm {
 			initializeCV.wait(lk, [this] { return initialized; });
 		}
 	public:
-		Window(std::string title, WindowConstruct construct = {});
+		Window(std::string title, WindowConstruct* construct = nullptr);
 
 		Window(Window&) = delete;
 		Window& operator = (Window&) = delete;
@@ -664,12 +744,17 @@ export namespace wm {
 		void SetGameRatio(float ratio) { 
 			gameRatio = ratio;
 		}
+		void SetGameRatioOptimal() {
+			gameRatio = (float)clientWidth / clientHeight;
+		}
 		void SetClientSize(int width, int height, bool shouldMoveWindow = true) {
 			RECT desktop;
 			const HWND hDesktop = GetDesktopWindow();
 			GetWindowRect(hDesktop, &desktop);
 			width += windowWidth - clientWidth;
 			height += windowHeight - clientHeight;
+			if (width > desktop.right - desktop.left) width = desktop.right - desktop.left;
+			if (height > desktop.bottom - desktop.top) height = desktop.bottom - desktop.top;
 			int x = desktop.right / 2 - width / 2;
 			int y = desktop.bottom / 2 - height / 2;
 			ShowWindow(hwnd, SW_RESTORE);
@@ -693,6 +778,12 @@ export namespace wm {
 		}
 		float GetTimeScale() {
 			return timeScale;
+		}
+		void SetVSync(bool vsync) {
+			this->vsync = vsync;
+		}
+		GLenum GetRenderTarget() {
+			return vsync ? GL_BACK_LEFT : GL_FRONT_LEFT;
 		}
 
 		void SetWindowName(std::string name) {
@@ -812,6 +903,9 @@ export namespace wm {
 		Mouse* Mouse() {
 			return &mouse;
 		}
+		Controls* Controls() {
+			return &controls;
+		}
 
 		bool isControlThread() {
             return std::this_thread::get_id() == controlThreadID;
@@ -909,9 +1003,11 @@ LRESULT Wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		if (!window || window->Close()) DestroyWindow(hwnd);
 		return 0;
 	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
 		if (window && window->active) window->keyboard.onKeyDown((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
 		return 0;
 	case WM_KEYUP:
+	case WM_SYSKEYUP:
 		if (window && window->active) window->keyboard.onKeyUp((wm::VertKey)wparam, (lparam >> 16) & 0xFF, lparam);
 		return 0;
 	case WM_CHAR:
@@ -1000,6 +1096,66 @@ wm::Mouse::Mouse(wm::Window* window) {
 	RegisterRawInputDevices(devices, 1, sizeof(RAWINPUTDEVICE));
 }
 
+void wm::Mouse::Input(RAWINPUT* input) {
+	if (input->header.dwType != RIM_TYPEMOUSE) return;
+	RAWMOUSE* mouse = &input->data.mouse;
+	if (mouse->usFlags & MOUSE_MOVE_ABSOLUTE) {
+		//abs mouse
+		STAMPDMSG("Mouse - absolute mouse movement not implemented");
+	}
+	else {
+		nextRawVelocity += { (double)mouse->lLastX, (double)mouse->lLastY };
+	}
+
+	//mouse input
+	if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::LeftMouse] = true;
+		mouseButtons[(int)wm::MouseButton::LeftMouse] = true;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::LeftMouse] = false;
+		mouseButtons[(int)wm::MouseButton::LeftMouse] = false;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::RightMouse] = true;
+		mouseButtons[(int)wm::MouseButton::RightMouse] = true;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::RightMouse] = false;
+		mouseButtons[(int)wm::MouseButton::RightMouse] = false;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::MiddleMouse] = true;
+		mouseButtons[(int)wm::MouseButton::MiddleMouse] = true;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::MiddleMouse] = false;
+		mouseButtons[(int)wm::MouseButton::MiddleMouse] = false;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::X1Mouse] = true;
+		mouseButtons[(int)wm::MouseButton::X1Mouse] = true;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_UP) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::X1Mouse] = false;
+		mouseButtons[(int)wm::MouseButton::X1Mouse] = false;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::X2Mouse] = true;
+		mouseButtons[(int)wm::MouseButton::X2Mouse] = true;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_UP) {
+		window->Keyboard()->vertKeys[(int)wm::VertKey::X2Mouse] = false;
+		mouseButtons[(int)wm::MouseButton::X2Mouse] = false;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_WHEEL) {
+		scrollVelocity.y = (signed short)mouse->usButtonData * scrollSenitivity;
+	}
+	if (mouse->usButtonFlags & RI_MOUSE_HWHEEL) {
+		scrollVelocity.x = (signed short)mouse->usButtonData * scrollSenitivity;
+	}
+}
+
 void wm::Mouse::MouseMove(int x, int y) {
 	Rect r = window->GetGameRect();
 	double sx = (double)(x - r.x) / r.width * 2 - 1;
@@ -1009,6 +1165,8 @@ void wm::Mouse::MouseMove(int x, int y) {
 }
 
 void wm::Mouse::SyncUpdate() {
+	prevMouseButtons = mouseButtons;
+
 	rawVelocity = nextRawVelocity * sensitivity;
 	nextRawVelocity = { 0, 0 };
 
@@ -1063,7 +1221,7 @@ void wm::Mouse::ConstrainCursor(ConstrainCursorState state) {
 	constrainState = state;
 }
 
-wm::Window::Window(std::string title, wm::WindowConstruct construct) {
+wm::Window::Window(std::string title, wm::WindowConstruct* construct) {
 	this->title = title;
 
 	static BOOL console = []()->BOOL {
@@ -1111,11 +1269,11 @@ void wm::RawSceneBase::Render() {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, window->GetInitialFramebuffer());
 	glReadBuffer(GL_COLOR_ATTACHMENT0 + colorAttachmentIndex);
-	glDrawBuffer(GL_BACK_LEFT);
+	glDrawBuffer(wm::CurrentWindow()->GetRenderTarget());
 	Rect r = window->GetGameRect();
 	GLSTAMPERROR;
 	glBlitFramebuffer(0, 0, colorAttachmentWidth, colorAttachmentHeight, r.x, r.y,
-		r.x + r.width, r.y + r.height, GL_COLOR_BUFFER_BIT, GL_SCALED_RESOLVE_NICEST_EXT);//GL_NEAREST  GL_LINEAR GL_SCALED_RESOLVE_FASTEST_EXT GL_SCALED_RESOLVE_NICEST_EXT
+		r.x + r.width, r.y + r.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);//GL_NEAREST  GL_LINEAR GL_SCALED_RESOLVE_FASTEST_EXT GL_SCALED_RESOLVE_NICEST_EXT
 
 	GLSTAMPERROR;
 }
@@ -1126,4 +1284,43 @@ void wm::RawSceneBase::SetFramebuffer(GLuint framebuffer, int width, int height,
 	this->colorAttachmentHeight = height;
 	this->colorAttachmentIndex = colorAttachmentIndex;
 	if (window) window->SetGameRatio((float)width / height);
+}
+
+bool wm::Controls::isActionDown(int index) const {
+	STAMPERROR(index < 0 || index >= MAX_ACTIONS, "Keyboard::isActionDown - index out of range");
+	const InputAction& action = actions[index];
+	if (action.key == VertKey::None) return false;
+	if (action.ignoreMod) {
+		return window->Keyboard()->isKeyDown(action.key);
+	}
+	else {
+		return window->Keyboard()->isKeyDown(action.key) && action.shift == window->Keyboard()->isKeyDown(VertKey::Shift) &&
+			action.control == window->Keyboard()->isKeyDown(VertKey::Control) &&
+			action.alt == window->Keyboard()->isKeyDown(VertKey::Alt);
+	}
+}
+bool wm::Controls::isActionUp(int index) const {
+	STAMPERROR(index < 0 || index >= MAX_ACTIONS, "Keyboard::isActionUp - index out of range");
+	const InputAction& action = actions[index];
+	if (action.key == VertKey::None) return false;
+	return window->Keyboard()->isKeyUp(action.key);
+}
+bool wm::Controls::isActionPress(int index) const {
+	STAMPERROR(index < 0 || index >= MAX_ACTIONS, "Keyboard::isActionPress - index out of range");
+	const InputAction& action = actions[index];
+	if (action.key == VertKey::None) return false;
+	if (action.ignoreMod) {
+		return window->Keyboard()->isKeyPress(action.key);
+	}
+	else {
+		return window->Keyboard()->isKeyPress(action.key) && action.shift == window->Keyboard()->isKeyDown(VertKey::Shift) &&
+			action.control == window->Keyboard()->isKeyDown(VertKey::Control) &&
+			action.alt == window->Keyboard()->isKeyDown(VertKey::Alt);
+	}
+}
+bool wm::Controls::isActionRelease(int index) const {
+	STAMPERROR(index < 0 || index >= MAX_ACTIONS, "Keyboard::isActionRelease - index out of range");
+	const InputAction& action = actions[index];
+	if (action.key == VertKey::None) return false;
+	return window->Keyboard()->isKeyRelease(action.key);
 }

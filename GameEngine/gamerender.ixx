@@ -68,7 +68,7 @@ export namespace render {
 		PointP3NTBUC(const math::Vec3f pos, const math::Vec3f normal, const math::Vec2f uv, const math::Vec4f color)
 			: pos(pos), normal(normal), uv(uv), color(color) {
 		}
-		static void setMaterial(MaterialBase& material) {
+		static void SetMaterial() {
 			//glEnableVertexAttribArray
 			glVertexAttribPointer(ATTRIBPOINTER_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, pos));
 			glVertexAttribPointer(ATTRIBPOINTER_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(PointP3NTBUC), (void*)offsetof(PointP3NTBUC, normal));
@@ -231,14 +231,15 @@ export namespace render {
 	class Mesh final : public std::enable_shared_from_this<Mesh> {
 		friend class MaterialBase;
 		GLuint vbo = 0;
+		GLuint vao = 0;
 		size_t count = 0;
 		GLenum renderMode = 0;
-		void (*setMaterial)(MaterialBase& material);
 	public:
 		Mesh(const Mesh& other) = delete;
 		Mesh() {
 			STAMPERROR(!wm::CurrentWindow()->isControlThread(), "render::Mesh - can only construct mesh in management thread.");
 			glGenBuffers(1, &vbo);
+			glGenVertexArrays(1, &vao);
 		}
 		Mesh(Mesh&& other) noexcept {
 			using std::swap;
@@ -254,24 +255,27 @@ export namespace render {
 			STAMPERROR(!wm::CurrentWindow()->isControlThread(),"render::Mesh::Bind - can only Bind mesh in management thread.");
 			STAMPERROR(!isValid(),"render::Mesh::Bind - failed to Bind mesh: mesh does not have assigned buffers.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindVertexArray(vao);
 		}
 		template<typename T>
-		void set(const std::vector<T>& meshPoints, BufferUsageHint usageHint = BufferUsageHint::StaticDraw) {
+		void SetMeshData(const std::vector<T>& meshPoints, BufferUsageHint usageHint = BufferUsageHint::StaticDraw) {
 			if (meshPoints.size() == 0) return;
 			STAMPERROR(!wm::CurrentWindow()->isControlThread(), "render::Mesh::set - can only Bind mesh in management thread.");
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindVertexArray(vao);
 			GLSTAMPERROR;
-			setMaterial = T::setMaterial;
+			T::SetMaterial();
 			glBufferData(GL_ARRAY_BUFFER, meshPoints.size() * sizeof(T), &(meshPoints[0]), (GLenum)usageHint);
 			GLSTAMPERROR;
 			count = meshPoints.size();
 			renderMode = T::renderMode;
 		}
 		void RenderArray() {
+			Bind();
 			glDrawArrays(renderMode, 0, count);
 		}
 		bool isValid() const {
-			return vbo != 0;
+			return vbo != 0 && vao != 0;
 		}
 		explicit operator bool() {
 			return isValid();
@@ -282,14 +286,16 @@ export namespace render {
 		inline friend void swap(Mesh& a, Mesh& b) {
 			using std::swap;
 			swap(a.vbo, b.vbo);
+			swap(a.vao, b.vao);
 			swap(a.count, b.count);
 			swap(a.renderMode, b.renderMode);
-			swap(a.setMaterial, b.setMaterial);
 		}
 		~Mesh() {
 			STAMPERROR(!wm::CurrentWindow()->isControlThread(),"render::Mesh::~Mesh - can only Bind mesh in management thread.");
 			glDeleteBuffers(1, &vbo);
 			vbo = 0;
+			glDeleteVertexArrays(1, &vao);
+			vao = 0;
 		}
 	};
 	
@@ -812,6 +818,7 @@ export namespace render {
 		UniformBufferObject& operator=(UniformBufferObject&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		void Bind() {
 			STAMPERROR(!IsValid(),"render::UniformBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
@@ -872,6 +879,7 @@ export namespace render {
 		ShaderStorageBufferObject& operator=(ShaderStorageBufferObject&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		void Bind() {
 			STAMPERROR(!isValid(), "render::ShaderStorageBufferObject::Bind - failed to Bind ubo: buffer not initialized.");
@@ -921,18 +929,55 @@ export namespace render {
 			GL_VERTEX_SHADER,  GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER, GL_COMPUTE_SHADER
 		};
 		inline static const std::string shaderDefineScript[]{
-			"VERTEX_SHADER\n", "TESS_CONTROL_SHADER\n", "TESS_EVALUATION_SHADER\n", "GEOMETRY_SHADER\n", "FRAGMENT_SHADER\n","COMPUTE_SHADER\n"
+			"VERTEX_SHADER", "TESS_CONTROL_SHADER", "TESS_EVALUATION_SHADER", "GEOMETRY_SHADER", "FRAGMENT_SHADER","COMPUTE_SHADER"
 		};
 	private:
 		GLuint program = 0;
 		static inline thread_local GLuint currentProgram = 0;
+
+		static std::string ToLineNumberString(std::string str) {
+			std::string result{};
+			int line = 1;
+			bool newLine = true;
+			for (int i = 0; i < str.size(); i++) {
+				if (str[i] == '\n') {
+					result += '\n';
+					newLine = true;
+				}
+				else {
+					if (newLine) {
+						std::string lineStr = std::to_string(line);
+						result += std::string(max(4 - lineStr.length(), 0), ' ') + lineStr + ": ";
+						newLine = false;
+						line++;
+					}
+					result += str[i];
+				}
+			}
+			return result;
+		}
+
+		std::string parseInclude(std::string str) {
+			std::string result{};
+			std::regex includeRegex(R"#((?:^|[\n\r]+)#include\s+"([^"]+)")#");
+			auto words_begin = std::sregex_iterator(str.begin(), str.end(), includeRegex);
+			auto words_end = std::sregex_iterator();
+
+			for (std::sregex_iterator i = words_begin; i != words_end; ++i)
+			{
+				std::smatch match = *i;
+				auto path = match[0].str();
+				result = match.prefix().str();
+			}
+			return result;
+		}
 
 		GLenum ToShaderComp(std::string& version, std::string& progTxt, int index) {
 			static GLint compiled = 0;
 			static GLchar message[1024]{};
 			static GLsizei log_length = 0;
 			GLuint comp = glCreateShader(shaderTypeEnum[index]);
-			std::string p = version + std::string("#define ") + shaderDefineScript[index] + progTxt;
+			std::string p = version + std::string("#define ") + shaderDefineScript[index] + "\n" + progTxt;
 			
 			const char* c = p.c_str();
 			glShaderSource(comp, 1, &c, 0);
@@ -942,7 +987,7 @@ export namespace render {
 			if (compiled != GL_TRUE) {
 				glGetShaderInfoLog(comp, sizeof(message), &log_length, message);
 				STAMPSTACK();
-				STAMPDMSG("render::ShaderProgramBase::set - compilation error" << std::endl << message << std::endl << p);
+				STAMPDMSG("render::ShaderProgramBase::set - compilation error" << std::endl << message << std::endl << ToLineNumberString(p));
 			}
 			return comp;
 		}
@@ -968,7 +1013,7 @@ export namespace render {
 				progTxt += c;
 			}
 			for (int i = 0; i < defines.size(); i++) {
-				progTxt = std::string("#define ") + defines[i] + std::string("\n") + progTxt;
+				progTxt = std::string("#define ") + defines[i] + "\n" + progTxt;
 			}
 			static GLint compiled = 0;
 			static GLchar message[1024]{};
@@ -1026,6 +1071,7 @@ export namespace render {
 		ShaderProgramBase& operator =(ShaderProgramBase&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		inline friend void swap(ShaderProgramBase& a, ShaderProgramBase& b) noexcept {
 			using std::swap;
@@ -1228,6 +1274,7 @@ export namespace render {
 		RenderShaderProgram& operator =(RenderShaderProgram&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		inline friend void swap(RenderShaderProgram& a, RenderShaderProgram& b) noexcept {
 			using std::swap;
@@ -1252,6 +1299,7 @@ export namespace render {
 		ComputeShaderProgram& operator =(ComputeShaderProgram&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		inline friend void swap(ComputeShaderProgram& a, ComputeShaderProgram& b) noexcept {
 			using std::swap;
@@ -1269,12 +1317,8 @@ export namespace render {
 		}
 	};
 	class MaterialBase : public std::enable_shared_from_this<MaterialBase> {
-		GLuint vao = 0;
 	protected:
-		MaterialBase() { 
-			glGenVertexArrays(1, &vao);
-			glBindVertexArray(vao);
-		}
+		MaterialBase() { }
 		MaterialBase(const MaterialBase& other) = delete;
 		MaterialBase& operator =(const MaterialBase& other) = delete;
 		virtual void UpdateMaterial() = 0;
@@ -1287,26 +1331,20 @@ export namespace render {
 			if (!mesh) return;
 			Bind();
 			mesh->Bind();
-			mesh->setMaterial(*this);
 			UpdateMaterial();
 		}
 		void Bind() {
 			STAMPERROR(!isValid(),"render::MaterialBase::Bind - failed to Bind mesh: mesh does not have allocated buffers.");
-			glBindVertexArray(vao);
 			shader->Bind();
 		}
 		bool isValid() {
-			return vao != 0 && shader->isValid();
+			return shader->isValid();
 		}
 		inline friend void swap(MaterialBase& a, MaterialBase& b) noexcept {
 			using std::swap;
-			swap(a.vao, b.vao);
 			swap(a.shader, b.shader);
 		}
-		virtual ~MaterialBase() {
-			glDeleteVertexArrays(1, &vao);
-			vao = 0;
-		}
+		virtual ~MaterialBase() { }
 	};
 	class SolidMaterial final : public MaterialBase {
 
@@ -1326,10 +1364,11 @@ export namespace render {
 		SolidMaterial& operator =(SolidMaterial&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		virtual void Render(Mesh* mesh) {
 			Bind();
-
+			mesh->Bind();
 			glEnableVertexAttribArray(ATTRIBPOINTER_POSITION);
 			glEnableVertexAttribArray(ATTRIBPOINTER_NORMAL);
 			glEnableVertexAttribArray(ATTRIBPOINTER_UV);
@@ -1383,6 +1422,7 @@ export namespace render {
 		UIMaterial& operator =(UIMaterial&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		virtual void Render(Mesh* mesh) {
 			GLSTAMPERROR;
@@ -1458,6 +1498,7 @@ export namespace render {
 		FrameBuffer2d& operator =(FrameBuffer2d&& other) noexcept {
 			using std::swap;
 			swap(*this, other);
+			return *this;
 		}
 		inline friend void swap(FrameBuffer2d& a, FrameBuffer2d& b) {
 			using std::swap;
@@ -1605,13 +1646,14 @@ export namespace render {
 		}
 	};
 
+	//https://github.com/Chlumsky/msdf-atlas-gen
 	class FontMap : public std::enable_shared_from_this<FontMap> {
 		struct FontMapEntry {
 			unsigned short X;
 			unsigned short Y;
 			unsigned char width;
 			unsigned char height;
-			unsigned char yOffset;
+			char yOffset;
 		};
 
 		std::map<int, FontMapEntry> fontMap{};
@@ -1631,7 +1673,7 @@ export namespace render {
 			math::Vec2f uvBL;
 			unsigned char width;
 			unsigned char height;
-			unsigned char yOffset;
+			char yOffset;
 		};
 
 		std::shared_ptr<SamplerTexture2d> texture = 0;
@@ -1704,7 +1746,7 @@ export namespace render {
 					(unsigned short)Y,
 					(unsigned char)width,
 					(unsigned char)height,
-					(unsigned char)yOffset
+					(char)yOffset
 				} };
 				map->fontMap.insert(entry);
 			}

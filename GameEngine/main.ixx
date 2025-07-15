@@ -4,6 +4,7 @@ import "glm.h";
 
 import winmanager;
 import testScene;
+import testPhysicsScene;
 import std;
 
 
@@ -31,11 +32,12 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     //window.SetWindowState(wm::ShowWindowState::Borderless);
     window.SetClientSize(1200, 900);
+    window.SetGameRatioOptimal();
     //window2.SetClientSize(1300, 900);
     //window.Mouse()->Visibility(false);
     //window.Mouse()->ConstrainCursor(wm::ConstrainCursorState::Freeze);
 
-	window.SetScene<InitScene>();
+	window.SetScene<physicsTest::PhysicsScene>();
 
     window.AwaitClose();
     //window2.AwaitClose();
