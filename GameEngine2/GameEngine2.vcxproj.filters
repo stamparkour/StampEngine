@@ -40,5 +40,23 @@
     <ClInclude Include="stamp\math\mathdefine.h">
       <Filter>stamp\math</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\math\quaternion.h">
+      <Filter>stamp\math</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\getset.h">
+      <Filter>stamp</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\inoncopyable.h">
+      <Filter>stamp</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\math\algorithm.h">
+      <Filter>stamp\math</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\math\matrix.h">
+      <Filter>stamp\math</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\math\rect.h">
+      <Filter>stamp\math</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

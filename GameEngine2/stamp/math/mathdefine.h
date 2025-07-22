@@ -1,6 +1,6 @@
 #pragma once
-#ifndef STAMP_MATHDEFINE_H
-#define STAMP_MATHDEFINE_H
+#ifndef STAMP_MATH_MATHDEFINE_H
+#define STAMP_MATH_MATHDEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -16,47 +16,95 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// provides short names for all math headers
+// #define STAMP_MATH_ALL_SHORT_NAMES
+
 #include <stamp/define.h>
 
-#define STAMPENGINE_MATHCONST_NAMESPACE			STAMPENGINE_NAMESPACE::mathconst
-#define STAMPENGINE_MATHCONST_NAMESPACE_BEGIN	namespace STAMPENGINE_MATHCONST_NAMESPACE {
-#define STAMPENGINE_MATHCONST_NAMESPACE_END		}
-#define STAMPENGINE_MATH_NAMESPACE				STAMPENGINE_NAMESPACE::math
-#define STAMPENGINE_MATH_NAMESPACE_BEGIN		namespace STAMPENGINE_MATH_NAMESPACE {
-#define STAMPENGINE_MATH_NAMESPACE_END			}
+#ifndef min
+#define min(x,y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef max
+#define max(x,y) ((x) > (y) ? (x) : (y))
+#endif
+#define STAMP_DEFAULT_ROTATION_ORDER RotationOrder::ZXY
+#define STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(T, TEMPLATE, ARGS) \
+	TEMPLATE using T##b = T<bool ARGS>;					\
+	TEMPLATE using T##uc = T<unsigned char ARGS>;		\
+	TEMPLATE using T##c = T<char ARGS>;					\
+	TEMPLATE using T##us = T<unsigned short ARGS>;		\
+	TEMPLATE using T##s = T<short ARGS>;				\
+	TEMPLATE using T##ui = T<unsigned int ARGS>;		\
+	TEMPLATE using T##i = T<int ARGS>;					\
+	TEMPLATE using T##ul = T<unsigned long ARGS>;		\
+	TEMPLATE using T##l = T<long ARGS>;					\
+	TEMPLATE using T##ull = T<unsigned long long ARGS>;	\
+	TEMPLATE using T##ll = T<long long ARGS>;			\
+	TEMPLATE using T##f = T<float ARGS>;				\
+	TEMPLATE using T##d = T<double ARGS>;				\
+	TEMPLATE using T##ld = T<long double ARGS>
+#define STAMP_TEMPLATE_ALL_QUANTITY(T) STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(T,,)
+
+#define STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE, TYPE2, TEMPLATE) \
+TEMPLATE TYPE	operator	+	(const TYPE& a, TYPE2 b)	noexcept { return a + static_cast<TYPE>(b); } \
+TEMPLATE TYPE&	operator	+=	(TYPE& a, TYPE2 b)			noexcept { return a += static_cast<TYPE>(b); } \
+TEMPLATE TYPE	operator	-	(const TYPE& a, TYPE2 b)	noexcept { return a - static_cast<TYPE>(b); } \
+TEMPLATE TYPE&	operator	-=	(TYPE& a, TYPE2 b)			noexcept { return a -= static_cast<TYPE>(b); } \
+TEMPLATE TYPE	operator	*	(const TYPE& a, TYPE2 b)	noexcept { return a * static_cast<TYPE>(b); } \
+TEMPLATE TYPE&	operator	*=	(TYPE& a, TYPE2 b)			noexcept { return a *= static_cast<TYPE>(b); } \
+TEMPLATE TYPE	operator	/	(const TYPE& a, TYPE2 b)	noexcept { return a / static_cast<TYPE>(b); } \
+TEMPLATE TYPE&	operator	/=	(TYPE& a, TYPE2 b)			noexcept { return a /= static_cast<TYPE>(b); } \
+TEMPLATE TYPE	operator	+	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) + b; } \
+TEMPLATE TYPE	operator	-	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) - b; } \
+TEMPLATE TYPE	operator	*	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) * b; } \
+TEMPLATE TYPE	operator	/	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) / b; }
+#define STAMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T>, T, template<Quantity T>)
 
 
-STAMPENGINE_MATHCONST_NAMESPACE_BEGIN
+#define STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE, TYPE1, TYPE2, TEMPLATE) \
+TEMPLATE TYPE1	operator	==	(const TYPE& a, TYPE2 b)	noexcept { return a == static_cast<TYPE>(b); } \
+TEMPLATE bool	operator	!=	(const TYPE& a, TYPE2 b)	noexcept { return a != static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	>	(const TYPE& a, TYPE2 b)	noexcept { return a > static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	<	(const TYPE& a, TYPE2 b)	noexcept { return a < static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	>=	(const TYPE& a, TYPE2 b)	noexcept { return a >= static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	<=	(const TYPE& a, TYPE2 b)	noexcept { return a <= static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	&&	(const TYPE& a, TYPE2 b)	noexcept { return a && static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	||	(const TYPE& a, TYPE2 b)	noexcept { return a || static_cast<TYPE>(b); } \
+TEMPLATE TYPE1	operator	==	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) == b; } \
+TEMPLATE bool	operator	!=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) != b; } \
+TEMPLATE TYPE1	operator	>	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) > b; } \
+TEMPLATE TYPE1	operator	<	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) < b; } \
+TEMPLATE TYPE1	operator	>=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) >= b; } \
+TEMPLATE TYPE1	operator	<=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) <= b; } \
+TEMPLATE TYPE1	operator	&&	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) && b; } \
+TEMPLATE TYPE1	operator	||	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) || b; }
+#define STAMP_COMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T>, TYPE<bool>, T, template<Quantity T>)
 
-constexpr double PI			= 3.141592653589793;
-constexpr double TAU		= 2 * PI;
-constexpr double DEGTORAD	= PI / 180;
-constexpr double RADTODEG	= 180 / PI;
-constexpr double E			= 2.718281828459045;
+#define STAMP_MATHCONST_NAMESPACE				STAMP_NAMESPACE::mathconst
+#define STAMP_MATHCONST_NAMESPACE_BEGIN			namespace STAMP_MATHCONST_NAMESPACE {
+#define STAMP_MATHCONST_NAMESPACE_END			}
 
-STAMPENGINE_MATHCONST_NAMESPACE_END
+#define STAMP_MATH_NAMESPACE					STAMP_NAMESPACE::math
+#define STAMP_MATH_NAMESPACE_BEGIN				namespace STAMP_MATH_NAMESPACE {
+#define STAMP_MATH_NAMESPACE_END				}
 
+#define STAMP_MATH_MATRIX_NAMESPACE				STAMP_MATH_NAMESPACE::matrix
+#define STAMP_MATH_MATRIX_NAMESPACE_BEGIN		namespace STAMP_MATH_MATRIX_NAMESPACE {
+#define STAMP_MATH_MATRIX_NAMESPACE_END			}
 
+#define STAMP_MATH_QUATERNION_NAMESPACE			STAMP_MATH_NAMESPACE::quat
+#define STAMP_MATH_QUATERNION_NAMESPACE_BEGIN	namespace STAMP_MATH_QUATERNION_NAMESPACE {
+#define STAMP_MATH_QUATERNION_NAMESPACE_END		}
 
-STAMPENGINE_MATH_NAMESPACE_BEGIN
+#define STAMP_MATH_VECTOR_NAMESPACE				STAMP_MATH_NAMESPACE::vector
+#define STAMP_MATH_VECTOR_NAMESPACE_BEGIN		namespace STAMP_MATH_VECTOR_NAMESPACE {
+#define STAMP_MATH_VECTOR_NAMESPACE_END			}
 
-template<typename T>
-concept Quantity = requires(T a, T b) {
-	a = b;
-	a + b;
-	a - b;
-	a * b;
-	a / b;
-	a += b;
-	a -= b;
-	a *= b;
-	a /= b;
-	a == b;
-	a != b;
-	a < b;
-	a > b;
-};
-
-STAMPENGINE_MATH_NAMESPACE_END
+#ifdef STAMP_MATH_ALL_SHORT_NAMES
+#define STAMP_MATH_VECTOR_SHORT_NAMES
+#define STAMP_MATH_QUATERNION_SHORT_NAMES
+#define STAMP_MATH_ALGORITHM_SHORT_NAMES
+#define STAMP_MATH_MATRIX_SHORT_NAMES
+#endif
 
 #endif

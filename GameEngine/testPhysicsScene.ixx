@@ -197,7 +197,7 @@ namespace physicsTest {
             std::shared_ptr<GameObject> coneObj = CreateObject("ConeMesh");
             coneObj->AddComponent<ObjectTestComponent>();
             coneObj->transform.position = { 0,0,0 };
-            coneObj->transform.scale = { 1, 1, 1 };
+            coneObj->transform.scale = { 10, 2, 10 };
             std::shared_ptr<MeshRenderer> mr2 = coneObj->AddComponent<MeshRenderer>();
             mr2->mesh = engine::resource::ResourceManager::GetMesh("stamp:cone")->GetMesh();
             mr2->material = material;

@@ -818,7 +818,7 @@ export namespace math {
 	}
 	template<Quantity T>
 	Vec3<T> Quat<T>::operator *(const Vec3<T>& b) const noexcept {
-		Quat<T> v = *this * Quat<T>{ 0,-b.x,-b.y,-b.z } *this->Inverse();
+		Quat<T> v = *this * Quat<T>{ 0,-b.x,-b.y,-b.z } * this->Inverse();
 		return { v.x,v.y,v.z };
 	}
 	template<Quantity T>
@@ -835,7 +835,7 @@ export namespace math {
 	}
 	template<Quantity T>
 	Quat<T>& Quat<T>::operator /=(const Quat<T>& b) noexcept {
-		return *this = *this + b;
+		return *this = *this / b;
 	}
 	template<Quantity T>
 	Quat<T> Quat<T>::RotationX(T v) noexcept {

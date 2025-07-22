@@ -6,6 +6,12 @@
     <ClCompile Include="stamp\test\vectorTest.cpp">
       <Filter>stamp\test</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\test\matrixText.cpp">
+      <Filter>stamp\test</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\quaternionTest.cpp">
+      <Filter>stamp\test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -17,5 +23,8 @@
     <Filter Include="stamp\test">
       <UniqueIdentifier>{bd01771b-01c3-4359-8f6b-ddd05814e1a0}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

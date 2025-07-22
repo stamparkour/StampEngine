@@ -147,7 +147,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\define.h" />
+    <ClInclude Include="stamp\getset.h" />
+    <ClInclude Include="stamp\inoncopyable.h" />
+    <ClInclude Include="stamp\math\algorithm.h" />
     <ClInclude Include="stamp\math\mathdefine.h" />
+    <ClInclude Include="stamp\math\matrix.h" />
+    <ClInclude Include="stamp\math\quaternion.h" />
+    <ClInclude Include="stamp\math\rect.h" />
     <ClInclude Include="stamp\math\vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

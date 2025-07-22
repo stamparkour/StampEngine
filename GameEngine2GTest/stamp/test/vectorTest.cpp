@@ -1,22 +1,22 @@
 #include <pch.h>
-#include <gtest/gtest.h>
 #include <stamp/math/vector.h>
+#include <gtest/gtest.h>
 
-using namespace STAMPENGINE_MATH_NAMESPACE;
+using namespace STAMP_MATH_NAMESPACE;
 
 TEST(Vector2Test, DefaultConstructor) {
-    Vector2<float> v;
+    Vector2<float> v{};
     EXPECT_FLOAT_EQ(v.x, 0.0f);
     EXPECT_FLOAT_EQ(v.y, 0.0f);
 }
 TEST(Vector3Test, DefaultConstructor) {
-    Vector3<float> v;
+    Vector3<float> v{};
     EXPECT_FLOAT_EQ(v.x, 0.0f);
     EXPECT_FLOAT_EQ(v.y, 0.0f);
     EXPECT_FLOAT_EQ(v.z, 0.0f);
 }
 TEST(Vector4Test, DefaultConstructor) {
-    Vector4<float> v;
+    Vector4<float> v{};
     EXPECT_FLOAT_EQ(v.x, 0.0f);
     EXPECT_FLOAT_EQ(v.y, 0.0f);
     EXPECT_FLOAT_EQ(v.z, 0.0f);
@@ -319,7 +319,7 @@ TEST(Vector2Test, LogicalOperators) {
     EXPECT_TRUE(r.x);
     EXPECT_TRUE(r.y);
     EXPECT_TRUE(static_cast<bool>(r));
-    r = !a;
+    r = ~a;
     EXPECT_FALSE(r.x);
     EXPECT_TRUE(r.y);
     EXPECT_FALSE(static_cast<bool>(r));
@@ -336,7 +336,7 @@ TEST(Vector3Test, LogicalOperators) {
     EXPECT_TRUE(r.y);
     EXPECT_FALSE(r.z);
     EXPECT_FALSE(static_cast<bool>(r));
-    r = !a;
+    r = ~a;
     EXPECT_FALSE(r.x);
     EXPECT_TRUE(r.y);
     EXPECT_TRUE(r.z);
@@ -356,7 +356,7 @@ TEST(Vector4Test, LogicalOperators) {
     EXPECT_FALSE(r.z);
     EXPECT_TRUE(r.w);
     EXPECT_FALSE(static_cast<bool>(r));
-    r = !a;
+    r = ~a;
     EXPECT_FALSE(r.x);
     EXPECT_TRUE(r.y);
     EXPECT_TRUE(r.z);

@@ -3,5 +3,5 @@ Mesh stamp:boat {
 }
 
 Mesh stamp:cone {
-	path = resources\cone.obj
+	path = resources\mesh.mesh
 }
