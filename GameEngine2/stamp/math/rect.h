@@ -1,3 +1,5 @@
+//stamp/math/rect.h
+
 #pragma once
 #ifndef STAMP_MATH_RECT_H
 #define STAMP_MATH_RECT_H
@@ -16,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/math/algorithm.h>
+#include <stamp/math/define.h>
 #include <stamp/math/vector.h>
 
 STAMP_MATH_NAMESPACE_BEGIN

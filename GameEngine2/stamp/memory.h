@@ -1,6 +1,8 @@
+//stamp/memory.h
+
 #pragma once
-#ifndef STAMP_MATH_INONCOPYABLE_H
-#define STAMP_MATH_INONCOPYABLE_H
+#ifndef STAMP_MEMORY_H
+#define STAMP_MEMORY_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -16,15 +18,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 #include <stamp/define.h>
+#include <stamp/noncopyable.h>
 
 STAMP_NAMESPACE_BEGIN
 
-class INonCopyable {
+template <typename T>
+class stamp_ptr_internal : public INonCopyable {
+
+};
+
+template <typename T>
+class stamp_ptr {
 public:
-	INonCopyable() = default;
-	INonCopyable(const INonCopyable&) = delete;
-	INonCopyable& operator=(const INonCopyable&) = delete;
 };
 
 STAMP_NAMESPACE_END

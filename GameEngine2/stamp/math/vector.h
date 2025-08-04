@@ -1,3 +1,5 @@
+//stamp/math/vector.h
+
 #pragma once
 #ifndef STAMP_MATH_VECTOR_H
 #define STAMP_MATH_VECTOR_H
@@ -24,7 +26,7 @@
 // #define STAMP_MATH_VECTOR_EQUAL_APROX
 
 //optional headers: <iostream> <string>
-#include <stamp/math/algorithm.h>
+#include <stamp/math/define.h>
 
 
 STAMP_MATH_NAMESPACE_BEGIN
@@ -58,31 +60,16 @@ using Vec4 = Vector2<T>;
 STAMP_TEMPLATE_ALL_QUANTITY(Vec4);
 #endif
 
-template<typename T, typename Q>
+template<typename V, typename T, size_t D>
 struct Vector_Base {
-	template<Quantity T1, size_t D1> explicit operator Vector<T1, D1>() const noexcept {
-		auto self = static_cast<const T*>(this);
-		Vector<T1, D1> o;
-		for (size_t i = 0; i < D1; ++i) 
-			o.V[i] = (i < T::dimensions ? static_cast<T1>(self->V[i]) : 0);
-		return o;
-	}
-	explicit operator const Q* () const noexcept {
-		auto self = static_cast<const T*>(this);
-		return &self->V; 
-	}
-	explicit operator Q* () noexcept {
-		auto self = static_cast<T*>(this);
-		return &self->V;
-	}
-	explicit operator bool() const noexcept {
-		auto self = static_cast<const T*>(this);
-		for (size_t i = 0; i < T::dimensions; ++i) if (!self->V[i]) return false; return true;
-	}
+	template<Quantity T1, size_t D1> explicit operator Vector<T1, D1>() const noexcept;
+	explicit operator const T* () const noexcept;
+	explicit operator T* () noexcept;
+	explicit operator bool() const noexcept;
 };
 
 template<Quantity T, size_t D>
-struct Vector final : Vector_Base<Vector<T, D>, T> {
+struct Vector final : Vector_Base<Vector<T, D>, T, D> {
 	using member_type = T;
 	constexpr static size_t dimensions = D;
 
@@ -96,16 +83,13 @@ struct Vector final : Vector_Base<Vector<T, D>, T> {
 
 
 template <Quantity T>
-struct Vector<T, 2> final : Vector_Base<Vector<T, 2>, T> {
+struct Vector<T, 2> final : Vector_Base<Vector<T, 2>, T, 2> {
 	using member_type = T;
 	constexpr static size_t dimensions = 2;
 
 	union {
 		T V[2] = {};
-		struct {
-			T x;
-			T y;
-		};
+		struct { T x, y; };
 	};
 
 	Vector() noexcept {}
@@ -120,16 +104,12 @@ struct Vector<T, 2> final : Vector_Base<Vector<T, 2>, T> {
 };
 
 template <Quantity T>
-struct Vector<T, 3> final : Vector_Base<Vector<T, 3>, T> {
+struct Vector<T, 3> final : Vector_Base<Vector<T, 3>, T, 3> {
 	using member_type = T;
 	constexpr static size_t dimensions = 3;
 	union {
 		T V[3] = {};
-		struct {
-			T x;
-			T y;
-			T z;
-		};
+		struct { T x, y, z; };
 	};
 
 	Vector() noexcept {}
@@ -148,17 +128,12 @@ struct Vector<T, 3> final : Vector_Base<Vector<T, 3>, T> {
 };
 
 template <Quantity T>
-struct Vector<T, 4> final : Vector_Base<Vector<T, 4>, T> {
+struct Vector<T, 4> final : Vector_Base<Vector<T, 4>, T, 4> {
 	using member_type = T;
 	constexpr static size_t dimensions = 4;
 	union {
 		T V[4] = {};
-		struct {
-			T x;
-			T y;
-			T z;
-			T w;
-		};
+		struct { T x, y, z, w; };
 	};
 
 	Vector() noexcept {}
@@ -208,20 +183,20 @@ template <Quantity T, size_t D>	bool			operator	!	(const Vector<T, D>& v)							
 STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Vector<T COMMA D>, T, template <Quantity T COMMA size_t D>);
 STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Vector<T COMMA D>, Vector<bool COMMA D>, T, template <Quantity T COMMA size_t D>);
 
-template <Quantity T>	inline T 					cross		(const Vector2<T>& a, const Vector2<T>& b)		noexcept;
-template <Quantity T>	inline Vector3<T>			cross		(const Vector3<T>& a, const Vector3<T>& b)		noexcept;
-template <Quantity T, size_t D>	inline bool			_and		(const Vector<T, D>& v) 						noexcept;
-template <Quantity T, size_t D>	inline bool			_or			(const Vector<T, D>& v) 						noexcept;
-template <Quantity T, size_t D>	inline T			summation	(const Vector<T, D>& v) 						noexcept;
-template <Quantity T, size_t D>	inline T 			magnitude	(const Vector<T, D>& v)							noexcept;
-template <Quantity T, size_t D>	inline T 			magnitude2	(const Vector<T, D>& v) 						noexcept;
-template <Quantity T, size_t D>	inline Vector<T, D> normal		(const Vector<T, D>& v) 						noexcept;
-template <Quantity T, size_t D>	inline T			dot			(const Vector<T, D>& a, const Vector<T, D>& b)	noexcept;
+template <Quantity T> T 						cross		(const Vector2<T>& a, const Vector2<T>& b)		noexcept;
+template <Quantity T> Vector3<T>				cross		(const Vector3<T>& a, const Vector3<T>& b)		noexcept;
+template <Quantity T, size_t D> bool			_and		(const Vector<T, D>& v) 						noexcept;
+template <Quantity T, size_t D> bool			_or			(const Vector<T, D>& v) 						noexcept;
+template <Quantity T, size_t D> T				summation	(const Vector<T, D>& v) 						noexcept;
+template <Quantity T, size_t D> T 				magnitude	(const Vector<T, D>& v)							noexcept;
+template <Quantity T, size_t D> T 				magnitude2	(const Vector<T, D>& v) 						noexcept;
+template <Quantity T, size_t D> Vector<T, D>	normal		(const Vector<T, D>& v) 						noexcept;
+template <Quantity T, size_t D> T				dot			(const Vector<T, D>& a, const Vector<T, D>& b)	noexcept;
 #ifdef STAMP_MATH_VECTOR_SHORT_NAMES
-template <Quantity T, size_t D>	inline T			sum(const Vector<T, D>& v)	noexcept;
-template <Quantity T, size_t D>	inline T 			mag(const Vector<T, D>& v)	noexcept;
-template <Quantity T, size_t D>	inline T 			mag2(const Vector<T, D>& v)	noexcept;
-template <Quantity T, size_t D>	inline Vector<T, D> norm(const Vector<T, D>& v)	noexcept;
+template <Quantity T, size_t D> T				sum(const Vector<T, D>& v)	noexcept;
+template <Quantity T, size_t D> T 				mag(const Vector<T, D>& v)	noexcept;
+template <Quantity T, size_t D> T 				mag2(const Vector<T, D>& v)	noexcept;
+template <Quantity T, size_t D> Vector<T, D>	norm(const Vector<T, D>& v)	noexcept;
 #endif
 
 template <Quantity T, size_t D>	inline Vector<bool, D>	equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b);
@@ -238,6 +213,32 @@ template <Quantity T, size_t D> inline std::string to_string(const Vector<T, D>&
 
 // Definitions
 
+//----------- Vector Base Logic ----------
+
+template<typename V, typename T, size_t D>
+template<Quantity T1, size_t D1> 
+inline Vector_Base<V, T, D>::operator Vector<T1, D1>() const noexcept {
+	auto self = static_cast<const V*>(this);
+	Vector<T1, D1> o;
+	for (size_t i = 0; i < D1; ++i)
+		o.V[i] = (i < V::dimensions ? static_cast<T1>(self->V[i]) : 0);
+	return o;
+}
+template<typename V, typename T, size_t D>
+inline Vector_Base<V, T, D>::operator const T* () const noexcept {
+	auto self = static_cast<const V*>(this);
+	return &self->V;
+}
+template<typename V, typename T, size_t D>
+inline Vector_Base<V, T, D>::operator T* () noexcept {
+	auto self = static_cast<V*>(this);
+	return &self->V;
+}
+template<typename V, typename T, size_t D>
+inline Vector_Base<V, T, D>::operator bool() const noexcept {
+	auto self = static_cast<const V*>(this);
+	for (size_t i = 0; i < D; ++i) if (!self->V[i]) return false; return true;
+}
 // ------------ Generic Logic ------------
 template<Quantity T, size_t D>
 inline Vector<T, D> operator+(const Vector<T, D>& a, const Vector<T, D>& b) noexcept {
@@ -419,7 +420,8 @@ inline Vector<bool, D> equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b)
 	return o;
 }
 #if defined(STAMP_MATH_ALGORITHM_SHORT_NAMES) || defined(STAMP_MATH_VECTOR_SHORT_NAMES)
-template <Quantity T, size_t D> inline Vector<bool, D>	eq_e(const Vector<T, D>& a, const Vector<T, D>& b) {
+template <Quantity T, size_t D> 
+inline Vector<bool, D>	eq_e(const Vector<T, D>& a, const Vector<T, D>& b) {
 	return equal_aprox(a, b);
 }
 #endif

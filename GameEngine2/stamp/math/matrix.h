@@ -1,3 +1,5 @@
+//stamp/math/matrix.h
+
 #pragma once
 #ifndef STAMP_MATH_MATRIX_H
 #define STAMP_MATH_MATRIX_H
@@ -24,7 +26,8 @@
 // #define STAMP_MATH_VECTOR_EQUAL_APROX
 
 //optional headers: <iostream> <string>
-#include <stamp/math/algorithm.h>
+#include <stamp/math/define.h>
+#include <stdexcept>
 #include <stamp/math/vector.h>
 #include <stamp/math/rect.h>
 
@@ -58,68 +61,86 @@ using Mat4 = Mat<T, 4>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix4);
 #endif
 
-#define STAMP_MATH_MATRIX_TYPECAST_GENERIC \
-Matrix() = default; \
-Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {} \
-Matrix(std::initializer_list<T> values) { if(values.size() != Cols * Rows) throw new std::length_error("Requires Cols * Rows elements."); std::copy(values.begin(), values.end(), (T*)&m); } \
+template<Quantity T, size_t Rows, size_t Cols>
+struct Matrix;
 
-template<typename T, typename Q>
+template<typename M, typename T, size_t Rows, size_t Cols>
 struct Matrix_Base {
-	operator const Q* () const noexcept { 
-		return &m[0][0]; 
-	}
-	operator Q* () noexcept { 
-		return &m[0][0]; 
-	}
-	Vector<T, Rows>& operator [] (size_t i) const noexcept {
-		return (Vector<T, Rows>&)m[i][0]; 
-	}
-	template<Quantity T1, size_t R1, size_t C1> explicit operator Matrix<T1, R1, C1>() {
-		Matrix<T1, R1, C1> o;
-		for (size_t i = 0; i < R1; ++i) for (size_t j = 0; j < C1; ++j) o.m[i][j] = (i < Rows && j < Cols ? static_cast<T1>(m[i][j]) : 0);
-		return o;
-	}
+	operator const T* () const noexcept;
+	operator T* () noexcept;
+	Vector<T, Rows>& operator [] (size_t i) const noexcept;
+	template<Quantity T1, size_t R1, size_t C1> explicit operator Matrix<T1, R1, C1>();
 };
 
 template<Quantity T, size_t Rows, size_t Cols>
-struct Matrix {
+struct Matrix : Matrix_Base<Matrix<T, Rows, Cols>, T, Rows, Cols> {
 	T m[Rows][Cols] = {};
-	STAMP_MATH_MATRIX_TYPECAST_GENERIC;
+	Matrix() = default;
+	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
+	Matrix(std::initializer_list<T> values) { 
+		if (values.size() != Cols * Rows) 
+			throw new std::length_error("Requires Cols * Rows elements."); 
+		std::copy(values.begin(), values.end(), (T*)&m); 
+	}
 
 	const static Matrix<T, Rows, Cols> IDENTITY;
 };
 
 template<Quantity T, size_t Rows>
-struct Matrix<T, Rows, 1> {
+struct Matrix<T, Rows, 1> : Matrix_Base<Matrix<T, Rows, 1>, T, Rows, 1> {
 	constexpr static size_t Cols = 1;
 	union {
 		T m[Rows][Cols] = {};
 		Vector<T, Rows> v;
 	};
+	Matrix() = default;
+	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
+	Matrix(std::initializer_list<T> values) {
+		if (values.size() != Cols * Rows) 
+			throw new std::length_error("Requires Cols * Rows elements.");
+		std::copy(values.begin(), values.end(), (T*)&m);
+	}
 	explicit Matrix(const Vector<T, Rows>& m) noexcept;
-	STAMP_MATH_MATRIX_TYPECAST_GENERIC;
+
+	const static Matrix<T, Rows, 1> IDENTITY;
 };
 
 template<Quantity T, size_t Cols>
-struct Matrix<T, 1, Cols> {
+struct Matrix<T, 1, Cols> : Matrix_Base<Matrix<T, 1, Cols>, T, 1, Cols> {
 	constexpr static size_t Rows = 1;
 	union {
 		T m[Rows][Cols] = {};
 		Vector<T, Cols> v;
 	};
+	Matrix() = default;
+	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
+	Matrix(std::initializer_list<T> values) {
+		if (values.size() != Cols * Rows) 
+			throw new std::length_error("Requires Cols * Rows elements.");
+		std::copy(values.begin(), values.end(), (T*)&m);
+	}
 	explicit Matrix(const Vector<T, Cols>& m) noexcept;
-	STAMP_MATH_MATRIX_TYPECAST_GENERIC;
+
+	const static Matrix<T, 1, Cols> IDENTITY;
 };
 
 template<Quantity T>
-struct Matrix<T, 1, 1> {
+struct Matrix<T, 1, 1> : Matrix_Base<Matrix<T, 1, 1>, T, 1, 1> {
 	constexpr static size_t Cols = 1;
 	constexpr static size_t Rows = 1;
 	union {
 		T m[Rows][Cols] = {};
 		T x;
 	};
-	STAMP_MATH_MATRIX_TYPECAST_GENERIC;
+
+	Matrix() = default;
+	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
+	Matrix(std::initializer_list<T> values) {
+		if (values.size() != Cols * Rows) throw new std::length_error("Requires Cols * Rows elements.");
+		std::copy(values.begin(), values.end(), (T*)&m);
+	}
+
+	const static Matrix<T, 1, 1> IDENTITY;
 };
 
 template<Quantity T, size_t Rows, size_t Cols, size_t C>	Matrix<T, Rows, C>			operator		*	(const Matrix<T, Rows, Cols>& a, const Matrix<T, Cols, C>& b)		noexcept;
@@ -130,11 +151,12 @@ template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>		operato
 template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>&		operator		+=	(Matrix<T, Rows, Cols>& a, const Matrix<T, Rows, Cols>& b)			noexcept;
 template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>		operator		-	(const Matrix<T, Rows, Cols>& a, const Matrix<T, Rows, Cols>& b)	noexcept;
 template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>&		operator		-=	(Matrix<T, Rows, Cols>& a, const Matrix<T, Rows, Cols>& b)			noexcept;
+template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>		operator		-	(const Matrix<T, Rows, Cols>& a)									noexcept;
 
-template<Quantity T, size_t Rows, size_t Cols> inline		Matrix<T, Cols, Rows>		transpose			(const Matrix<T, Rows, Cols>& m)									noexcept;
-template<Quantity T, size_t Q> inline						Matrix<T, Q>				determinant			(const Matrix<T, Q>& m)												noexcept;
-template<Quantity T, size_t Rows, size_t Cols> inline		Matrix<T, Rows, Cols>		toRowEchelonForm	(const Matrix<T, Rows, Cols>& m)									noexcept;
-template<Quantity T, size_t Q> inline						bool						inverse				(const Matrix<T, Q>& m, Matrix<T, Q>* o)							noexcept;
+template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Cols, Rows>		transpose			(const Matrix<T, Rows, Cols>& m)									noexcept;
+template<Quantity T, size_t Q>								Matrix<T, Q>				determinant			(const Matrix<T, Q>& m)												noexcept;
+template<Quantity T, size_t Rows, size_t Cols>				Matrix<T, Rows, Cols>		toRowEchelonForm	(const Matrix<T, Rows, Cols>& m)									noexcept;
+template<Quantity T, size_t Q>								bool						inverse				(const Matrix<T, Q>& m, Matrix<T, Q>* o)							noexcept;
 
 STAMP_MATH_NAMESPACE_END
 STAMP_MATH_MATRIX_NAMESPACE_BEGIN
@@ -154,6 +176,33 @@ template<Quantity T>										Matrix4<T>					Rotation(const Vector3<T>& v, Rotat
 STAMP_MATH_MATRIX_NAMESPACE_END
 //Definition
 STAMP_MATH_NAMESPACE_BEGIN
+
+// Matrix Base Logic
+template<typename M, typename T, size_t Rows, size_t Cols>
+Matrix_Base<M, T, Rows, Cols>::operator const T* () const noexcept {
+	auto self = static_cast<const T*>(this);
+	return &(self->m[0][0]);
+}
+template<typename M, typename T, size_t Rows, size_t Cols>
+Matrix_Base<M, T, Rows, Cols>::operator T* () noexcept {
+	auto self = static_cast<T*>(this);
+	return &(self->m[0][0]);
+}
+template<typename M, typename T, size_t Rows, size_t Cols>
+Vector<T, Rows>& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i) const noexcept {
+	auto self = static_cast<T*>(this);
+	return (Vector<T, Rows>&)(self->m[i][0]);
+}
+template<typename M, typename T, size_t Rows, size_t Cols>
+template<Quantity T1, size_t R1, size_t C1> 
+Matrix_Base<M, T, Rows, Cols>::operator Matrix<T1, R1, C1>() {
+	auto self = static_cast<T*>(this);
+	Matrix<T1, R1, C1> o;
+	for (size_t i = 0; i < R1; ++i)
+		for (size_t j = 0; j < C1; ++j)
+			o.m[i][j] = (i < Rows && j < Cols ? static_cast<T1>(self->m[i][j]) : 0);
+	return o;
+}
 
 // Vertical 1D Matrix Logic
 template<Quantity T, size_t Rows>
@@ -209,6 +258,16 @@ inline Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& a, const Mat
 template<Quantity T, size_t Rows, size_t Cols>
 inline Matrix<T, Rows, Cols>& operator-=(Matrix<T, Rows, Cols>& a, const Matrix<T, Cols, Rows>& b) noexcept {
 	return a = a - b;
+}
+template<Quantity T, size_t Rows, size_t Cols>
+inline Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& a) noexcept {
+	Matrix<T, Rows, Cols> result;
+	for (size_t i = 0; i < Rows; ++i) {
+		for (size_t j = 0; j < Cols; ++j) {
+			result.m[i][j] =  -a.m[i][j];
+		}
+	}
+	return result;
 }
 template<Quantity T, size_t Q>
 inline Vector<T, Q> operator*(const Matrix<T, Q, Q>& a, const Vector<T, Q>& b) noexcept {
@@ -318,11 +377,11 @@ STAMP_MATH_MATRIX_NAMESPACE_BEGIN
 using namespace ::STAMP_MATH_NAMESPACE;
 
 template<Quantity T>
-Matrix4<T> PerspectiveProjection(T right, T left, T top, T bottom, T _near, T _far) noexcept {
+inline Matrix4<T> PerspectiveProjection(T right, T left, T top, T bottom, T _near, T _far) noexcept {
 	return { 2 * _near / (right - left),0,(right + left) / (right - left),0,0,2 * _near / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(_far + _near) / (_far - _near),1,0,0,2 * _far * _near / (_far - _near),0 };
 }
 template<Quantity T>
-Matrix4<T> PerspectiveProjection(T right, T left, T top, T bottom, T ratio, T _near, T _far) noexcept {
+inline Matrix4<T> PerspectiveProjection(T right, T left, T top, T bottom, T ratio, T _near, T _far) noexcept {
 	right = tan(right);
 	left = tan(left);
 	top = tan(top) * ratio;
@@ -330,38 +389,38 @@ Matrix4<T> PerspectiveProjection(T right, T left, T top, T bottom, T ratio, T _n
 	return { 2 / (right - left),0,(right + left) / (right - left),0,0,2 / (top - bottom),(top + bottom) / (top - bottom),0,0,0,-(_far + _near) / (_far - _near),1,0,0,2 * _far * _near / (_far - _near),0 };
 }
 template<Quantity T>
-Matrix4<T> PerspectiveProjection(T fovx, T ratio, T _near, T _far) noexcept {
+inline Matrix4<T> PerspectiveProjection(T fovx, T ratio, T _near, T _far) noexcept {
 	T tangent = tan(fovx / 2);
 	return { ratio / tangent,0,0,0,0,1 / tangent,0,0,0,0,-(_near + _far) / (_far - _near),1,0,0,2 * _near * _far / (_far - _near),0 };
 }
 template<Quantity T>
-Matrix4<T> OrthographicProjection(T scaleX, T ratio, T _nearPlane, T _farPlane) noexcept {
+inline Matrix4<T> OrthographicProjection(T scaleX, T ratio, T _nearPlane, T _farPlane) noexcept {
 	return { ratio / scaleX,0,0,0,0,1 / scaleX,0,0,0,0,-2 / (_farPlane - _nearPlane),0,0,0,(_farPlane + _nearPlane) / (_farPlane - _nearPlane),1 };
 }
 template<Quantity T>
-Matrix4<T> Scale(const Vector3<T>& v) noexcept {
+inline Matrix4<T> Scale(const Vector3<T>& v) noexcept {
 	return { v.x,0,0,0,0,v.y,0,0,0,0,v.z,0,0,0,0,1 };
 }
 template<Quantity T>
-Matrix4<T> Translate(const Vector3<T>& v) noexcept {
+inline Matrix4<T> Translate(const Vector3<T>& v) noexcept {
 	return { 1,0,0,0,0,1,0,0,0,0,1,0,v.x,v.y,v.z,1 };
 }
 template<Quantity T>
-Matrix4<T> RotationX(T v) noexcept {
+inline Matrix4<T> RotationX(T v) noexcept {
 	return { 1,0,0,0,0,cosf(v),sinf(v),0,0,-sinf(v),cosf(v),0,0,0,0,1 };
 }
 template<Quantity T>
-Matrix4<T> RotationY(T v) noexcept {
+inline Matrix4<T> RotationY(T v) noexcept {
 	using namespace std;
 	return { cos(v),0,-sin(v),0,0,1,0,0,sin(v),0,cos(v),0,0,0,0,1 };
 }
 template<Quantity T>
-Matrix4<T> RotationZ(T v) noexcept {
+inline Matrix4<T> RotationZ(T v) noexcept {
 	using namespace std;
 	return { cos(v),sin(v),0,0,-sin(v),cos(v),0,0,0,0,1,0,0,0,0,1 };
 }
 template<Quantity T>
-Matrix4<T> Rotation(const Vector3<T>& v, RotationOrder order) noexcept {
+inline Matrix4<T> Rotation(const Vector3<T>& v, RotationOrder order) noexcept {
 	switch (order) {
 	case RotationOrder::XYZ:
 		return RotationZ(v.z) * RotationY(v.y) * RotationX(v.x);

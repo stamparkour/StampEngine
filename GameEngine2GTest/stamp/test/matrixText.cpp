@@ -4,7 +4,7 @@
 
 using namespace STAMP_MATH_NAMESPACE;
 
-TEST(Matrix, DefaultConstructor) {
+TEST(MatrixTest, DefaultConstructor) {
     Matrix<float, 2, 2> m{};
     EXPECT_FLOAT_EQ(m.m[0][0], 0.0f);
     EXPECT_FLOAT_EQ(m.m[0][1], 0.0f);
@@ -12,7 +12,7 @@ TEST(Matrix, DefaultConstructor) {
     EXPECT_FLOAT_EQ(m.m[1][1], 0.0f);
 }
 
-TEST(Matrix, ConstructorAndAssignmentr) {
+TEST(MatrixTest, ConstructorAndAssignmentr) {
     Matrix<float, 2, 2> m{0.0f, 1.0f, 2.0f, 3.0f};
     EXPECT_FLOAT_EQ(m.m[0][0], 0.0f);
     EXPECT_FLOAT_EQ(m.m[0][1], 1.0f);

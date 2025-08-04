@@ -1,3 +1,5 @@
+//stamp/math/quaternion.h
+
 #pragma once
 #ifndef STAMP_MATH_QUATERNION_H
 #define STAMP_MATH_QUATERNION_H
@@ -23,7 +25,7 @@
 // #define STAMP_MATH_QUATERNION_EQUAL_APROX
 
 //optional headers: <iostream> <string>
-#include <stamp/math/algorithm.h>
+#include <stamp/math/define.h>
 #include <stamp/math/matrix.h>
 #include <stamp/math/vector.h>
 
@@ -69,20 +71,20 @@ STAMP_MATH_NAMESPACE_END
 STAMP_MATH_QUATERNION_NAMESPACE_BEGIN
 using namespace STAMP_MATH_NAMESPACE;
 
-template<Quantity T> inline Matrix3<T>    ToMatrix3	(const Quaternion<T>& q)	noexcept;
-template<Quantity T> inline Matrix4<T>	  ToMatrix4	(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Matrix3<T>		ToMatrix3	(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Matrix4<T>		ToMatrix4	(const Quaternion<T>& q)	noexcept;
 
-template<Quantity T> inline Quaternion<T> RotationX	(T v)						noexcept;
-template<Quantity T> inline Quaternion<T> RotationY	(T v)						noexcept;
-template<Quantity T> inline Quaternion<T> RotationZ	(T v)						noexcept;
-template<Quantity T> inline Quaternion<T> RotationAxis(T r, const Vector3<T>& axis) noexcept;
-template<Quantity T> inline Quaternion<T> Rotation(const Vector3<T>& angles, RotationOrder order = RotationOrder::ZXY) noexcept;
-template<Quantity T> inline Quaternion<T> LookAt(const Vector3<T>& position)	noexcept;
+template<Quantity T> Quaternion<T>	RotationX	(T v)						noexcept;
+template<Quantity T> Quaternion<T>	RotationY	(T v)						noexcept;
+template<Quantity T> Quaternion<T>	RotationZ	(T v)						noexcept;
+template<Quantity T> Quaternion<T>	RotationAxis(T r, const Vector3<T>& axis) noexcept;
+template<Quantity T> Quaternion<T>	Rotation(const Vector3<T>& angles, RotationOrder order = RotationOrder::ZXY) noexcept;
+template<Quantity T> Quaternion<T>	LookAt(const Vector3<T>& position)		noexcept;
 
 STAMP_MATH_QUATERNION_NAMESPACE_END
 STAMP_MATH_NAMESPACE_BEGIN
 
-template<Quantity T> Quaternion<T>	operator	+	(const Quaternion<T>& a, const Quaternion<T>& b)	noexcept;
+template<Quantity T>  Quaternion<T>	operator	+	(const Quaternion<T>& a, const Quaternion<T>& b)	noexcept;
 template<Quantity T> Quaternion<T>&	operator	+=	(Quaternion<T>& a, const Quaternion<T>& b)			noexcept;
 template<Quantity T> Quaternion<T>	operator	-	(const Quaternion<T>& a, const Quaternion<T>& b)	noexcept;
 template<Quantity T> Quaternion<T>&	operator	-=	(Quaternion<T>& a, const Quaternion<T>& b)			noexcept;
@@ -92,28 +94,33 @@ template<Quantity T> Quaternion<T>	operator	/	(const Quaternion<T>& a, const Qua
 template<Quantity T> Quaternion<T>&	operator	/=	(Quaternion<T>& a, const Quaternion<T>& b)			noexcept;
 template<Quantity T> Vector4<bool>&	operator	==	(const Quaternion<T>& a, const Quaternion<T>& b)	noexcept;
 template<Quantity T> Vector3<T>		operator	*	(const Quaternion<T>& a, const Vector3<T>& b)		noexcept;
+template<Quantity T> Quaternion<T>	operator	-	(const Quaternion<T>& a)							noexcept;
 
 STAMP_OPERATOR_ALL_QUANTITY(Quaternion);
 
-template<Quantity T> inline Quaternion<T> conjugate(const Quaternion<T>& q)	noexcept;
-template<Quantity T> inline T norm(const Quaternion<T>& q)		noexcept;
-template<Quantity T> inline T norm2(const Quaternion<T>& q)		noexcept;
-template<Quantity T> inline Quaternion<T> unit(const Quaternion<T>& q)		noexcept;
-template<Quantity T> inline Quaternion<T> inverse(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> conjugate(const Quaternion<T>& q)	noexcept;
+template<Quantity T> T norm(const Quaternion<T>& q)						noexcept;
+template<Quantity T> T norm2(const Quaternion<T>& q)					noexcept;
+template<Quantity T> Quaternion<T> unit(const Quaternion<T>& q)			noexcept;
+template<Quantity T> Quaternion<T> inverse(const Quaternion<T>& q)		noexcept;
+template<Quantity T> Quaternion<T> exponential(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> logarithm(const Quaternion<T>& q)	noexcept;
 
-template <Quantity T> inline Quaternion<bool>	equal_aprox(const Quaternion<T>& a, const Quaternion<T>& b);
+template <Quantity T> Quaternion<bool>	equal_aprox(const Quaternion<T>& a, const Quaternion<T>& b);
 
 #ifdef STAMP_MATH_QUATERNION_SHORT_NAMES
-template<Quantity T> inline Quaternion<T> conj		(const Quaternion<T>& q)	noexcept;
-template<Quantity T> inline Quaternion<T> inv		(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> conj		(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> inv		(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> exp		(const Quaternion<T>& q)	noexcept;
+template<Quantity T> Quaternion<T> log		(const Quaternion<T>& q)	noexcept;
 #endif
 
 #ifdef STAMP_IOSTREAM_HEADER_INCLUDED
-template <STAMP_MATH_NAMESPACE::Quantity T> inline std::ostream& operator <<(std::ostream& stream, const STAMP_MATH_NAMESPACE::Quaternion<T>& v);
+template <STAMP_MATH_NAMESPACE::Quantity T> std::ostream& operator <<(std::ostream& stream, const STAMP_MATH_NAMESPACE::Quaternion<T>& v);
 #endif
 
 #ifdef STAMP_STRING_HEADER_INCLUDED
-template <STAMP_MATH_NAMESPACE::Quantity T> inline std::string to_string(const STAMP_MATH_NAMESPACE::Quaternion<T>& v);
+template <STAMP_MATH_NAMESPACE::Quantity T> std::string to_string(const STAMP_MATH_NAMESPACE::Quaternion<T>& v);
 #endif
 
 //Definitions
@@ -157,34 +164,34 @@ inline Quaternion<T> operator + (const Quaternion<T>& a, const Quaternion<T>& b)
 	return { a.x + b.x, a.i + b.i, a.j + b.j, a.k + b.k };
 }
 template<Quantity T>
-Quaternion<T>& operator +=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T>& operator +=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return *this = *this + b;
 }
 template<Quantity T>
-Quaternion<T> operator -(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T> operator -(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return { a.x - b.x, a.i - b.i, a.j - b.j, a.k - b.k };
 }
 template<Quantity T>
-Quaternion<T>& operator -=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T>& operator -=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return *this = *this - b;
 }
 template<Quantity T>
-Quaternion<T> operator *(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T> operator *(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return { a.x * b.x - a.i * b.i - a.j * b.j - a.k * b.k,
 		a.x * b.i + a.i * b.x + a.j * b.k - a.k * b.j,
 		a.x * b.j - a.i * b.k + a.j * b.x + a.k * b.i,
 		a.x * b.k + a.i * b.j - a.j * b.i + a.k * b.x };
 }
 template<Quantity T>
-Quaternion<T>& operator *=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T>& operator *=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return *this = *this * b;
 }
 template<Quantity T>
-Quaternion<T> operator /(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T> operator /(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return a * inverse(b);
 }
 template<Quantity T>
-Quaternion<T>& operator /=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+inline Quaternion<T>& operator /=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
 	return *this = *this / b;
 }
 #ifdef STAMP_MATH_QUATERNION_EQUAL_APROX
@@ -199,9 +206,13 @@ inline Vector4<bool>& operator==(const Quaternion<T>& a, const Quaternion<T>& b)
 }
 #endif
 template<Quantity T>
-Vector3<T> operator *(const Quaternion<T>& a, const Vector3<T>& b) noexcept {
+inline Vector3<T> operator *(const Quaternion<T>& a, const Vector3<T>& b) noexcept {
 	Quaternion<T> v = *this * (Quaternion<T>)b * inverse(*this);
 	return (Vector3<T>)v;
+}
+template<Quantity T> 
+inline Quaternion<T> operator -(const Quaternion<T>& a) noexcept {
+	return { -a.x, -a.i, -a.j, -a.k };
 }
 
 STAMP_MATH_NAMESPACE_END
@@ -283,6 +294,19 @@ template<Quantity T>
 inline Quaternion<T> inverse(const Quaternion<T>& q) noexcept {
 	return conjugate(q) * (1 / norm2(q));
 }
+template<Quantity T>
+inline Quaternion<T> exponential(const Quaternion<T>& q) noexcept {
+	Quaternion<T> v = { 0, q.i, q.j, q.k };
+	T n = norm(v);
+	return exp(q.x) * (cos(n) + v / n * sin(n));
+}
+template<Quantity T>
+inline Quaternion<T> logarithm(const Quaternion<T>& q) noexcept {
+	Quaternion<T> v = { 0, q.i, q.j, q.k };
+	T qn = norm(q);
+	T n = norm(v);
+	return log(qn) + v / n * acos(q.x / qn);
+}
 #ifdef STAMP_MATH_QUATERNION_SHORT_NAMES
 template<Quantity T>
 inline Quaternion<T> conj(const Quaternion<T>& q) noexcept {
@@ -291,6 +315,14 @@ inline Quaternion<T> conj(const Quaternion<T>& q) noexcept {
 template<Quantity T>
 inline Quaternion<T> inv(const Quaternion<T>& q) noexcept {
 	return inverse(q);
+}
+template<Quantity T>
+inline Quaternion<T> exp(const Quaternion<T>& q) noexcept {
+	return exponential(q);
+}
+template<Quantity T>
+inline Quaternion<T> log(const Quaternion<T>& q) noexcept {
+	return logarithm(q);
 }
 #endif
 

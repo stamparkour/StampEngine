@@ -9,54 +9,314 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="libraries">
+      <UniqueIdentifier>{65dbe86d-a6d0-42f9-85e6-5cbdd1423b4e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="stamp">
+    <Filter Include="libraries\stamp">
       <UniqueIdentifier>{8f43d7a5-aeac-49ed-9cb7-9895db851f0b}</UniqueIdentifier>
       <Extensions>
       </Extensions>
     </Filter>
-    <Filter Include="stamp\core">
+    <Filter Include="libraries\stamp\core">
       <UniqueIdentifier>{8abbb5a4-52ff-432d-92aa-26c7e6632858}</UniqueIdentifier>
     </Filter>
-    <Filter Include="stamp\math">
+    <Filter Include="libraries\stamp\math">
       <UniqueIdentifier>{4d187eef-9981-45e1-88ca-ba3586379ad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\hid">
+      <UniqueIdentifier>{3ee4a33f-132f-44a5-bbce-5e7ce99b0eed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\lua">
+      <UniqueIdentifier>{747562aa-5afb-49b3-975d-7220267692b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Script Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="libraries\stamp\lua">
+      <UniqueIdentifier>{25ed0f49-f79c-4ff7-9b93-b708734d8c39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\test">
+      <UniqueIdentifier>{afd2db5c-079c-41c6-82d2-17dc3ce728c4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\core\window_base.cpp">
+      <Filter>libraries\stamp\core</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lbaselib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lcode.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lcorolib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lctype.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ldblib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ldebug.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ldo.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ldump.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lfunc.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lgc.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\linit.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\liolib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\llex.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lmathlib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lmem.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\loadlib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lobject.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lopcodes.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\loslib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lparser.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lstate.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lstring.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lstrlib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ltable.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ltablib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\ltm.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lua.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lundump.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lutf8lib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lvm.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lzio.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lapi.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lua\lauxlib.c">
+      <Filter>libraries\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\math\lualib.cpp">
+      <Filter>libraries\stamp\math</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\lua\linit.cpp">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\lua\lualib.cpp">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\vectorTest.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\luaTest.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\matrixText.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\quaternionTest.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
-      <Filter>stamp\math</Filter>
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
     <ClInclude Include="stamp\define.h">
-      <Filter>stamp</Filter>
+      <Filter>libraries\stamp</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\math\mathdefine.h">
-      <Filter>stamp\math</Filter>
+    <ClInclude Include="stamp\math\define.h">
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
     <ClInclude Include="stamp\math\quaternion.h">
-      <Filter>stamp\math</Filter>
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
     <ClInclude Include="stamp\getset.h">
-      <Filter>stamp</Filter>
+      <Filter>libraries\stamp</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\inoncopyable.h">
-      <Filter>stamp</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\math\algorithm.h">
-      <Filter>stamp\math</Filter>
+    <ClInclude Include="stamp\noncopyable.h">
+      <Filter>libraries\stamp</Filter>
     </ClInclude>
     <ClInclude Include="stamp\math\matrix.h">
-      <Filter>stamp\math</Filter>
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
     <ClInclude Include="stamp\math\rect.h">
-      <Filter>stamp\math</Filter>
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\core\window_base.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\define.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\hid_base.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\keyboard.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\mouse.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\define.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\hid.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\memory.h">
+      <Filter>libraries\stamp</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\math\lua.h">
+      <Filter>libraries\stamp\math</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lcode.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lctype.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\ldebug.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\ldo.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lfunc.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lgc.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\ljumptab.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\llex.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\llimits.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lmem.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lobject.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lopcodes.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lopnames.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lparser.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lprefix.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lstate.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lstring.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\ltable.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\ltm.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua.hpp">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\luaconf.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lualib.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lundump.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lvm.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lzio.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lapi.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lauxlib.h">
+      <Filter>libraries\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\lua\lualib.h">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\lua\define.h">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\lua\lua.h">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\script\test.lua">
+      <Filter>Script Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

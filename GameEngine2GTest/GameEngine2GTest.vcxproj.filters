@@ -12,6 +12,9 @@
     <ClCompile Include="stamp\test\quaternionTest.cpp">
       <Filter>stamp\test</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\test\luaTest.cpp">
+      <Filter>stamp\test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

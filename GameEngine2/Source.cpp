@@ -11,12 +11,12 @@ using namespace stamp::math;
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
 	
-	::Vector2<float> v1(3.0f, 4.0f);
-	::Vector2<float> v2(5.0f, 4.0f);
+	Vector2<float> v1(3.0f, 4.0f);
+	Vector2<float> v2(5.0f, 4.0f);
 	std::swap(v1, v2);
 
-	::Vector<float, 2> v3{ 0 };
-	auto k = static_cast<::Vector<int, 3>>(v3);
+	Vector<float, 2> v3{ 0 };
+	auto k = static_cast<Vector<int, 3>>(v3);
 
 	//Matrix<float, 2, 2> m1{ 2, 3 };
 	//Matrix<float, 2, 1> m2{ v2 };

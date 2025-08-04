@@ -1,3 +1,5 @@
+//stamp/getset.h
+
 #pragma once
 #ifndef STAMP_MATH_GETSET_H
 #define STAMP_MATH_GETSET_H
@@ -19,7 +21,6 @@
 
 #include <utility>
 #include <stamp/define.h>
-#include <stamp/inoncopyable.h>
 
 STAMP_NAMESPACE_BEGIN
 

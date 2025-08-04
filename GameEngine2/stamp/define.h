@@ -1,3 +1,5 @@
+//stamp/define.h
+
 #pragma once
 #ifndef STAMP_DEFINE_H
 #define STAMP_DEFINE_H
@@ -33,6 +35,7 @@
 #define STAMP_NAMESPACE					stamp
 #define STAMP_NAMESPACE_BEGIN			namespace STAMP_NAMESPACE {
 #define STAMP_NAMESPACE_END				}
+
 
 
 //OS platform

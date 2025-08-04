@@ -1,6 +1,8 @@
+//stamp/math/define.h
+
 #pragma once
-#ifndef STAMP_MATH_MATHDEFINE_H
-#define STAMP_MATH_MATHDEFINE_H
+#ifndef STAMP_MATH_DEFINE_H
+#define STAMP_MATH_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -19,6 +21,11 @@
 // provides short names for all math headers
 // #define STAMP_MATH_ALL_SHORT_NAMES
 
+#include <exception>
+#include <initializer_list>
+#include <cmath>
+#include <utility>
+#include <algorithm>
 #include <stamp/define.h>
 
 #ifndef min
@@ -106,5 +113,55 @@ TEMPLATE TYPE1	operator	||	(TYPE2 a, const TYPE& b)	noexcept { return static_cas
 #define STAMP_MATH_ALGORITHM_SHORT_NAMES
 #define STAMP_MATH_MATRIX_SHORT_NAMES
 #endif
+
+
+
+STAMP_MATHCONST_NAMESPACE_BEGIN
+
+constexpr double PI = 3.141592653589793;
+constexpr double TAU = 2 * PI;
+constexpr double DEGTORAD = PI / 180;
+constexpr double RADTODEG = 180 / PI;
+constexpr double E = 2.718281828459045;
+
+STAMP_MATHCONST_NAMESPACE_END
+STAMP_MATH_NAMESPACE_BEGIN
+
+template<typename T>
+concept Quantity = requires(T a, T b) {
+	a = b;
+	a + b; a - b; a* b; a / b;
+	a += b; a -= b; a *= b; a /= b;
+	a == b; a != b;
+	a < b; a > b; a <= b; a >= b;
+};
+
+enum struct RotationOrder {
+	XYZ,
+	XZY,
+	YXZ,
+	YZX,
+	ZXY,
+	ZYX
+};
+
+template<Quantity T> bool equal_aprox(T a, T b);
+
+#ifdef STAMP_MATH_ALGORITHM_SHORT_NAMES
+template<Quantity T> bool eq_e(T a, T b);
+#endif
+
+//Definitions
+
+template<Quantity T> inline bool equal_aprox(T a, T b) {
+	return abs(a - b) < std::numeric_limits<T>::epsilon;
+}
+#ifdef STAMP_MATH_ALGORITHM_SHORT_NAMES
+template<Quantity T> inline bool eq_e(T a, T b) {
+	return equal_aprox(a, b);
+}
+#endif
+
+STAMP_MATH_NAMESPACE_END
 
 #endif
