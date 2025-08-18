@@ -19,9 +19,29 @@
 // limitations under the License.
 
 #include <stamp/define.h>
+#include <Windows.h>
+#include <Windowsx.h>
+#include <stdio.h>
 
 #define STAMP_CORE_NAMESPACE				STAMP_NAMESPACE::core
 #define STAMP_CORE_NAMESPACE_BEGIN			namespace STAMP_CORE_NAMESPACE {
 #define STAMP_CORE_NAMESPACE_END			}
+
+inline void StampCreateConsole() {
+#ifndef STAMP_UNITTEST
+	static BOOL console = []()->BOOL {
+		BOOL k = AllocConsole();
+#pragma warning(suppress : 4996 6031)
+		freopen("CONOUT$", "w", stdout);
+#pragma warning(suppress : 4996 6031)
+		freopen("CONIN$", "r", stdin);
+#pragma warning(suppress : 4996 6031)
+		freopen("CONOUT$", "w", stderr);
+
+		SetConsoleOutputCP(CP_UTF8);
+		return k;
+		}();
+#endif
+}
 
 #endif

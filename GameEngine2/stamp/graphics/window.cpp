@@ -1,9 +1,3 @@
-//stamp/math/rect.h
-
-#pragma once
-#ifndef STAMP_MATH_RECT_H
-#define STAMP_MATH_RECT_H
-
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,30 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/math/define.h>
-#include <stamp/math/vector.h>
+#include <stamp/graphics/window_base.h>
 
-STAMP_MATH_NAMESPACE_BEGIN
-
-template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
-struct Rect;
-
-STAMP_TEMPLATE_ALL_QUANTITY(Rect);
-
-template<Quantity T>
-struct Rect {
-	union {
-		struct {
-			Vector2<T> topleft;
-			Vector2<T> size;
-		};
-		struct {
-			Vector2<T> min;
-			Vector2<T> max;
-		};
-	};
-};
-
-STAMP_MATH_NAMESPACE_END
-
-#endif

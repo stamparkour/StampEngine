@@ -1,3 +1,9 @@
+//stamp/graphics/define.h
+
+#pragma once
+#ifndef STAMP_GRAHPICS_DEFINE_H
+#define STAMP_GRAHPICS_DEFINE_H
+
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,5 +18,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/core/window_base.h>
 
+#include <utility>
+#include <stamp/define.h>
+
+#define STAMP_GRAPHICS_NAMESPACE					STAMP_NAMESPACE::graphics
+#define STAMP_GRAPHICS_NAMESPACE_BEGIN				namespace STAMP_GRAPHICS_NAMESPACE {
+#define STAMP_GRAPHICS_NAMESPACE_END				}
+
+
+#endif

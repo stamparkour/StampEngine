@@ -60,10 +60,11 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -106,6 +107,7 @@
     <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <Microsoft-GoogleTest-Disable-gtest_main />
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
@@ -162,6 +164,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -173,13 +176,16 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -198,6 +204,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -236,18 +243,23 @@
     <ClCompile Include="lua\ltable.c" />
     <ClCompile Include="lua\ltablib.c" />
     <ClCompile Include="lua\ltm.c" />
-    <ClCompile Include="lua\lua.c" />
     <ClCompile Include="lua\lundump.c" />
     <ClCompile Include="lua\lutf8lib.c" />
     <ClCompile Include="lua\lvm.c" />
     <ClCompile Include="lua\lzio.c" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="stamp\core\window_base.cpp" />
+    <ClCompile Include="stamp\core\bit_internal.cpp" />
+    <ClCompile Include="stamp\core\string_internal.cpp" />
+    <ClCompile Include="stamp\graphics\os\windows\windows.cpp" />
+    <ClCompile Include="stamp\graphics\window.cpp" />
+    <ClCompile Include="stamp\hid\hid.cpp" />
+    <ClCompile Include="stamp\hid\lualib.cpp" />
     <ClCompile Include="stamp\lua\linit.cpp" />
     <ClCompile Include="stamp\lua\lualib.cpp" />
     <ClCompile Include="stamp\math\lualib.cpp" />
     <ClCompile Include="stamp\test\luaTest.cpp" />
     <ClCompile Include="stamp\test\matrixText.cpp" />
+    <ClCompile Include="stamp\test\memoryTest.cpp" />
     <ClCompile Include="stamp\test\quaternionTest.cpp" />
     <ClCompile Include="stamp\test\vectorTest.cpp" />
   </ItemGroup>
@@ -280,14 +292,18 @@
     <ClInclude Include="lua\lundump.h" />
     <ClInclude Include="lua\lvm.h" />
     <ClInclude Include="lua\lzio.h" />
+    <ClInclude Include="stamp\core\bit_internal.h" />
     <ClInclude Include="stamp\core\define.h" />
-    <ClInclude Include="stamp\core\window_base.h" />
+    <ClInclude Include="stamp\core\string_internal.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\getset.h" />
+    <ClInclude Include="stamp\graphics\define.h" />
+    <ClInclude Include="stamp\graphics\window_gl.h" />
+    <ClInclude Include="stamp\graphics\window_base.h" />
     <ClInclude Include="stamp\hid\define.h" />
     <ClInclude Include="stamp\hid\hid.h" />
-    <ClInclude Include="stamp\hid\hid_base.h" />
     <ClInclude Include="stamp\hid\keyboard.h" />
+    <ClInclude Include="stamp\hid\lua.h" />
     <ClInclude Include="stamp\hid\mouse.h" />
     <ClInclude Include="stamp\lua\define.h" />
     <ClInclude Include="stamp\lua\lua.h" />

@@ -182,7 +182,7 @@ namespace physicsTest {
             material->shader = render::RenderShaderProgram::ParseStream_glsl(shaderFile, { 0 }, { {"test"} });
             material->normalMap = engine::resource::ResourceManager::GetTexture("stamp:normal")->getSamplerTexture2d();
 
-            for (int i = 0; i < 70; i++) {
+            for (int i = 0; i < 400; i++) {
                 std::shared_ptr<GameObject> myObj = CreateObject("TestMesh");
                 myObj->AddComponent< ObjectCuller>();
                 myObj->transform.position = math::Vec3f{ 0, 5.0f + i * 2, 0 } + math::Vec3f{ engine::RandomFloat(-2, 2), 0, engine::RandomFloat(-2, 2) };

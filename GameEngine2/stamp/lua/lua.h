@@ -26,17 +26,33 @@
 // #define STAMP_MATH_VECTOR_EQUAL_APROX
 
 //optional headers: <iostream> <string>
+#include <stamp/define.h>
+#ifdef STAMP_LUA_AVAILABLE
+
 #include <stamp/lua/define.h>
+#include <stamp/lua/lualib.h>
 
 STAMP_LUA_NAMESPACE_BEGIN
 
-#define STAMP_LUA_TYPEID_METATABLEKEY "__typeid"
-#define STAMP_LUA_TYPEID_REGISTRYKEY "stamp_typeid"
-#define STAMP_LUA_TYPEIDMAX_REGISTRYKEY "stamp_typeid_max"
-#define STAMP_LUA_CLASSES_REGISTRYKEY "stamp_classes"
+lua_State* InitializeLua();
 
-#define STAMP_LUA_MIN_TYPEID LUA_NUMTYPES
+//all files are run in ./resources/scripts/
+// 
+//phase 0 preload (library phase)
+//		all returned outputs of files are set into package.loaded
+//		cannot have duplicate file names
+//		runs in parallel since no dependencies
+//phase 1 operational
+//		files can have same name with newer files having precidence
+//phases:
+//	0 - preload / library
+//	1 - load
+void luaS_setphasef(int phase, void(*func)(lua_State* L));
+void luaS_runphase(lua_State* L, int phase);
+
+const char* luaS_geterror(lua_State* L, int errorCode);
 
 STAMP_LUA_NAMESPACE_END
 
+#endif
 #endif

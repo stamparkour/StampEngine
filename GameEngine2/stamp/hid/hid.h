@@ -19,35 +19,58 @@
 // limitations under the License.
 
 #include <stamp/hid/define.h>
-#include <stamp/hid/hid_base.h>
 #include <stamp/noncopyable.h>
-#include <mutex>
 #include <vector>
 
 STAMP_HID_NAMESPACE_BEGIN
 
-class IHumanInterfaceDevice : public IHumanInterfaceDevice_Base, public STAMP_NAMESPACE::INonCopyable {
-private:
+class IHumanInterfaceDevice_Base : STAMP_NAMESPACE::INonCopyable {
+	friend class Window_Base;
+protected:
+	IHumanInterfaceDevice_Base() = default;
+
+	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) = 0;
+	virtual void Unfocus() = 0;
+public:
+	virtual ~IHumanInterfaceDevice_Base() = 0;
+
+	virtual bool Exists() const noexcept = 0;
+
+	virtual bool ButtonDown(size_t index) const noexcept = 0;
+	virtual bool ButtonUp(size_t index) const noexcept = 0;
+	virtual bool ButtonPressed(size_t index) const noexcept = 0;
+	virtual bool ButtonReleased(size_t index) const noexcept = 0;
+
+	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index) const noexcept = 0;
+	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(size_t index) const noexcept = 0;
+};
+
+class IHumanInterfaceDevice : IHumanInterfaceDevice_Base {
 	std::vector<bool> buttons;
 	std::vector<bool> buttons_prev;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes;
-	virtual void OnFrame();
-	virtual void OnDeselect();
+	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_prev;
+	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_delta;
 protected:
-	IHumanInterfaceDevice(size_t buttons, size_t axes);
-	void Button(size_t index, bool value);
-	void Axis(size_t index, STAMP_DEFAULT_FLOATINGPOINT value);
+	IHumanInterfaceDevice(size_t button_count = 0, size_t axis_count = 0);
+
+	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) override;
+	virtual void Unfocus() override;
+
+	void Button(size_t index, bool down) noexcept;
+	void Axis(size_t index, STAMP_DEFAULT_FLOATINGPOINT input) noexcept;
 public:
-	virtual ~IHumanInterfaceDevice();
+	~IHumanInterfaceDevice() noexcept = 0;
 
-	virtual bool Enabled();
+	virtual bool Exists() const noexcept override = 0;
 
-	virtual bool ButtonDown(size_t index);
-	virtual bool ButtonUp(size_t index);
-	virtual bool ButtonPressed(size_t index);
-	virtual bool ButtonReleased(size_t index);
+	virtual bool ButtonDown(size_t index) const noexcept override;
+	virtual bool ButtonUp(size_t index) const noexcept override;
+	virtual bool ButtonPressed(size_t index) const noexcept override;
+	virtual bool ButtonReleased(size_t index) const noexcept override;
 
-	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index);
+	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index) const noexcept override;
+	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(size_t index) const noexcept override;
 };
 
 STAMP_HID_NAMESPACE_END

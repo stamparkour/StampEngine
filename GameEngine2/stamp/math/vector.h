@@ -69,7 +69,7 @@ struct Vector_Base {
 };
 
 template<Quantity T, size_t D>
-struct Vector final : Vector_Base<Vector<T, D>, T, D> {
+struct Vector final : public Vector_Base<Vector<T, D>, T, D> {
 	using member_type = T;
 	constexpr static size_t dimensions = D;
 
@@ -83,7 +83,7 @@ struct Vector final : Vector_Base<Vector<T, D>, T, D> {
 
 
 template <Quantity T>
-struct Vector<T, 2> final : Vector_Base<Vector<T, 2>, T, 2> {
+struct Vector<T, 2> final : public Vector_Base<Vector<T, 2>, T, 2> {
 	using member_type = T;
 	constexpr static size_t dimensions = 2;
 
@@ -104,7 +104,7 @@ struct Vector<T, 2> final : Vector_Base<Vector<T, 2>, T, 2> {
 };
 
 template <Quantity T>
-struct Vector<T, 3> final : Vector_Base<Vector<T, 3>, T, 3> {
+struct Vector<T, 3> final : public Vector_Base<Vector<T, 3>, T, 3> {
 	using member_type = T;
 	constexpr static size_t dimensions = 3;
 	union {
@@ -128,7 +128,7 @@ struct Vector<T, 3> final : Vector_Base<Vector<T, 3>, T, 3> {
 };
 
 template <Quantity T>
-struct Vector<T, 4> final : Vector_Base<Vector<T, 4>, T, 4> {
+struct Vector<T, 4> final : public Vector_Base<Vector<T, 4>, T, 4> {
 	using member_type = T;
 	constexpr static size_t dimensions = 4;
 	union {
@@ -199,16 +199,16 @@ template <Quantity T, size_t D> T 				mag2(const Vector<T, D>& v)	noexcept;
 template <Quantity T, size_t D> Vector<T, D>	norm(const Vector<T, D>& v)	noexcept;
 #endif
 
-template <Quantity T, size_t D>	inline Vector<bool, D>	equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b);
+template <Quantity T, size_t D> Vector<bool, D>	equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b);
 
 #if defined(STAMP_MATH_ALGORITHM_SHORT_NAMES) || defined(STAMP_MATH_VECTOR_SHORT_NAMES)
-template <Quantity T, size_t D> inline Vector<bool, D> eq_e(const Vector<T, D>& a, const Vector<T, D>& b);
+template <Quantity T, size_t D> Vector<bool, D> eq_e(const Vector<T, D>& a, const Vector<T, D>& b);
 #endif
-#ifdef STAMP_IOSTREAM_HEADER_INCLUDED
-template <Quantity T, size_t D> inline std::ostream& operator <<(std::ostream& stream, const Vector<T, D>& v);
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
+template <Quantity T, size_t D> std::ostream& operator <<(std::ostream& stream, const Vector<T, D>& v);
 #endif
 #ifdef STAMP_STRING_HEADER_INCLUDED
-template <Quantity T, size_t D> inline std::string to_string(const Vector<T, D>& v);
+template <Quantity T, size_t D, typename S> std::basic_string<S> to_string(const Vector<T, D>& v);
 #endif
 
 // Definitions
@@ -426,7 +426,7 @@ inline Vector<bool, D>	eq_e(const Vector<T, D>& a, const Vector<T, D>& b) {
 }
 #endif
 
-#ifdef STAMP_IOSTREAM_HEADER_INCLUDED
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <Quantity T, size_t D>
 inline std::ostream& operator<<(std::ostream& stream, const Vector<T, D>& v) {
 	stream << "(";
@@ -441,14 +441,20 @@ inline std::ostream& operator<<(std::ostream& stream, const Vector<T, D>& v) {
 
 #ifdef STAMP_STRING_HEADER_INCLUDED
 template <Quantity T, size_t D>
-inline std::string to_string(const Vector<T, D>& v) {
+inline std::string to_string_templated(const Vector<T, D>& v) {
+	using namespace std;
+
 	std::string result = "(";
-	for (size_t i = 0; i < D; ++i) {
-		result += v.V[i];
+	for (size_t i = 0; i < D; i++) {
+		result += to_string(v.V[i]);
 		if (i != D - 1) result += ", ";
 	}
 	result += ")";
 	return result;
+}
+template <Quantity T, size_t D>
+inline std::string to_string(const Vector<T, D>& v) {
+	return to_string_templated(v);
 }
 #endif
 

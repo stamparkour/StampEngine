@@ -29,8 +29,15 @@
 // Patches are always compatible with no new features or breaking changes.
 #define STAMP_VERSION_PATCH 0
 
-// Defines the default floating point value for all library functions
+// Defines the default value type for all library functions
 #define STAMP_DEFAULT_FLOATINGPOINT double
+#define STAMP_DEFAULT_CHAR char32_t
+
+// network endianness 1: big-endian, 0: little-endian
+#define STAMP_NETWORK_ENDIANNESS 0
+
+// Defines the default loop count for benchmarks
+#define STAMP_BENCHMARK_LOOPCOUNT 500000
 
 #define STAMP_NAMESPACE					stamp
 #define STAMP_NAMESPACE_BEGIN			namespace STAMP_NAMESPACE {
@@ -68,13 +75,36 @@
 #error Stamp Engine does not support this compiler.
 #endif
 
+#ifdef _TEST
+#define STAMP_UNITTEST
+#if __has_include(<CppUnitTest.h>)
+#define STAMP_MICROSOFT_UNITTEST
+#endif
+#endif
+
+#ifdef _DEBUG
+#define STAMP_DEBUG
+#endif
+
+
+#if __has_include(<lua/lua.h>)
+#define STAMP_LUA_AVAILABLE
+#endif
 
 //optional headers
-#ifdef _IOSTREAM_
-#define STAMP_IOSTREAM_HEADER_INCLUDED
+#ifdef _OSTREAM_
+#define STAMP_OSTREAM_HEADER_INCLUDED
+#endif
+#ifdef _ISTREAM_
+#define STAMP_ISTREAM_HEADER_INCLUDED
 #endif
 #ifdef _STRING_
 #define STAMP_STRING_HEADER_INCLUDED
+#include <stamp/core/string_internal.h>
+#endif
+#ifdef _BIT_
+#define STAMP_BIT_HEADER_INCLUDED
+#include <stamp/core/bit_internal.h>
 #endif
 
 #ifdef STAMP_COMPILER_MSVC 

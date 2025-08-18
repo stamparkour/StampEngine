@@ -1,8 +1,8 @@
-//stamp/hid/hid_base.h
+//stamp/hid/lua.h
 
 #pragma once
-#ifndef STAMP_HID_HID_BASE_H
-#define STAMP_HID_HID_BASE_H
+#ifndef STAMP_HID_LUA_H
+#define STAMP_HID_LUA_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -18,27 +18,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+#include <stamp/define.h>
+#ifdef STAMP_LUA_AVAILABLE
+
+#include <stamp/lua/lua.h>
 #include <stamp/hid/define.h>
-#include <stamp/noncopyable.h>
-#include <vector>
+#include <stamp/hid/keyboard.h>
 
-STAMP_HID_NAMESPACE_BEGIN
 
-class IHumanInterfaceDevice_Base : public STAMP_NAMESPACE::INonCopyable {
-protected:
-	IHumanInterfaceDevice_Base();
+STAMP_LUA_NAMESPACE_BEGIN
 
-	virtual void OnFrame();
-	virtual void OnDeselect();
-public:
-	virtual ~IHumanInterfaceDevice_Base();
+bool luaS_iskeyboard(lua_State* L, int index);
 
-	virtual bool ButtonDown(size_t index);
-	virtual bool ButtonUp(size_t index);
-	virtual bool ButtonPressed(size_t index);
-	virtual bool ButtonReleased(size_t index);
-	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index);
-};
+//lua_Vector2* luaS_pushvector2(lua_State* L);
+//lua_Vector2* luaS_pushvector2(lua_State* L, const lua_Vector2& v);
 
-STAMP_HID_NAMESPACE_END
+//lua_Vector2 luaS_tovector2x(lua_State* L, int index, int* isvector);
+//lua_Vector2 luaS_tovector2(lua_State* L, int index);
+
+STAMP_HID_NAMESPACE::Keyboard* luaS_checkkeyboard(lua_State* L, int index);
+
+STAMP_LUA_NAMESPACE_END
+
+#endif
 #endif

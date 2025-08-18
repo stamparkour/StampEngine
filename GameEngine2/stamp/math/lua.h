@@ -19,6 +19,9 @@
 // limitations under the License.
 
 
+#include <stamp/define.h>
+#ifdef STAMP_LUA_AVAILABLE
+
 #include <stamp/lua/lua.h>
 #include <stamp/math/define.h>
 #include <stamp/math/vector.h>
@@ -34,27 +37,29 @@ using lua_Vector2 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 2>;
 using lua_Vector3 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 3>;
 using lua_Vector4 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 4>;
 
-bool lua_isvector2(lua_State* L, int index);
-bool lua_isvector3(lua_State* L, int index);
-bool lua_isvector4(lua_State* L, int index);
+bool luaS_isvector2(lua_State* L, int index);
+bool luaS_isvector3(lua_State* L, int index);
+bool luaS_isvector4(lua_State* L, int index);
 
-lua_Vector2* lua_pushvector2(lua_State* L);
-lua_Vector3* lua_pushvector3(lua_State* L);
-lua_Vector4* lua_pushvector4(lua_State* L);
-lua_Vector2* lua_pushvector2(lua_State* L, const lua_Vector2& v);
-lua_Vector3* lua_pushvector3(lua_State* L, const lua_Vector3& v);
-lua_Vector4* lua_pushvector4(lua_State* L, const lua_Vector4& v);
+lua_Vector2* luaS_pushvector2(lua_State* L);
+lua_Vector3* luaS_pushvector3(lua_State* L);
+lua_Vector4* luaS_pushvector4(lua_State* L);
+lua_Vector2* luaS_pushvector2(lua_State* L, const lua_Vector2& v);
+lua_Vector3* luaS_pushvector3(lua_State* L, const lua_Vector3& v);
+lua_Vector4* luaS_pushvector4(lua_State* L, const lua_Vector4& v);
 
-lua_Vector2 lua_tovector2x(lua_State* L, int index, int* isvector);
-lua_Vector3 lua_tovector3x(lua_State* L, int index, int* isvector);
-lua_Vector4 lua_tovector4x(lua_State* L, int index, int* isvector);
-lua_Vector2 lua_tovector2(lua_State* L, int index);
-lua_Vector3 lua_tovector3(lua_State* L, int index);
-lua_Vector4 lua_tovector4(lua_State* L, int index);
+lua_Vector2 luaS_tovector2x(lua_State* L, int index, int* isvector);
+lua_Vector3 luaS_tovector3x(lua_State* L, int index, int* isvector);
+lua_Vector4 luaS_tovector4x(lua_State* L, int index, int* isvector);
+lua_Vector2 luaS_tovector2(lua_State* L, int index);
+lua_Vector3 luaS_tovector3(lua_State* L, int index);
+lua_Vector4 luaS_tovector4(lua_State* L, int index);
 
-lua_Vector2* luaL_checkvector2(lua_State* L, int index);
-lua_Vector3* luaL_checkvector3(lua_State* L, int index);
-lua_Vector4* luaL_checkvector4(lua_State* L, int index);
+lua_Vector2* luaS_checkvector2(lua_State* L, int index);
+lua_Vector3* luaS_checkvector3(lua_State* L, int index);
+lua_Vector4* luaS_checkvector4(lua_State* L, int index);
 
 STAMP_LUA_NAMESPACE_END
+
+#endif
 #endif

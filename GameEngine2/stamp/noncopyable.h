@@ -23,10 +23,20 @@
 STAMP_NAMESPACE_BEGIN
 
 class INonCopyable {
-public:
+protected:
 	INonCopyable() = default;
+public:
 	INonCopyable(const INonCopyable&) = delete;
+	INonCopyable(INonCopyable&&) = default;
 	INonCopyable& operator=(const INonCopyable&) = delete;
+	INonCopyable& operator=(INonCopyable&&) = default;
+};
+
+class INonAddressable {
+protected:
+	INonAddressable() = default;
+public:
+	INonAddressable* operator &() = delete;
 };
 
 STAMP_NAMESPACE_END

@@ -12,38 +12,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stamp/define.h>
+#ifdef STAMP_LUA_AVAILABLE
+
 #include <stamp/lua/lualib.h>
 #include <stamp/lua/lua.h>
 
 using namespace STAMP_LUA_NAMESPACE;
 
 // 0, 0, e
-int STAMP_LUA_NAMESPACE::lua_instance(lua_State* L, int index) {
+int STAMP_LUA_NAMESPACE::luaS_instance(lua_State* L, int index) {
     // if(type(p1) != "table" and type(p1) != "userdata") then return type(p1) end
-    int type = lua_type(L, index);
-    if (!lua_isindexable(L, index)) {
+    int e, i, type = lua_type(L, index);
+    if (!luaS_isindexable(L, index)) {
         return type;
     }
-    // if(getmetatable(p1) == nil) then return "nil" end
+    // if(getmetatable(p1) == nil) then
     lua_getmetatable(L, index);
-    if (!lua_isnil(L, -1)) {
+    if (lua_isnil(L, -1)) {
         lua_pop(L, 1);
-        return type;
+        lua_getfield(L, index, STAMP_LUA_TYPEID_METATABLEKEY);
+        i = lua_tointegerx(L, -1, &e);
+        lua_pop(L, 1);
+        // return getmetatable(p1).__typeid
+        if (e) return i;
+        // return type(p1)
+        else return type;
     }
     lua_getfield(L, -1, STAMP_LUA_TYPEID_METATABLEKEY);
-    // if(getmetatable(p1).__typeid == nil) then return "nil" end
-    if (!lua_isnil(L, -1)) {
+    // if(getmetatable(p1).__typeid == nil) then return type end
+    if (lua_isnil(L, -1)) {
         lua_pop(L, 2);
         return type;
     }
     lua_remove(L, -2); // remove the metatable from the stack
+    
+    i = lua_tointegerx(L, -1, &e);
+    lua_pop(L, 1);
+
     // return getmetatable(p1).__typeid 
-    return lua_tointeger(L,-1);
+    if (e) return i;
+    // return type(p1)
+    else return type;
 }
 
-
-int STAMP_LUA_NAMESPACE::luaL_newmetaobject(lua_State* L, const char* name) {
-	int id = lua_getmaxmetaobjectid(L);
+void* STAMP_LUA_NAMESPACE::luaS_testuobject(lua_State* L, int arg, int id) {
+    void* p = lua_touserdata(L, arg);
+    if (p == nullptr) return nullptr;
+    luaS_pushmetaobject(L, id);
+    int c = lua_getmetatable(L, arg);
+    if (!lua_rawequal(L, -1, -2)) {
+        lua_pop(L, 2);
+        return nullptr;
+    }
+    lua_pop(L, 2);
+    return p;
+}
+void* STAMP_LUA_NAMESPACE::luaS_checkuobject(lua_State* L, int arg, int id) {
+    void* p = luaS_testuobject(L, arg, id);
+    luaL_argexpected(L, p != NULL, arg, luaS_instancename(L, luaS_instance(L, 1)));
+    return p;
+}
+int STAMP_LUA_NAMESPACE::luaS_newmetaobject(lua_State* L, const char* name) {
+	int id = luaS_getmaxmetaobjectid(L);
 	lua_pushinteger(L, id + 1); // +1
     lua_setfield(L, LUA_REGISTRYINDEX, STAMP_LUA_TYPEIDMAX_REGISTRYKEY); // -1
 
@@ -64,10 +95,13 @@ int STAMP_LUA_NAMESPACE::luaL_newmetaobject(lua_State* L, const char* name) {
     lua_setfield(L, -2, name);// -1
     lua_pop(L, 1); // -1, pop the registry table
 
+    lua_pushvalue(L, -1);// +1
+    lua_setfield(L, LUA_REGISTRYINDEX, name);// -1
+
     return id;
 }
-int STAMP_LUA_NAMESPACE::luaL_pushmetaobject(lua_State* L, int id) {
-    if (id < STAMP_LUA_MIN_TYPEID || id > lua_getmaxmetaobjectid(L)) {
+int STAMP_LUA_NAMESPACE::luaS_pushmetaobject(lua_State* L, int id) {
+    if (id < STAMP_LUA_MIN_TYPEID || id > luaS_getmaxmetaobjectid(L)) {
         return 0;
     }
     lua_getfield(L, LUA_REGISTRYINDEX, STAMP_LUA_TYPEID_REGISTRYKEY); // +1
@@ -75,7 +109,7 @@ int STAMP_LUA_NAMESPACE::luaL_pushmetaobject(lua_State* L, int id) {
     lua_remove(L, -2);
     return 1;
 }
-int STAMP_LUA_NAMESPACE::luaL_pushmetaobject(lua_State* L, const char* name) {
+int STAMP_LUA_NAMESPACE::luaS_pushmetaobject(lua_State* L, const char* name) {
     lua_getfield(L, LUA_REGISTRYINDEX, STAMP_LUA_CLASSES_REGISTRYKEY); // +1
     lua_getfield(L, -1, name); // +1, returns metatable for id
     if(lua_isnil(L, -1)) {
@@ -85,9 +119,9 @@ int STAMP_LUA_NAMESPACE::luaL_pushmetaobject(lua_State* L, const char* name) {
     lua_remove(L, -2);
     return 1;
 }
-const char* STAMP_LUA_NAMESPACE::lua_instancename(lua_State* L, int id) {
+const char* STAMP_LUA_NAMESPACE::luaS_instancename(lua_State* L, int id) {
     if (id < LUA_NUMTYPES) return lua_typename(L, id);
-    if (id < STAMP_LUA_MIN_TYPEID || id > lua_getmaxmetaobjectid(L)) {
+    if (id < STAMP_LUA_MIN_TYPEID || id > luaS_getmaxmetaobjectid(L)) {
         luaL_error(L, "Invalid instance id: %d", id);
         return nullptr;
     }
@@ -98,13 +132,13 @@ const char* STAMP_LUA_NAMESPACE::lua_instancename(lua_State* L, int id) {
     lua_pop(L, 3); // pop the registry, the metatable, and the name
     return n;
 }
-int STAMP_LUA_NAMESPACE::lua_getmaxmetaobjectid(lua_State* L) {
+int STAMP_LUA_NAMESPACE::luaS_getmaxmetaobjectid(lua_State* L) {
 	lua_getfield(L, LUA_REGISTRYINDEX, STAMP_LUA_TYPEIDMAX_REGISTRYKEY);
 	int max = luaL_checkinteger(L, -1);
 	lua_pop(L, 1);
     return max;
 }
-int STAMP_LUA_NAMESPACE::lua_isindexable(lua_State* L, int index) {
+int STAMP_LUA_NAMESPACE::luaS_isindexable(lua_State* L, int index) {
     int type = lua_type(L, index);
 	if(type == LUA_TTABLE) return true;
     if(type != LUA_TUSERDATA) return false;
@@ -127,7 +161,7 @@ int STAMP_LUA_NAMESPACE::lua_isindexable(lua_State* L, int index) {
 
 // returns object's type as a string
 static int luaf_instance(lua_State* L) {
-    lua_pushstring(L, lua_instancename(L, lua_instance(L, 1)));
+    lua_pushstring(L, luaS_instancename(L, luaS_instance(L, 1)));
     return 1;
 }
 
@@ -142,3 +176,5 @@ void STAMP_LUA_NAMESPACE::lua_stampOpenBasicFunctions(lua_State* L) {
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, STAMP_LUA_CLASSES_REGISTRYKEY);
 }
+
+#endif

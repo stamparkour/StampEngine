@@ -19,11 +19,24 @@
 // limitations under the License.
 
 
-#include <lua/lua.hpp>
 #include <stamp/define.h>
+#ifdef STAMP_LUA_AVAILABLE
+#include <lua/lua.hpp>
 
 #define STAMP_LUA_NAMESPACE				STAMP_NAMESPACE::lua
 #define STAMP_LUA_NAMESPACE_BEGIN		namespace STAMP_LUA_NAMESPACE {
 #define STAMP_LUA_NAMESPACE_END			}
 
+#define STAMP_LUA_TYPEID_METATABLEKEY "__typeid"
+#define STAMP_LUA_TYPEID_REGISTRYKEY "typeid"
+#define STAMP_LUA_TYPEIDMAX_REGISTRYKEY "typeid_max"
+#define STAMP_LUA_CLASSES_REGISTRYKEY "classes"
+
+#define STAMP_LUA_MIN_TYPEID LUA_NUMTYPES
+
+STAMP_LUA_NAMESPACE_BEGIN
+
+STAMP_LUA_NAMESPACE_END
+
+#endif
 #endif

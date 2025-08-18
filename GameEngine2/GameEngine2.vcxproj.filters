@@ -39,13 +39,19 @@
     <Filter Include="libraries\stamp\test">
       <UniqueIdentifier>{afd2db5c-079c-41c6-82d2-17dc3ce728c4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libraries\stamp\graphics">
+      <UniqueIdentifier>{8ef915a7-9ec5-497a-a642-f480702cf7b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\graphics\os">
+      <UniqueIdentifier>{1da6d831-b932-410c-832e-6e073534b889}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\graphics\os\windows">
+      <UniqueIdentifier>{e6e254c5-3251-4491-bdf7-a67042f44771}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\core\window_base.cpp">
-      <Filter>libraries\stamp\core</Filter>
     </ClCompile>
     <ClCompile Include="lua\lbaselib.c">
       <Filter>libraries\lua</Filter>
@@ -125,9 +131,6 @@
     <ClCompile Include="lua\ltm.c">
       <Filter>libraries\lua</Filter>
     </ClCompile>
-    <ClCompile Include="lua\lua.c">
-      <Filter>libraries\lua</Filter>
-    </ClCompile>
     <ClCompile Include="lua\lundump.c">
       <Filter>libraries\lua</Filter>
     </ClCompile>
@@ -167,6 +170,27 @@
     <ClCompile Include="stamp\test\quaternionTest.cpp">
       <Filter>libraries\stamp\test</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\hid\hid.cpp">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\test\memoryTest.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\hid\lualib.cpp">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\graphics\window.cpp">
+      <Filter>libraries\stamp\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\graphics\os\windows\windows.cpp">
+      <Filter>libraries\stamp\graphics\os\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\core\string_internal.cpp">
+      <Filter>libraries\stamp\core</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\core\bit_internal.cpp">
+      <Filter>libraries\stamp\core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
@@ -193,14 +217,8 @@
     <ClInclude Include="stamp\math\rect.h">
       <Filter>libraries\stamp\math</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\core\window_base.h">
-      <Filter>libraries\stamp\core</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\core\define.h">
       <Filter>libraries\stamp\core</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\hid\hid_base.h">
-      <Filter>libraries\stamp\hid</Filter>
     </ClInclude>
     <ClInclude Include="stamp\hid\keyboard.h">
       <Filter>libraries\stamp\hid</Filter>
@@ -312,6 +330,24 @@
     </ClInclude>
     <ClInclude Include="stamp\lua\lua.h">
       <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\hid\lua.h">
+      <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\window_base.h">
+      <Filter>libraries\stamp\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\define.h">
+      <Filter>libraries\stamp\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\string_internal.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\window_gl.h">
+      <Filter>libraries\stamp\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\bit_internal.h">
+      <Filter>libraries\stamp\core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

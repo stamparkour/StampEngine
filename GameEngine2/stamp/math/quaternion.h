@@ -115,7 +115,7 @@ template<Quantity T> Quaternion<T> exp		(const Quaternion<T>& q)	noexcept;
 template<Quantity T> Quaternion<T> log		(const Quaternion<T>& q)	noexcept;
 #endif
 
-#ifdef STAMP_IOSTREAM_HEADER_INCLUDED
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <STAMP_MATH_NAMESPACE::Quantity T> std::ostream& operator <<(std::ostream& stream, const STAMP_MATH_NAMESPACE::Quaternion<T>& v);
 #endif
 
@@ -336,7 +336,7 @@ template <Quantity T> inline Quaternion<bool>	eq_e(const Quaternion<T>& a, const
 }}
 #endif
 
-#ifdef STAMP_IOSTREAM_HEADER_INCLUDED
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template<STAMP_MATH_NAMESPACE::Quantity T>
 inline std::ostream& operator<<(std::ostream& stream, const STAMP_MATH_NAMESPACE::Quaternion<T>& v) {
 	return stream << "(" << v.x << "+" << v.i << "i+" << v.j << "j+" << v.k << "k)";

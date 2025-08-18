@@ -1,8 +1,8 @@
-//stamp/math/rect.h
+//stamp/graphics/window.h
 
 #pragma once
-#ifndef STAMP_MATH_RECT_H
-#define STAMP_MATH_RECT_H
+#ifndef STAMP_GRAPHICS_WINDOW_H
+#define STAMP_GRAPHICS_WINDOW_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -18,30 +18,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/math/define.h>
-#include <stamp/math/vector.h>
 
-STAMP_MATH_NAMESPACE_BEGIN
+#include <string>
+#include <stamp/graphics/define.h>
+#include <stamp/graphics/window_base.h>
 
-template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
-struct Rect;
+STAMP_GRAPHICS_NAMESPACE_BEGIN
 
-STAMP_TEMPLATE_ALL_QUANTITY(Rect);
+namespace window_gl {
+	void UnbindGLContext();
+}
 
-template<Quantity T>
-struct Rect {
-	union {
-		struct {
-			Vector2<T> topleft;
-			Vector2<T> size;
-		};
-		struct {
-			Vector2<T> min;
-			Vector2<T> max;
-		};
-	};
+class IWindow_gl : public IWindow_Base {
+protected:
+	IWindow_gl(const window::CreationSettings& settings);
+public:
+	virtual ~IWindow_gl();
+	void BindGLContext();
 };
 
-STAMP_MATH_NAMESPACE_END
+STAMP_GRAPHICS_NAMESPACE_END
 
 #endif

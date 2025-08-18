@@ -14,3 +14,4 @@ Engine.BindAction(1, {
 	key=87, --W key
 	ignoreMod = true, alt = false, shift = false, control = false
 })
+

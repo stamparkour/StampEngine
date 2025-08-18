@@ -24,8 +24,8 @@
 #include <exception>
 #include <initializer_list>
 #include <cmath>
-#include <utility>
 #include <algorithm>
+#include <utility>
 #include <stamp/define.h>
 
 #ifndef min
