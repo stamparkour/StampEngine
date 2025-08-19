@@ -343,6 +343,18 @@
     <ClInclude Include="sol\sol.hpp">
       <Filter>libraries\sol</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\lua\lua.h">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\lua\luamath.h">
+      <Filter>libraries\stamp\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="sol\forward.hpp">
+      <Filter>libraries\sol</Filter>
+    </ClInclude>
+    <ClInclude Include="sol\config.hpp">
+      <Filter>libraries\sol</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\script\test.lua">

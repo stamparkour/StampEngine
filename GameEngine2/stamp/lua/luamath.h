@@ -1,8 +1,8 @@
-//stamp/lua/define.h
+//stamp/lua/luamath.h
 
 #pragma once
-#ifndef STAMP_LUA_DEFINE_H
-#define STAMP_LUA_DEFINE_H
+#ifndef STAMP_LUA_LUAMATH_H
+#define STAMP_LUA_LUAMATH_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -21,17 +21,17 @@
 
 #include <stamp/define.h>
 #ifdef STAMP_LUA_AVAILABLE
-#include <sol/sol.hpp>
-
-#define STAMP_LUA_NAMESPACE				STAMP_NAMESPACE::lua
-#define STAMP_LUA_NAMESPACE_BEGIN		namespace STAMP_LUA_NAMESPACE {
-#define STAMP_LUA_NAMESPACE_END			}
-
-#define STAMP_LUA_INSTANCEOF_FUNCTION "instanceof"
-
-using lualib_t = void (*)(sol::state& state);
+#include <stamp/lua/define.h>
 
 STAMP_LUA_NAMESPACE_BEGIN
+
+//implement vector2, 3, 4
+//quat
+//matrix
+
+void Lua_Mathlib(sol::state& lua);
+
+
 
 STAMP_LUA_NAMESPACE_END
 
