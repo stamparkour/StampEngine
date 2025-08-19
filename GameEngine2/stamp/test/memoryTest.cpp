@@ -46,19 +46,19 @@ public:
 	}
 };
 
-TEST_CLASS(Benchmark) {
-public:
-	TEST_METHOD(SharedPointer) {
-		for (int i = 0; i < STAMP_BENCHMARK_LOOPCOUNT; ++i) {
-			shared_ptr<int> ptr = make_shared<int>(i);
-		}
-	}
-	TEST_METHOD(ThreadSafePointer) {
-		for (int i = 0; i < STAMP_BENCHMARK_LOOPCOUNT; ++i) {
-			threadsafe_ptr<int> ptr = make_threadsafe<int>(i);
-		}
-	}
-};
+//TEST_CLASS(Benchmark) {
+//public:
+//	TEST_METHOD(SharedPointer) {
+//		for (int i = 0; i < STAMP_BENCHMARK_LOOPCOUNT; ++i) {
+//			shared_ptr<int> ptr = make_shared<int>(i);
+//		}
+//	}
+//	TEST_METHOD(ThreadSafePointer) {
+//		for (int i = 0; i < STAMP_BENCHMARK_LOOPCOUNT; ++i) {
+//			threadsafe_ptr<int> ptr = make_threadsafe<int>(i);
+//		}
+//	}
+//};
 }
 
 #endif

@@ -107,3 +107,9 @@ KeybaordCharacterBuffer* Keyboard::CharacterBuffer() noexcept {
 const KeybaordCharacterBuffer* Keyboard::CharacterBuffer() const noexcept {
 	return &characterBuffer;
 }
+bool Keyboard::Exists() const noexcept {
+	return true;
+}
+Keyboard::~Keyboard() {
+
+}

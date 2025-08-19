@@ -442,7 +442,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Vector<T, D>& v) {
 #ifdef STAMP_STRING_HEADER_INCLUDED
 template <Quantity T, size_t D>
 inline std::string to_string_templated(const Vector<T, D>& v) {
-	using namespace std;
+	using std::to_string;
 
 	std::string result = "(";
 	for (size_t i = 0; i < D; i++) {

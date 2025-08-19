@@ -4,7 +4,7 @@ Texture stamp:ariel_24 {
 	;magFilter = nearest
 }
 Texture stamp:perlin_noise {
-	path = resources\perlin_noise.bmp
+	path = resources\sun.bmp
 	minFilter = linear
 	magFilter = linear
 }

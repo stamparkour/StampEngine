@@ -32,7 +32,7 @@ protected:
 	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) = 0;
 	virtual void Unfocus() = 0;
 public:
-	virtual ~IHumanInterfaceDevice_Base() = 0;
+	virtual ~IHumanInterfaceDevice_Base() {}
 
 	virtual bool Exists() const noexcept = 0;
 
