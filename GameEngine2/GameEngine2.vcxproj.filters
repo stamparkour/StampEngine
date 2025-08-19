@@ -48,6 +48,9 @@
     <Filter Include="libraries\stamp\graphics\os\windows">
       <UniqueIdentifier>{e6e254c5-3251-4491-bdf7-a67042f44771}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libraries\sol">
+      <UniqueIdentifier>{cb08666b-aa85-4201-a7ec-94e044a1619b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -151,12 +154,6 @@
     </ClCompile>
     <ClCompile Include="stamp\math\lualib.cpp">
       <Filter>libraries\stamp\math</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\lua\linit.cpp">
-      <Filter>libraries\stamp\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\lua\lualib.cpp">
-      <Filter>libraries\stamp\lua</Filter>
     </ClCompile>
     <ClCompile Include="stamp\test\vectorTest.cpp">
       <Filter>libraries\stamp\test</Filter>
@@ -322,13 +319,7 @@
     <ClInclude Include="lua\lauxlib.h">
       <Filter>libraries\lua</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\lua\lualib.h">
-      <Filter>libraries\stamp\lua</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\lua\define.h">
-      <Filter>libraries\stamp\lua</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\lua\lua.h">
       <Filter>libraries\stamp\lua</Filter>
     </ClInclude>
     <ClInclude Include="stamp\hid\lua.h">
@@ -348,6 +339,9 @@
     </ClInclude>
     <ClInclude Include="stamp\core\bit_internal.h">
       <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="sol\sol.hpp">
+      <Filter>libraries\sol</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

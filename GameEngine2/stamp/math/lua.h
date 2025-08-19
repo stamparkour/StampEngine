@@ -22,7 +22,7 @@
 #include <stamp/define.h>
 #ifdef STAMP_LUA_AVAILABLE
 
-#include <stamp/lua/lua.h>
+#include <stamp/lua/define.h>
 #include <stamp/math/define.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/quaternion.h>
