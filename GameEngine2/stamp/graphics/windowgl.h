@@ -21,19 +21,19 @@
 
 #include <string>
 #include <stamp/graphics/define.h>
-#include <stamp/graphics/window_base.h>
+#include <stamp/graphics/window.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
-namespace window_gl {
+namespace windowgl {
 	void UnbindGLContext();
 }
 
-class IWindow_gl : public IWindow_Base {
+class IWindowgl : public IWindow {
 protected:
-	IWindow_gl(const window::CreationSettings& settings);
+	IWindowgl(const window::CreationSettings& settings);
 public:
-	virtual ~IWindow_gl();
+	virtual ~IWindowgl();
 	void BindGLContext();
 };
 
