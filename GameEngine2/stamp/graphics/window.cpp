@@ -12,5 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/graphics/window_base.h>
+#include <stamp/graphics/window.h>
+
+using namespace STAMP_GRAPHICS_NAMESPACE;
+
 
