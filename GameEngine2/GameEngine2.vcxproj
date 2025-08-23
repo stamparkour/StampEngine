@@ -382,8 +382,8 @@
     <ClCompile Include="lua\lzio.c" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="stamp\core\bit_internal.cpp" />
+    <ClCompile Include="stamp\core\os\windows\windows.cpp" />
     <ClCompile Include="stamp\core\string_internal.cpp" />
-    <ClCompile Include="stamp\graphics\os\windows\windows.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
     <ClCompile Include="stamp\hid\lualib.cpp" />
