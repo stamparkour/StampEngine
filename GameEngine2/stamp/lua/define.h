@@ -28,6 +28,8 @@
 #define STAMP_LUA_NAMESPACE_END			}
 
 #define STAMP_LUA_INSTANCEOF_FUNCTION "instanceof"
+#define STAMP_LUA_INSTANCE_FUNCTION "instance"
+#define STAMP_LUA_ROOT_OBJECT "stamp"
 
 using lualib_t = void (*)(sol::state& state);
 

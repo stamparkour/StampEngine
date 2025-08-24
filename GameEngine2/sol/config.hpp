@@ -50,4 +50,8 @@ the build system, or the command line options of your compiler.
 
 // end of sol/config.hpp
 
+// #define SOL_PRINT_ERRORS 1
+// #define SOL_ALL_SAFETIES_ON 1
+#define SOL_NO_EXCEPTIONS 1
+
 #endif // SOL_SINGLE_CONFIG_HPP

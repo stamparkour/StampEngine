@@ -23,9 +23,15 @@
 #ifdef STAMP_LUA_AVAILABLE
 #include <stamp/lua/define.h>
 
-#if __has_include(<stamp/lua/luamath.h>)
-#include <stamp/lua/luamath.h>
+#if __has_include(<stamp/math/lua.h>)
+#include <stamp/math/lua.h>
 #endif
+
+STAMP_LUA_NAMESPACE_BEGIN
+
+sol::state InitializeLua();
+
+STAMP_LUA_NAMESPACE_END
 
 #endif
 #endif
