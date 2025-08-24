@@ -21,43 +21,28 @@
 
 #include <stamp/define.h>
 #ifdef STAMP_LUA_AVAILABLE
-
 #include <stamp/lua/define.h>
-#include <stamp/math/define.h>
-#include <stamp/math/vector.h>
-#include <stamp/math/quaternion.h>
-#include <stamp/math/matrix.h>
-#include <stamp/math/rect.h>
 
+#include <stamp/math/vector.h>
+#include <stamp/math/matrix.h>
+#include <stamp/math/quaternion.h>
 
 STAMP_LUA_NAMESPACE_BEGIN
 
+//implement vector2, 3, 4
+//quat
+//matrix
 
-using lua_Vector2 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 2>;
-using lua_Vector3 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 3>;
-using lua_Vector4 = STAMP_MATH_NAMESPACE::Vector<LUA_NUMBER, 4>;
+using lua_number_t = LUA_NUMBER;
+using lua_Vector2 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 2>;
+using lua_Vector3 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 3>;
+using lua_Vector4 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 4>;
+using lua_Matrix2 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 2>;
+using lua_Matrix3 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 3>;
+using lua_Matrix4 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 4>;
+using lua_Quaternion = STAMP_MATH_NAMESPACE::Quaternion<lua_number_t>;
 
-bool luaS_isvector2(lua_State* L, int index);
-bool luaS_isvector3(lua_State* L, int index);
-bool luaS_isvector4(lua_State* L, int index);
-
-lua_Vector2* luaS_pushvector2(lua_State* L);
-lua_Vector3* luaS_pushvector3(lua_State* L);
-lua_Vector4* luaS_pushvector4(lua_State* L);
-lua_Vector2* luaS_pushvector2(lua_State* L, const lua_Vector2& v);
-lua_Vector3* luaS_pushvector3(lua_State* L, const lua_Vector3& v);
-lua_Vector4* luaS_pushvector4(lua_State* L, const lua_Vector4& v);
-
-lua_Vector2 luaS_tovector2x(lua_State* L, int index, int* isvector);
-lua_Vector3 luaS_tovector3x(lua_State* L, int index, int* isvector);
-lua_Vector4 luaS_tovector4x(lua_State* L, int index, int* isvector);
-lua_Vector2 luaS_tovector2(lua_State* L, int index);
-lua_Vector3 luaS_tovector3(lua_State* L, int index);
-lua_Vector4 luaS_tovector4(lua_State* L, int index);
-
-lua_Vector2* luaS_checkvector2(lua_State* L, int index);
-lua_Vector3* luaS_checkvector3(lua_State* L, int index);
-lua_Vector4* luaS_checkvector4(lua_State* L, int index);
+void Lua_Mathlib(sol::state* lua, sol::table* target);
 
 STAMP_LUA_NAMESPACE_END
 

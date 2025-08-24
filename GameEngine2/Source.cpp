@@ -15,7 +15,7 @@ using namespace stamp;
 using namespace std;
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
-	//StampCreateConsole();
+	StampCreateConsole();
 
 
 	//Vector2<float> v1(3.0f, 4.0f);
@@ -36,8 +36,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	//auto q = cross(myVector, forward);
 	//auto t = (myVector + 3.0l) / 5.0l;
 
-	//lua_State* L = stamp::lua::InitializeLua();
-	//int e = luaL_dofile(L, "resources/script/test.lua");
-	//auto c = stamp::lua::luaS_geterror(L, e);
-	//if(c) std::cout << c << std::endl;
+	sol::state lua = stamp::lua::InitializeLua();
+	lua.safe_script_file("resources\\script\\test.lua");
 }

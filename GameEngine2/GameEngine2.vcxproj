@@ -254,7 +254,8 @@
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
     <ClCompile Include="stamp\hid\lualib.cpp" />
-    <ClCompile Include="stamp\math\lualib.cpp" />
+    <ClCompile Include="stamp\lua\lua.cpp" />
+    <ClCompile Include="stamp\math\lua.cpp" />
     <ClCompile Include="stamp\test\luaTest.cpp" />
     <ClCompile Include="stamp\test\matrixText.cpp" />
     <ClCompile Include="stamp\test\memoryTest.cpp" />
@@ -308,9 +309,9 @@
     <ClInclude Include="stamp\hid\mouse.h" />
     <ClInclude Include="stamp\lua\define.h" />
     <ClInclude Include="stamp\lua\lua.h" />
-    <ClInclude Include="stamp\lua\luamath.h" />
     <ClInclude Include="stamp\math\lua.h" />
     <ClInclude Include="stamp\memory.h" />
+    <ClInclude Include="stamp\network\socketstream.h" />
     <ClInclude Include="stamp\noncopyable.h" />
     <ClInclude Include="stamp\math\define.h" />
     <ClInclude Include="stamp\math\matrix.h" />
