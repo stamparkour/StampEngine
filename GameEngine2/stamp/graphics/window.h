@@ -25,6 +25,7 @@
 #include <stamp/noncopyable.h>
 #include <stamp/math/rect.h>
 #include <stamp/memory.h>
+#include <stdio.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
@@ -40,7 +41,7 @@ namespace window {
 		//Fullscreen,
 	};
 	struct CreationSettings {
-		std::string title = "Window Title";
+		STAMP_NAMESPACE::sstring title = U"Stamp Engine—Window Title";
 		STAMP_MATH_NAMESPACE::Recti rect = {};
 		STAMP_MATH_NAMESPACE::Recti rectBound = {};
 		window::visibility visibility = visibility::Visible;
@@ -51,68 +52,68 @@ namespace window {
 }
 
 class IWindow_Base : INonCopyable {
+	friend struct IWindow_internal;
+private:
+	bool isWindowClosePromise = false;
+	std::promise<void> windowClosePromise{};
+protected:
+	// call at most once
+	void SetWindowClosed();
 public:
-	virtual ~IWindow_Base() = 0;
+	virtual ~IWindow_Base();
 
-	virtual void Title(const std::string& title) noexcept;
-	virtual std::string Title() const noexcept;
+	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
+	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
 
-	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
+	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
 
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept;
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
+	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept = 0;
+	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept = 0;
 
-	virtual void VSync(bool enabled) noexcept;
-	virtual bool VSync() const noexcept;
+	virtual void VSync(bool enabled) noexcept = 0;
+	virtual bool VSync() const noexcept = 0;
 
-	virtual void Visibility(window::visibility visibility) noexcept;
-	virtual window::visibility Visibility() const noexcept;
+	virtual void Visibility(window::visibility visibility) noexcept = 0;
+	virtual window::visibility Visibility() const noexcept = 0;
 
-	virtual void WindowEventsWait();
-	virtual bool WindowEventsQuery();
 
-	virtual std::future<void> Wait_WindowClose();
-	virtual std::future<void> WaitFor_WindowClose();
-	virtual std::future<void> WaitUntil_WindowClose();
+	std::future<void> WaitForWindowClose();
 };
 
-class IWindow : IWindow_Base {
+class IWindow : public IWindow_Base {
+	friend struct IWindow_internal;
 private:
-	std::string title;
+	STAMP_NAMESPACE::sstring title;
 	STAMP_MATH_NAMESPACE::Recti rect;
 	STAMP_MATH_NAMESPACE::Recti rectBound;
 	window::visibility visibility;
 	bool vsync = false;
-	struct WindowData* windowData;
+	struct IWindow_internal* windowData;
 protected:
-	IWindow(const window::CreationSettings& settings);
 public:
-	virtual ~IWindow() = 0;
+	//should be protected but is testing
+	IWindow(const window::CreationSettings& settings);
 
-	virtual void Title(const std::string& title) noexcept;
-	virtual std::string Title() const noexcept;
+	virtual ~IWindow();
 
-	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
+	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept override;
+	virtual STAMP_NAMESPACE::sstring Title() const noexcept override;
 
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept;
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
+	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
+	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept override;
 
-	virtual void VSync(bool enabled) noexcept;
-	virtual bool VSync() const noexcept;
+	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept override;
+	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
+	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept override;
 
-	virtual void Visibility(window::visibility visibility) noexcept;
-	virtual window::visibility Visibility() const noexcept;
+	virtual void VSync(bool enabled) noexcept override;
+	virtual bool VSync() const noexcept override;
 
-	virtual void WindowEventsWait();
-	virtual bool WindowEventsQuery();
+	virtual void Visibility(window::visibility visibility) noexcept override;
+	virtual window::visibility Visibility() const noexcept override;
 
-	virtual std::future<void> Wait_WindowClose();
-	virtual std::future<void> WaitFor_WindowClose();
-	virtual std::future<void> WaitUntil_WindowClose();
 };
 
 STAMP_GRAPHICS_NAMESPACE_END

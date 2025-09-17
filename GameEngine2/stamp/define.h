@@ -1,6 +1,5 @@
 //stamp/define.h
 
-#pragma once
 #ifndef STAMP_DEFINE_H
 #define STAMP_DEFINE_H
 
@@ -91,21 +90,6 @@
 #define STAMP_LUA_AVAILABLE
 #endif
 
-//optional headers
-#ifdef _OSTREAM_
-#define STAMP_OSTREAM_HEADER_INCLUDED
-#endif
-#ifdef _ISTREAM_
-#define STAMP_ISTREAM_HEADER_INCLUDED
-#endif
-#ifdef _STRING_
-#define STAMP_STRING_HEADER_INCLUDED
-#include <stamp/core/string_internal.h>
-#endif
-#ifdef _BIT_
-#define STAMP_BIT_HEADER_INCLUDED
-#include <stamp/core/bit_internal.h>
-#endif
 
 #ifdef STAMP_COMPILER_MSVC 
 #define NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
@@ -115,4 +99,20 @@
 
 #define COMMA ,
 
+#endif
+
+//optional headers
+#if defined(_OSTREAM_) && !defined(STAMP_OSTREAM_HEADER_INCLUDED)
+#define STAMP_OSTREAM_HEADER_INCLUDED
+#endif
+#if defined(_ISTREAM_) && !defined(STAMP_ISTREAM_HEADER_INCLUDED)
+#define STAMP_ISTREAM_HEADER_INCLUDED
+#endif
+#if defined(_STRING_) && !defined(STAMP_STRING_HEADER_INCLUDED)
+#define STAMP_STRING_HEADER_INCLUDED
+#include <stamp/core/string_internal.h>
+#endif
+#if defined(_BIT_) && !defined(STAMP_BIT_HEADER_INCLUDED)
+#define STAMP_BIT_HEADER_INCLUDED
+#include <stamp/core/bit_internal.h>
 #endif

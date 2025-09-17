@@ -57,7 +57,7 @@
     <Filter Include="libraries\stamp\core\os">
       <UniqueIdentifier>{659cdf4d-bf63-4148-b801-8a6c130b782d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="libraries\stamp\core\os\windows">
+    <Filter Include="libraries\stamp\core\os\win32">
       <UniqueIdentifier>{dc5402a7-7bdd-4288-b3a6-8c8c80df1038}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -596,8 +596,8 @@
     <ClCompile Include="Jolt\Geometry\OrientedBox.cpp">
       <Filter>libraries\Jolt</Filter>
     </ClCompile>
-    <ClCompile Include="stamp\core\os\windows\windows.cpp">
-      <Filter>libraries\stamp\core\os\windows</Filter>
+    <ClCompile Include="stamp\core\os\windows\win32.cpp">
+      <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1642,6 +1642,12 @@
     <ClInclude Include="Jolt\Geometry\Triangle.h">
       <Filter>libraries\Jolt</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\network\define.h">
+      <Filter>libraries\stamp\network</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\entry.h">
+      <Filter>libraries\stamp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\script\test.lua">
@@ -1695,6 +1701,7 @@
     <None Include="Jolt\Core\Profiler.inl">
       <Filter>libraries\Jolt</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Jolt\Jolt.natvis">

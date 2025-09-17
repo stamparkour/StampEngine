@@ -30,16 +30,33 @@ STAMP_TEMPLATE_ALL_QUANTITY(Rect);
 
 template<Quantity T>
 struct Rect {
-	union {
-		struct {
-			Vector2<T> topleft;
-			Vector2<T> size;
-		};
-		struct {
-			Vector2<T> min;
-			Vector2<T> max;
-		};
-	};
+	Vector2<T> A;
+	Vector2<T> B;
+
+	void Min(const Vector<T>& v) {
+		A = v;
+	}
+	Vector2<T> Min() const {
+		return A;
+	}
+	void Max(const Vector<T>& v) {
+		B = v;
+	}
+	Vector2<T> Max() const {
+		return B;
+	}
+	void TopLeft(const Vector2<T>& v) {
+		A = v;
+	}
+	Vector2<T> TopLeft() const {
+		return A;
+	}
+	void Size(const Vector2<T>& v) {
+		B = v;
+	}
+	Vector2<T> Size() const {
+		return B;
+	}
 };
 
 STAMP_MATH_NAMESPACE_END

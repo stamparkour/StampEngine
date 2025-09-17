@@ -20,6 +20,7 @@
 
 
 #include <mutex>
+#include <shared_mutex>
 #include <condition_variable>
 #include <cstddef>
 #include <utility>
@@ -41,37 +42,16 @@ using Stamp_Deleter = void(*)(stamp_ptr_internal<T>*);
 
 template <typename T>
 class stamp_ptr_internal final {
-	std::atomic_int readCount = 0;
-	std::condition_variable writeProtection{};
 public:
-	std::mutex accessMutex{};
+	std::shared_mutex accessMutex{};
 	Stamp_Deleter<T> deleter;
+	std::atomic_int readCount = 0;
 	std::atomic_int refrenceCount = 0;
 	T* ptr = nullptr;
 
 	stamp_ptr_internal(T* ptr, Stamp_Deleter<T> deleter = Deleter) {
 		this->ptr = ptr;
 		this->deleter = deleter;
-	}
-	int ReadCount() {
-		return readCount;
-	}
-	std::unique_lock<std::mutex> write_lock() {
-		std::unique_lock lk(accessMutex);
-		writeProtection.wait(lk, [this]() { return readCount == 0; });
-		return lk;
-	}
-	void write_unlock(std::unique_lock<std::mutex>& lk) {
-		lk.unlock();
-		writeProtection.notify_all();
-	}
-	void read_lock() {
-		std::unique_lock lk(accessMutex);
-		readCount++;
-	}
-	void read_unlock() {
-		//could notify either a read or write access
-		if((--readCount) == 0) writeProtection.notify_all();
 	}
 
 	static inline void Deleter(stamp_ptr_internal<T>* ptri) {
@@ -101,17 +81,30 @@ private:
 	readonly_ptr(stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptri = ptri;
-		this->ptri->read_lock();
+		this->ptri->accessMutex.lock_shared();
+		this->ptri->readCount++;
 	}
 public:
 	readonly_ptr(nullptr_t) {
 		this->ptri = nullptr;
 	}
+
+	readonly_ptr(const readonly_ptr<T>&) = delete;
+	readonly_ptr(readonly_ptr<T>&&) = delete;
+
 	readonly_ptr& operator=(nullptr_t) {
 		if (!ptri) return;
-		this->ptri->read_unlock();
+		this->ptri->accessMutex.unlock_shared();
+		this->ptri->readCount--;
 
 		this->ptri = nullptr;
+	}
+	readonly_ptr& operator=(const readonly_ptr<T>&) = delete;
+	readonly_ptr& operator=(readonly_ptr<T>&&) = delete;
+
+	int readCount() const noexcept {
+		if (!ptri) return 0;
+		return ptri->readCount;
 	}
 
 	bool operator==(nullptr_t) const noexcept {
@@ -139,16 +132,15 @@ public:
 	const element_type* get() const noexcept {
 		return ptri->ptr;
 	}
-	int read_count() {
-		return ptri->ReadCount();
-	}
 	operator bool() const noexcept {
 		return ptri != nullptr && ptri->ptr != nullptr;
 	}
 
 	~readonly_ptr() {
 		if (!ptri) return;
-		this->ptri->read_unlock();
+		this->ptri->readCount--;
+		this->ptri->accessMutex.unlock_shared();
+		this->ptri = nullptr;
 	}
 };
 
@@ -160,24 +152,26 @@ public:
 	using element_type = T;
 private:
 	stamp_ptr_internal<T>* ptri = nullptr;
-	std::unique_lock<std::mutex> lock;
 
 	writable_ptr(stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptri = ptri;
-		lock = this->ptri->write_lock();
-
+		this->ptri->accessMutex.lock();
 	}
 public:
 	writable_ptr(nullptr_t) {
 		this->ptri = nullptr;
 	}
+	writable_ptr(const writable_ptr<T>&) = delete;
+	writable_ptr(writable_ptr<T>&&) = delete;
 	writable_ptr& operator=(nullptr_t) {
 		if (!ptri) return;
-		this->ptri->write_unlock(lock);
+		this->ptri->accessMutex.unlock();
 		
 		this->ptri = nullptr;
 	}
+	writable_ptr& operator=(const writable_ptr<T>&) = delete;
+	writable_ptr& operator=(writable_ptr<T>&&) = delete;
 
 	bool operator==(nullptr_t) const noexcept {
 		return ptri == nullptr || ptri->ptr == nullptr;
@@ -210,7 +204,7 @@ public:
 
 	~writable_ptr() {
 		if (!ptri) return;
-		this->ptri->write_unlock(lock);
+		this->ptri->accessMutex.unlock();
 	}
 };
 
@@ -256,11 +250,13 @@ public:
 		if (ptri) {
 			ptri->refrenceCount--;
 			if (ptri->refrenceCount == 0) {
-				ptri->read_lock();
-				ptri->read_unlock();
+
+				auto p = ptri;
+				p->accessMutex.lock();
+				ptri = nullptr;
+				p->accessMutex.unlock();
+
 				ptri->deleter(ptri);
-				delete ptri;
-				ptri = 0;
 			}
 		}
 
@@ -287,10 +283,6 @@ public:
 	operator bool() const noexcept {
 		return ptri != nullptr && ptri->ptr != nullptr;
 	}
-
-	int read_count() {
-		return ptri->ReadCount();
-	}
 	int use_count() {
 		return ptri->refrenceCount;
 	}
@@ -307,10 +299,12 @@ public:
 	~threadsafe_ptr() {
 		if (!ptri) return;
 		if (--ptri->refrenceCount > 0) return;
+
 		auto p = ptri;
-		auto k = p->write_lock();
+		p->accessMutex.lock();
 		ptri = nullptr;
-		p->write_unlock(k);
+		p->accessMutex.unlock();
+
 		p->deleter(p);
 	}
 };
@@ -323,6 +317,7 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 	};
 
 	Stamp_Deleter<T> deleter = [](stamp_ptr_internal<T>* ptri) {
+		ptri->ptr->~T();
 		ptri->~stamp_ptr_internal();
 		::operator delete(ptri, sizeof(MAKE_THREADSAFE), std::align_val_t{ alignof(MAKE_THREADSAFE) });
 	};

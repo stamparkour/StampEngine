@@ -7,16 +7,16 @@
 #include <stamp/lua/lua.h>
 #include <stamp/core/define.h>
 #include <stamp/memory.h>
-
+#include <stamp/graphics/window.h>
+#include <stamp/entry.h>
 #include <Windows.h>
 
 using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
-int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
-	StampCreateConsole();
-
+int StampEngineEntry(int argv, char* argc[]) {
+	std::cout << "Hello, Stamp Engine!" << std::endl;
 
 	//Vector2<float> v1(3.0f, 4.0f);
 	//Vector2<float> v2(5.0f, 4.0f);
@@ -36,6 +36,27 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	//auto q = cross(myVector, forward);
 	//auto t = (myVector + 3.0l) / 5.0l;
 
-	sol::state lua = stamp::lua::InitializeLua();
-	lua.safe_script_file("resources\\script\\test.lua");
+	//sol::state lua = stamp::lua::InitializeLua();
+	//lua.safe_script_file("resources\\script\\test.lua");
+
+	stamp::graphics::IWindow window{ stamp::graphics::window::CreationSettings{
+			.title = U"Stamp Engine - Window",
+			.rect = { {100, 100}, {800, 600}},
+			.visibility = stamp::graphics::window::visibility::Visible,
+			.vsync = true,
+		}
+	};
+
+	stamp::graphics::IWindow window2{ stamp::graphics::window::CreationSettings{
+			.title = U"Stamp Engine - Window",
+			.rect = { {100, 100}, {800, 600}},
+			.visibility = stamp::graphics::window::visibility::Visible,
+			.vsync = true,
+		}
+	};
+
+	window.WaitForWindowClose().wait();
+	window2.WaitForWindowClose().wait();
+
+	return 0;
 }

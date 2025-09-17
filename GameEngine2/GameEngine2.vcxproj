@@ -57,13 +57,13 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -71,7 +71,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -382,7 +382,7 @@
     <ClCompile Include="lua\lzio.c" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="stamp\core\bit_internal.cpp" />
-    <ClCompile Include="stamp\core\os\windows\windows.cpp" />
+    <ClCompile Include="stamp\core\os\windows\win32.cpp" />
     <ClCompile Include="stamp\core\string_internal.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
@@ -723,6 +723,7 @@
     <ClInclude Include="stamp\core\define.h" />
     <ClInclude Include="stamp\core\string_internal.h" />
     <ClInclude Include="stamp\define.h" />
+    <ClInclude Include="stamp\entry.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />
     <ClInclude Include="stamp\graphics\windowgl.h" />
@@ -736,6 +737,7 @@
     <ClInclude Include="stamp\lua\lua.h" />
     <ClInclude Include="stamp\math\lua.h" />
     <ClInclude Include="stamp\memory.h" />
+    <ClInclude Include="stamp\network\define.h" />
     <ClInclude Include="stamp\network\socketstream.h" />
     <ClInclude Include="stamp\noncopyable.h" />
     <ClInclude Include="stamp\math\define.h" />
@@ -761,11 +763,20 @@
     <None Include="Jolt\Math\Vec4.inl" />
     <None Include="Jolt\Physics\Body\Body.inl" />
     <None Include="Jolt\Physics\Body\MotionProperties.inl" />
+    <None Include="packages.config" />
     <None Include="resources\script\test.lua" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Jolt\Jolt.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\boost.1.87.0\build\boost.targets" Condition="Exists('..\packages\boost.1.87.0\build\boost.targets')" />
+  </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\boost.1.87.0\build\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost.1.87.0\build\boost.targets'))" />
+  </Target>
 </Project>

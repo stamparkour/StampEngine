@@ -35,19 +35,20 @@ using sstring = std::basic_string<stamp_char>;
 /// <param name="str">- input character to convert</param>
 /// <param name="length2">- size of input str, recommended to be 2.</param>
 /// <returns>if both buffer and length1 are 0, then it returns the required size of the buffer. Else it returns the number of characters written.</returns>
-size_t to_utf8(char* buffer, size_t length1, const char16_t* str, size_t length2);
-size_t to_utf8(char* buffer, size_t length, char32_t str);
-size_t to_utf16(char16_t* buffer, size_t length1, const char* str, size_t length2);
+
+size_t to_utf8(char8_t* buffer, size_t length1, const char16_t* str, size_t length2);
+size_t to_utf8(char8_t* buffer, size_t length, char32_t str);
+size_t to_utf16(char16_t* buffer, size_t length1, const char8_t* str, size_t length2);
 size_t to_utf16(char16_t* buffer, size_t length, char32_t str);
-char32_t to_utf32(const char* buffer, size_t length);
+char32_t to_utf32(const char8_t* buffer, size_t length);
 char32_t to_utf32(const char16_t* buffer, size_t length);
 
-std::string to_utf8(const std::u16string& str);
-std::string to_utf8(const std::u32string& str);
-std::string to_utf16(const std::u8string& str);
-std::string to_utf16(const std::u32string& str);
-std::string to_utf32(const std::u8string& str);
-std::string to_utf32(const std::u16string& str);
+std::u8string to_utf8(const std::u16string& str);
+std::u8string to_utf8(const std::u32string& str);
+std::u16string to_utf16(const std::u8string& str);
+std::u16string to_utf16(const std::u32string& str);
+std::u32string to_utf32(const std::u8string& str);
+std::u32string to_utf32(const std::u16string& str);
 
 STAMP_NAMESPACE_END
 

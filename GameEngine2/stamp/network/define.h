@@ -1,8 +1,8 @@
-//stamp/core/define.h
+//stamp/network/define.h
 
 #pragma once
-#ifndef STAMP_CORE_DEFINE_H
-#define STAMP_CORE_DEFINE_H
+#ifndef STAMP_NETWORK_DEFINE_H
+#define STAMP_NETWORK_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -18,13 +18,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/define.h>
-#include <Windows.h>
-#include <Windowsx.h>
-#include <stdio.h>
 
-#define STAMP_CORE_NAMESPACE				STAMP_NAMESPACE::core
-#define STAMP_CORE_NAMESPACE_BEGIN			namespace STAMP_CORE_NAMESPACE {
-#define STAMP_CORE_NAMESPACE_END			}
+#include <stamp/define.h>
+
+#define STAMP_NETWORK_NAMESPACE				STAMP_NAMESPACE::network
+#define STAMP_NETWORK_NAMESPACE_BEGIN		namespace STAMP_NETWORK_NAMESPACE {
+#define STAMP_NETWORK_NAMESPACE_END			}
 
 #endif
