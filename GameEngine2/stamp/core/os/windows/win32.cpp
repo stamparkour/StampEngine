@@ -13,15 +13,11 @@
 // limitations under the License.
 
 #include <stamp/define.h>
-#if defined(STAMP_PLATFORM_WINDOWS) && !defined(STAMP_UNITTEST)
+#if defined(STAMP_PLATFORM_WINDOWS) && defined(STAMP_DEPLOY)
 #include <iostream>
 #include <stamp/entry.h>
 #include <stamp/graphics/window.h>
 #include <stamp/graphics/windowgl.h>
-#include <stamp/hid/hid.h>
-#include <stamp/hid/keyboard.h>
-#include <stamp/hid/mouse.h>
-#include <Windows.h>
 
 using namespace STAMP_GRAPHICS_NAMESPACE;
 
@@ -184,6 +180,7 @@ void ParentWindowLoop(std::promise<void>* promise) {
 	}
 
 	promise->set_value();
+
 
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0)) {

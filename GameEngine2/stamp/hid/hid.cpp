@@ -19,97 +19,59 @@
 
 using namespace STAMP_HID_NAMESPACE;
 
-// IHumanInterfaceDevice implementation
-IHumanInterfaceDevice::IHumanInterfaceDevice(size_t buttons, size_t axes) {
+// GenericHumanInterfaceDevice implementation
+GenericHumanInterfaceDevice::GenericHumanInterfaceDevice(size_t buttons, size_t axes) {
 	this->buttons = std::vector<bool>(buttons, false);
 	buttons_prev = std::vector<bool>(buttons, false);
 	this->axes = std::vector<STAMP_DEFAULT_FLOATINGPOINT>(axes, 0);
 	axes_prev = std::vector<STAMP_DEFAULT_FLOATINGPOINT>(axes, 0);
 	axes_delta = std::vector<STAMP_DEFAULT_FLOATINGPOINT>(axes, 0);
 }
-IHumanInterfaceDevice::~IHumanInterfaceDevice() {}
-void IHumanInterfaceDevice::Button(size_t index, bool value) noexcept {
+GenericHumanInterfaceDevice::~GenericHumanInterfaceDevice() {}
+void GenericHumanInterfaceDevice::Button(size_t index, bool value) noexcept {
 	if (index >= buttons.size()) return;
 	buttons[index] = value;
 }
-void IHumanInterfaceDevice::Axis(size_t index, STAMP_DEFAULT_FLOATINGPOINT value) noexcept {
+void GenericHumanInterfaceDevice::Axis(size_t index, STAMP_DEFAULT_FLOATINGPOINT value) noexcept {
 	if (index >= axes.size()) return;
 	axes[index] = value;
 }
-void IHumanInterfaceDevice::Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) {
+void GenericHumanInterfaceDevice::Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) {
 	buttons_prev = buttons;
 	axes_prev = axes;
 	for(size_t i = 0; i < axes.size(); ++i) {
 		axes_delta[i] = (axes[i] - axes_prev[i]) / deltaTime;
 	}
 }
-void IHumanInterfaceDevice::Unfocus() {
+void GenericHumanInterfaceDevice::Unfocus() {
 	std::fill(buttons.begin(), buttons.end(), false);
 	std::fill(buttons_prev.begin(), buttons_prev.end(), false);
 	std::fill(axes.begin(), axes.end(), 0);
 	std::fill(axes_prev.begin(), axes_prev.end(), 0);
 	std::fill(axes_delta.begin(), axes_prev.end(), 0);
 }
-bool IHumanInterfaceDevice::ButtonDown(size_t index) const noexcept {
+bool GenericHumanInterfaceDevice::ButtonDown(size_t index) const noexcept {
 	if (index >= buttons.size()) return false;
 	return buttons[index];
 }
-bool IHumanInterfaceDevice::ButtonUp(size_t index) const noexcept {
+bool GenericHumanInterfaceDevice::ButtonUp(size_t index) const noexcept {
 	if (index >= buttons.size()) return false;
 	return !buttons[index];
 }
-bool IHumanInterfaceDevice::ButtonPressed(size_t index) const noexcept {
+bool GenericHumanInterfaceDevice::ButtonPressed(size_t index) const noexcept {
 	if (index >= buttons.size()) return false;
 	return buttons[index] && !buttons_prev[index];
 }
-bool IHumanInterfaceDevice::ButtonReleased(size_t index) const noexcept {
+bool GenericHumanInterfaceDevice::ButtonReleased(size_t index) const noexcept {
 	if (index >= buttons.size()) return false;
 	return !buttons[index] && buttons_prev[index];
 }
-STAMP_DEFAULT_FLOATINGPOINT IHumanInterfaceDevice::Axis(size_t index) const noexcept {
+STAMP_DEFAULT_FLOATINGPOINT GenericHumanInterfaceDevice::Axis(size_t index) const noexcept {
 	if (index >= axes.size()) return false;
 	return axes[index];
 }
-STAMP_DEFAULT_FLOATINGPOINT IHumanInterfaceDevice::AxisDelta(size_t index) const noexcept {
+STAMP_DEFAULT_FLOATINGPOINT GenericHumanInterfaceDevice::AxisDelta(size_t index) const noexcept {
 	if (index >= axes.size()) return false;
 	return axes_delta[index];
 }
 
-// Keyboard implementation
-Keyboard::Keyboard() : IHumanInterfaceDevice(512, 0) {}
-bool Keyboard::ButtonDown(size_t index) const noexcept {
-	if ((index & 0xFF00) == 0xE000) {
-		index = (index & 0x00FF) | 0x0100;
-	}
-	return IHumanInterfaceDevice::ButtonDown(index);
-}
-bool Keyboard::ButtonUp(size_t index) const noexcept {
-	if ((index & 0xFF00) == 0xE000) {
-		index = (index & 0x00FF) | 0x0100;
-	}
-	return IHumanInterfaceDevice::ButtonUp(index);
-}
-bool Keyboard::ButtonPressed(size_t index) const noexcept {
-	if ((index & 0xFF00) == 0xE000) {
-		index = (index & 0x00FF) | 0x0100;
-	}
-	return IHumanInterfaceDevice::ButtonPressed(index);
-}
-bool Keyboard::ButtonReleased(size_t index) const noexcept {
-	if ((index & 0xFF00) == 0xE000) {
-		index = (index & 0x00FF) | 0x0100;
-	}
-	return IHumanInterfaceDevice::ButtonReleased(index);
-}
-KeybaordCharacterBuffer* Keyboard::CharacterBuffer() noexcept {
-	return &characterBuffer;
-}
-const KeybaordCharacterBuffer* Keyboard::CharacterBuffer() const noexcept {
-	return &characterBuffer;
-}
-bool Keyboard::Exists() const noexcept {
-	return true;
-}
-Keyboard::~Keyboard() {
-
-}

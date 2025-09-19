@@ -45,24 +45,24 @@ public:
 	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(size_t index) const noexcept = 0;
 };
 
-class IHumanInterfaceDevice : IHumanInterfaceDevice_Base {
+class GenericHumanInterfaceDevice : IHumanInterfaceDevice_Base {
 	std::vector<bool> buttons;
 	std::vector<bool> buttons_prev;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_prev;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_delta;
 protected:
-	IHumanInterfaceDevice(size_t button_count = 0, size_t axis_count = 0);
+public:
+	GenericHumanInterfaceDevice(size_t button_count = 0, size_t axis_count = 0);
+	~GenericHumanInterfaceDevice() noexcept;
+
+	virtual bool Exists() const noexcept override = 0;
 
 	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) override;
 	virtual void Unfocus() override;
 
 	void Button(size_t index, bool down) noexcept;
 	void Axis(size_t index, STAMP_DEFAULT_FLOATINGPOINT input) noexcept;
-public:
-	~IHumanInterfaceDevice() noexcept = 0;
-
-	virtual bool Exists() const noexcept override = 0;
 
 	virtual bool ButtonDown(size_t index) const noexcept override;
 	virtual bool ButtonUp(size_t index) const noexcept override;

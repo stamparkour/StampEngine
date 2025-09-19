@@ -170,7 +170,27 @@ namespace scancodeUS {
 	};
 }
 
-class KeybaordCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
+class Keyboard final : public IHumanInterfaceDevice_Base {
+	class Keyboard_internal* data;
+private:
+public:
+	Keyboard(int id);
+
+	~Keyboard() noexcept;
+
+	bool Exists() const noexcept override;
+
+	bool ButtonDown(size_t index) const noexcept override;
+	bool ButtonUp(size_t index) const noexcept override;
+	bool ButtonPressed(size_t index) const noexcept override;
+	bool ButtonReleased(size_t index) const noexcept override;
+
+	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index) const noexcept override;
+	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(size_t index) const noexcept override;
+};
+
+class KeyboardCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
+	friend class Keyboard;
 public:
 	using char_type = stamp::stamp_char;
 	using keyboard_string = stamp::sstring;
@@ -179,6 +199,8 @@ private:
 	size_t lineWidth;
 	keyboard_string buffer;
 public:
+	KeyboardCharacterBuffer(Keyboard keyboard);
+
 	void Reset(keyboard_string newBuffer = U"") noexcept {
 		this->buffer = std::move(newBuffer);
 		cursor = buffer.size();
@@ -229,9 +251,9 @@ public:
 		size_t prevNewlineIndex = cursor;
 		for (; prevNewlineIndex > 0 && buffer[prevNewlineIndex - 1] != '\n'; --prevNewlineIndex);
 		size_t prevLineLength = newlineIndex - prevNewlineIndex;
-		
+
 		//go up to the previous line without any line width restrictions
-		if(lineWidth == 0 || prevLineLength < lineWidth) {
+		if (lineWidth == 0 || prevLineLength < lineWidth) {
 			cursor = prevNewlineIndex + (prevLineLength >= currentLineLength ? currentLineLength : prevLineLength);
 		}
 		else {
@@ -257,34 +279,6 @@ public:
 
 	}
 };
-
-class Keyboard final : public IHumanInterfaceDevice {
-	friend class Window_Base;
-
-	KeybaordCharacterBuffer characterBuffer;
-
-	Keyboard();
-public:
-	~Keyboard() noexcept;
-
-	bool Exists() const noexcept override;
-
-	bool ButtonDown(size_t index) const noexcept override;
-	bool ButtonUp(size_t index) const noexcept override;
-	bool ButtonPressed(size_t index) const noexcept override;
-	bool ButtonReleased(size_t index) const noexcept override;
-
-	KeybaordCharacterBuffer* CharacterBuffer() noexcept;
-	const KeybaordCharacterBuffer* CharacterBuffer() const noexcept;
-};
-
-
-namespace keyboard {
-	/// <returns>maximum index for keyboards</returns>
-	size_t MaxIndex();
-	STAMP_NAMESPACE::readonly_ptr<Keyboard> Get(size_t index = 1) noexcept;
-	STAMP_NAMESPACE::writable_ptr<Keyboard> GetLocked(size_t index = 1) noexcept;
-}
 
 STAMP_HID_NAMESPACE_END
 

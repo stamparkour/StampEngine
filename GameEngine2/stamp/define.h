@@ -79,6 +79,8 @@
 #if __has_include(<CppUnitTest.h>)
 #define STAMP_MICROSOFT_UNITTEST
 #endif
+#else
+#define STAMP_DEPLOY
 #endif
 
 #ifdef _DEBUG

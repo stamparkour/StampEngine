@@ -599,6 +599,9 @@
     <ClCompile Include="stamp\core\os\windows\win32.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
+    <ClCompile Include="hid.cpp">
+      <Filter>libraries\stamp\core\os\win32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
