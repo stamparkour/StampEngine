@@ -15,17 +15,3 @@
 #include <stamp/graphics/window.h>
 
 using namespace STAMP_GRAPHICS_NAMESPACE;
-
-IWindow_Base::~IWindow_Base() {
-	SetWindowClosed();
-}
-
-std::future<void> IWindow_Base::WaitForWindowClose() {
-	return windowClosePromise.get_future();
-}
-
-void IWindow_Base::SetWindowClosed() {
-	if (isWindowClosePromise) return;
-	isWindowClosePromise = true;
-	windowClosePromise.set_value();
-}

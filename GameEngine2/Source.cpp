@@ -39,7 +39,7 @@ int StampEngineEntry(int argv, char* argc[]) {
 	//sol::state lua = stamp::lua::InitializeLua();
 	//lua.safe_script_file("resources\\script\\test.lua");
 
-	stamp::graphics::IWindow window{ stamp::graphics::window::CreationSettings{
+	stamp::graphics::Window window{ stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",
 			.rect = { {100, 100}, {800, 600}},
 			.visibility = stamp::graphics::window::visibility::Visible,
@@ -47,7 +47,7 @@ int StampEngineEntry(int argv, char* argc[]) {
 		}
 	};
 
-	stamp::graphics::IWindow window2{ stamp::graphics::window::CreationSettings{
+	stamp::graphics::Window window2{ stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",
 			.rect = { {100, 100}, {800, 600}},
 			.visibility = stamp::graphics::window::visibility::Visible,

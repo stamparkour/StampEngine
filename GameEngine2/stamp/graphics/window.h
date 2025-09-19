@@ -32,35 +32,33 @@ STAMP_GRAPHICS_NAMESPACE_BEGIN
 // todo: create templated threads for use with specialized windows - like main render loop, or dialog box
 
 namespace window {
-	enum struct visibility {
-		Hidden,
-		Visible,
-		Minimized,
-		Maximized,
-		Borderless,
-		//Fullscreen,
-	};
+	using visibility_t = int;
+	namespace visibility {
+		enum : visibility_t {
+			Hidden,
+			Visible,
+			Minimized,
+			Maximized,
+			Borderless,
+			//Fullscreen,
+		};
+	}
 	struct CreationSettings {
 		STAMP_NAMESPACE::sstring title = U"Stamp Engine—Window Title";
 		STAMP_MATH_NAMESPACE::Recti rect = {};
 		STAMP_MATH_NAMESPACE::Recti rectBound = {};
-		window::visibility visibility = visibility::Visible;
+		visibility_t visibility = visibility::Visible;
 		bool vsync = false;
 		stamp::threadsafe_ptr<std::thread> windowThread;
 		bool terminateOnClose = true;
 	};
 }
 
-class IWindow_Base : INonCopyable {
-	friend struct IWindow_internal;
-private:
-	bool isWindowClosePromise = false;
-	std::promise<void> windowClosePromise{};
-protected:
-	// call at most once
-	void SetWindowClosed();
+class IWindow {
+	friend struct Window_internal;
 public:
-	virtual ~IWindow_Base();
+	IWindow() {}
+	virtual ~IWindow() = 0;
 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
@@ -75,28 +73,23 @@ public:
 	virtual void VSync(bool enabled) noexcept = 0;
 	virtual bool VSync() const noexcept = 0;
 
-	virtual void Visibility(window::visibility visibility) noexcept = 0;
-	virtual window::visibility Visibility() const noexcept = 0;
+	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
+	virtual window::visibility_t Visibility() const noexcept = 0;
 
 
-	std::future<void> WaitForWindowClose();
+	virtual std::future<void> WaitForWindowClose() const noexcept = 0;
 };
 
-class IWindow : public IWindow_Base {
-	friend struct IWindow_internal;
+class Window : public IWindow {
+	friend struct Window_internal;
 private:
-	STAMP_NAMESPACE::sstring title;
-	STAMP_MATH_NAMESPACE::Recti rect;
-	STAMP_MATH_NAMESPACE::Recti rectBound;
-	window::visibility visibility;
-	bool vsync = false;
-	struct IWindow_internal* windowData;
+	struct Window_internal* windowData;
 protected:
 public:
 	//should be protected but is testing
-	IWindow(const window::CreationSettings& settings);
+	Window(const window::CreationSettings& settings);
 
-	virtual ~IWindow();
+	virtual ~Window();
 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept override;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept override;
@@ -111,9 +104,10 @@ public:
 	virtual void VSync(bool enabled) noexcept override;
 	virtual bool VSync() const noexcept override;
 
-	virtual void Visibility(window::visibility visibility) noexcept override;
-	virtual window::visibility Visibility() const noexcept override;
+	virtual void Visibility(window::visibility_t visibility) noexcept override;
+	virtual window::visibility_t Visibility() const noexcept override;
 
+	virtual std::future<void> WaitForWindowClose() const noexcept override;
 };
 
 STAMP_GRAPHICS_NAMESPACE_END

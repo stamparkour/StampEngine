@@ -27,10 +27,9 @@
 
 STAMP_HID_NAMESPACE_BEGIN
 
-
 namespace scancodeUS {
 	//https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes
-	enum : size_t {
+	enum : buttonID_t {
 		A = 0x001E,
 		B = 0x0030,
 		C = 0x002E,
@@ -170,9 +169,14 @@ namespace scancodeUS {
 	};
 }
 
-class Keyboard final : public IHumanInterfaceDevice_Base {
+class Keyboard final : public IHumanInterfaceDevice {
 	class Keyboard_internal* data;
 private:
+	void Unfocus() override;
+	void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) override;
+
+	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override;
+	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override;
 public:
 	Keyboard(int id);
 
@@ -185,8 +189,6 @@ public:
 	bool ButtonPressed(size_t index) const noexcept override;
 	bool ButtonReleased(size_t index) const noexcept override;
 
-	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(size_t index) const noexcept override;
-	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(size_t index) const noexcept override;
 };
 
 class KeyboardCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
@@ -199,7 +201,7 @@ private:
 	size_t lineWidth;
 	keyboard_string buffer;
 public:
-	KeyboardCharacterBuffer(Keyboard keyboard);
+	KeyboardCharacterBuffer(Keyboard keyboard) {}
 
 	void Reset(keyboard_string newBuffer = U"") noexcept {
 		this->buffer = std::move(newBuffer);

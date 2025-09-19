@@ -599,7 +599,7 @@
     <ClCompile Include="stamp\core\os\windows\win32.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
-    <ClCompile Include="hid.cpp">
+    <ClCompile Include="win32hid.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
   </ItemGroup>

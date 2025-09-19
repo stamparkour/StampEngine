@@ -29,7 +29,7 @@ namespace windowgl {
 	void UnbindGLContext();
 }
 
-class IWindowgl : public IWindow {
+class IWindowgl : public Window {
 protected:
 	IWindowgl(const window::CreationSettings& settings);
 public:

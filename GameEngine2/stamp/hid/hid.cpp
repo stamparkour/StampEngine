@@ -28,6 +28,9 @@ GenericHumanInterfaceDevice::GenericHumanInterfaceDevice(size_t buttons, size_t 
 	axes_delta = std::vector<STAMP_DEFAULT_FLOATINGPOINT>(axes, 0);
 }
 GenericHumanInterfaceDevice::~GenericHumanInterfaceDevice() {}
+bool GenericHumanInterfaceDevice::Exists() const noexcept {
+	return true;
+}
 void GenericHumanInterfaceDevice::Button(size_t index, bool value) noexcept {
 	if (index >= buttons.size()) return;
 	buttons[index] = value;

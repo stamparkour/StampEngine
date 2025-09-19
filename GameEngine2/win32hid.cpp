@@ -25,7 +25,6 @@ STAMP_HID_NAMESPACE_BEGIN
 
 class Keyboard_internal {
 	STAMP_HID_NAMESPACE::GenericHumanInterfaceDevice controller;
-	bool
 };
 
 STAMP_HID_NAMESPACE_END

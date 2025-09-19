@@ -23,27 +23,28 @@ using namespace STAMP_GRAPHICS_NAMESPACE;
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
-struct IWindow_internal {
+struct Window_internal {
 	//thread
 	//is allive
+	bool isWindowClosePromise = false;
+	std::promise<void> windowClosePromise{};
+
+	STAMP_NAMESPACE::sstring title;
+	STAMP_MATH_NAMESPACE::Recti rect;
+	STAMP_MATH_NAMESPACE::Recti rectBound;
+	window::visibility_t visibility;
+	bool vsync = false;
+
 	std::thread windowThread;
 	std::thread manageThread;
-	IWindow* window = nullptr;
+	Window* window = nullptr;
 	HWND hWnd = NULL;
 	bool isAlive = true;
 	bool isVisible = false;
 	int winSizeState = 0;
 	window::CreationSettings settings;
 
-	IWindow_internal() = default;
-
-	void SetTitle_i(const STAMP_NAMESPACE::sstring& title) {
-		window->title = title;
-	}
-
-	void SetVisible_i(const STAMP_GRAPHICS_NAMESPACE::window::visibility& visiblity) {
-		window->visibility = visiblity;
-	}
+	Window_internal() = default;
 
 	void CloseWindow_i() {
 		if (!isAlive) return;
@@ -112,15 +113,15 @@ LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	IWindow_internal* winData = (IWindow_internal*)GetWindowLongPtrW(hWnd, 0);
-	IWindow* window = winData ? winData->window : 0;
+	Window_internal* winData = (Window_internal*)GetWindowLongPtrW(hWnd, 0);
+	Window* window = winData ? winData->window : 0;
 
 	std::cout << "Child Window Message: hex " << std::hex << uMsg << " " << (int)wParam << " " << (int)lParam << std::endl;
 
 	switch (uMsg) {
 	case WM_CREATE: {
 		CREATESTRUCTW* c = (CREATESTRUCTW*)lParam;
-		winData = (IWindow_internal*)(c->lpCreateParams);
+		winData = (Window_internal*)(c->lpCreateParams);
 		SetWindowLongPtrW(hWnd, 0, (LONG_PTR)winData);
 	} return 0;
 	case WM_GETMINMAXINFO: {
@@ -189,8 +190,8 @@ void ParentWindowLoop(std::promise<void>* promise) {
 	}
 }
 
-void WindowLoop(IWindow_internal* windowData) {
-	IWindow* window = windowData->window;
+void WindowLoop(Window_internal* windowData) {
+	Window* window = windowData->window;
 	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(windowData->settings.title);
 	HWND hwnd = CreateWindowExW(
 		WS_EX_APPWINDOW,					// Optional window styles.
@@ -215,18 +216,18 @@ void WindowLoop(IWindow_internal* windowData) {
 	}
 }
 
-IWindow::IWindow(const window::CreationSettings& settings) {
+Window::Window(const window::CreationSettings& settings) {
 	title = settings.title;
-	this->windowData = new IWindow_internal();
+	this->windowData = new Window_internal();
 	this->windowData->window = this;
 	this->windowData->settings = settings;
 
 	windowData->windowThread = std::thread{ WindowLoop, this->windowData };
 }
 
-IWindow::~IWindow() {
+Window::~Window() {
 	if (!this->windowData) return;
-	STAMP_GRAPHICS_NAMESPACE::IWindow_internal* winData = this->windowData;
+	STAMP_GRAPHICS_NAMESPACE::Window_internal* winData = this->windowData;
 	this->windowData = nullptr;
 	winData->isAlive = false;
 
@@ -235,45 +236,45 @@ IWindow::~IWindow() {
 	delete winData;
 }
 
-void IWindow::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
+void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
 	this->title = title;
 	//if (this->windowData && this->windowData->hWnd) {
 	//	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(title);
 	//	SetWindowTextW(this->windowData->hWnd, (LPCWSTR)wtitle.c_str());
 	//}
 }
-void IWindow::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
+void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 	this->rect = rect;
 }
-STAMP_MATH_NAMESPACE::Recti IWindow::Rect() const noexcept {
+STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return this->rect;
 }
-void IWindow::RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept {
+void Window::RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept {
 	this->rectBound = { fixedSize, fixedSize };
 }
-void IWindow::RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
+void Window::RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 	this->rectBound = rect;
 }
-STAMP_MATH_NAMESPACE::Recti IWindow::RectBound() const noexcept {
+STAMP_MATH_NAMESPACE::Recti Window::RectBound() const noexcept {
 	return this->rectBound;
 }
-STAMP_NAMESPACE::sstring IWindow::Title() const noexcept {
+STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return this->title;
 }
-void IWindow::VSync(bool enabled) noexcept {
+void Window::VSync(bool enabled) noexcept {
 	this->vsync = enabled;
 }
-bool IWindow::VSync() const noexcept {
+bool Window::VSync() const noexcept {
 	return this->vsync;
 }
-void IWindow::Visibility(window::visibility visibility) noexcept {
+void Window::Visibility(window::visibility visibility) noexcept {
 	this->visibility = visibility;
 	//if (this->windowData && this->windowData->hWnd) {
 	//	//expand for min and max and fullscreen
 	//	ShowWindow(this->windowData->hWnd, visibility == window::visibility::Visible ? SW_SHOW : SW_HIDE);
 	//}
 }
-window::visibility IWindow::Visibility() const noexcept {
+window::visibility Window::Visibility() const noexcept {
 	return this->visibility;
 }
 
