@@ -599,7 +599,7 @@
     <ClCompile Include="stamp\core\os\windows\win32.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
-    <ClCompile Include="win32hid.cpp">
+    <ClCompile Include="stamp\core\os\windows\win32hid.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1648,7 +1648,7 @@
     <ClInclude Include="stamp\network\define.h">
       <Filter>libraries\stamp\network</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\entry.h">
+    <ClInclude Include="stamp\state.h">
       <Filter>libraries\stamp</Filter>
     </ClInclude>
   </ItemGroup>

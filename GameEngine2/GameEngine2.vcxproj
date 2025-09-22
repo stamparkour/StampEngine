@@ -215,7 +215,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="win32hid.cpp" />
+    <ClCompile Include="stamp\core\os\windows\win32hid.cpp" />
     <ClCompile Include="Jolt\AABBTree\AABBTreeBuilder.cpp" />
     <ClCompile Include="Jolt\Core\Color.cpp" />
     <ClCompile Include="Jolt\Core\Factory.cpp" />
@@ -724,7 +724,7 @@
     <ClInclude Include="stamp\core\define.h" />
     <ClInclude Include="stamp\core\string_internal.h" />
     <ClInclude Include="stamp\define.h" />
-    <ClInclude Include="stamp\entry.h" />
+    <ClInclude Include="stamp\state.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />
     <ClInclude Include="stamp\graphics\windowgl.h" />

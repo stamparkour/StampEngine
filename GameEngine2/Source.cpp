@@ -8,14 +8,15 @@
 #include <stamp/core/define.h>
 #include <stamp/memory.h>
 #include <stamp/graphics/window.h>
-#include <stamp/entry.h>
+#include <stamp/state.h>
+#include <stamp/hid/keyboard.h>
 #include <Windows.h>
 
 using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
-int StampEngineEntry(int argv, char* argc[]) {
+int StampEngineInit(int argv, char* argc[]) {
 	std::cout << "Hello, Stamp Engine!" << std::endl;
 
 	//Vector2<float> v1(3.0f, 4.0f);
@@ -38,6 +39,8 @@ int StampEngineEntry(int argv, char* argc[]) {
 
 	//sol::state lua = stamp::lua::InitializeLua();
 	//lua.safe_script_file("resources\\script\\test.lua");
+
+	stamp::hid::Keyboard keyboard(0);
 
 	stamp::graphics::Window window{ stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",

@@ -43,22 +43,23 @@ namespace window {
 			//Fullscreen,
 		};
 	}
+
 	struct CreationSettings {
 		STAMP_NAMESPACE::sstring title = U"Stamp Engine—Window Title";
 		STAMP_MATH_NAMESPACE::Recti rect = {};
 		STAMP_MATH_NAMESPACE::Recti rectBound = {};
 		visibility_t visibility = visibility::Visible;
 		bool vsync = false;
-		stamp::threadsafe_ptr<std::thread> windowThread;
 		bool terminateOnClose = true;
 	};
 }
 
 class IWindow {
 	friend struct Window_internal;
+protected:
 public:
 	IWindow() {}
-	virtual ~IWindow() = 0;
+	virtual ~IWindow() {}
 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
@@ -76,6 +77,8 @@ public:
 	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
 	virtual window::visibility_t Visibility() const noexcept = 0;
 
+	virtual void Active(bool active) noexcept = 0;
+	virtual bool Active() const noexcept = 0;
 
 	virtual std::future<void> WaitForWindowClose() const noexcept = 0;
 };
@@ -85,6 +88,10 @@ class Window : public IWindow {
 private:
 	struct Window_internal* windowData;
 protected:
+	virtual void OnCreate() {}
+	virtual void OnResize(const STAMP_MATH_NAMESPACE::Recti& newRect) {}
+	virtual void OnMove(const STAMP_MATH_NAMESPACE::Vector2i& newPosition) {}
+	virtual void OnClose() {}
 public:
 	//should be protected but is testing
 	Window(const window::CreationSettings& settings);
@@ -106,6 +113,9 @@ public:
 
 	virtual void Visibility(window::visibility_t visibility) noexcept override;
 	virtual window::visibility_t Visibility() const noexcept override;
+
+	virtual void Active(bool active) noexcept override;
+	virtual bool Active() const noexcept override;
 
 	virtual std::future<void> WaitForWindowClose() const noexcept override;
 };

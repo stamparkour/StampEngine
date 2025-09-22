@@ -170,25 +170,49 @@ namespace scancodeUS {
 }
 
 class Keyboard final : public IHumanInterfaceDevice {
-	class Keyboard_internal* data;
+	friend class KeyboardCharacterBuffer;
+	friend class Keyboard_internal;
 private:
-	void Unfocus() override;
-	void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) override;
-
-	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override;
-	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override;
+	class Keyboard_internal* data;
+	STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override { return 0; }
+	STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override { return 0; }
 public:
-	Keyboard(int id);
+	Keyboard(size_t id);
 
-	~Keyboard() noexcept;
+	//add swap and copy constructor/assignment
+
+	~Keyboard() noexcept override;
 
 	bool Exists() const noexcept override;
 
-	bool ButtonDown(size_t index) const noexcept override;
-	bool ButtonUp(size_t index) const noexcept override;
-	bool ButtonPressed(size_t index) const noexcept override;
-	bool ButtonReleased(size_t index) const noexcept override;
+	bool ButtonDown(buttonID_t index) const noexcept override;
+	bool ButtonUp(buttonID_t index) const noexcept override;
+	bool ButtonPressed(buttonID_t index) const noexcept override;
+	bool ButtonReleased(buttonID_t index) const noexcept override;
+};
 
+class IKeyboardListener : public IHumanInterfaceDevice {
+private:
+	Keyboard keyboard;
+protected:
+	IKeyboardListener(size_t id);
+
+	STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override { return 0; }
+	STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override { return 0; }
+
+	virtual void OnButtonDown(buttonID_t index) = 0;
+	virtual void OnButtonUp(buttonID_t index) = 0;
+	virtual void OnConnect() = 0;
+	virtual void OnDisconnect() = 0;
+public:
+	virtual ~IKeyboardListener() noexcept override;
+
+	bool Exists() const noexcept override;
+
+	bool ButtonDown(buttonID_t index) const noexcept override { keyboard.ButtonDown(index); }
+	bool ButtonUp(buttonID_t index) const noexcept override { keyboard.ButtonUp(index); }
+	bool ButtonPressed(buttonID_t index) const noexcept override { keyboard.ButtonPressed(index); }
+	bool ButtonReleased(buttonID_t index) const noexcept override { keyboard.ButtonReleased(index); }
 };
 
 class KeyboardCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
@@ -201,7 +225,7 @@ private:
 	size_t lineWidth;
 	keyboard_string buffer;
 public:
-	KeyboardCharacterBuffer(Keyboard keyboard) {}
+	KeyboardCharacterBuffer(size_t id) {}
 
 	void Reset(keyboard_string newBuffer = U"") noexcept {
 		this->buffer = std::move(newBuffer);

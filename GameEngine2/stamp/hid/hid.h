@@ -36,9 +36,6 @@ public:
 
 	virtual bool Exists() const noexcept = 0;
 
-	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) = 0;
-	virtual void Unfocus() = 0;
-
 	virtual bool ButtonDown(buttonID_t index) const noexcept = 0;
 	virtual bool ButtonUp(buttonID_t index) const noexcept = 0;
 	virtual bool ButtonPressed(buttonID_t index) const noexcept = 0;
@@ -61,8 +58,8 @@ public:
 
 	virtual bool Exists() const noexcept override;
 
-	virtual void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime) override;
-	virtual void Unfocus() override;
+	void Update(STAMP_DEFAULT_FLOATINGPOINT deltaTime);
+	void Unfocus();
 
 	void Button(buttonID_t index, bool down) noexcept;
 	void Axis(axisID_t index, STAMP_DEFAULT_FLOATINGPOINT input) noexcept;
