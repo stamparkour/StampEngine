@@ -724,6 +724,7 @@
     <ClInclude Include="stamp\core\define.h" />
     <ClInclude Include="stamp\core\string_internal.h" />
     <ClInclude Include="stamp\define.h" />
+    <ClInclude Include="stamp\event.h" />
     <ClInclude Include="stamp\state.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />

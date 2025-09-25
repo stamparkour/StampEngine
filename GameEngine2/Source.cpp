@@ -16,6 +16,24 @@ using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
+class MyKeyboard : public stamp::hid::IKeyboardListener {
+public:
+	MyKeyboard(size_t id) : IKeyboardListener(id) {}
+
+	virtual void OnButtonDown(stamp::hid::buttonID_t index) {
+		std::cout << "Button Down: " << std::hex << index << std::endl;
+	}
+	virtual void OnButtonUp(stamp::hid::buttonID_t index) {
+
+	}
+	virtual void OnConnect() {
+
+	}
+	virtual void OnDisconnect() {
+
+	}
+};
+
 int StampEngineInit(int argv, char* argc[]) {
 	std::cout << "Hello, Stamp Engine!" << std::endl;
 
@@ -40,7 +58,6 @@ int StampEngineInit(int argv, char* argc[]) {
 	//sol::state lua = stamp::lua::InitializeLua();
 	//lua.safe_script_file("resources\\script\\test.lua");
 
-	stamp::hid::Keyboard keyboard(0);
 
 	stamp::graphics::Window window{ stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",
@@ -57,6 +74,8 @@ int StampEngineInit(int argv, char* argc[]) {
 			.vsync = true,
 		}
 	};
+
+	MyKeyboard keyboard(0);
 
 	window.WaitForWindowClose().wait();
 	window2.WaitForWindowClose().wait();

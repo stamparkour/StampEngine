@@ -30,35 +30,40 @@ STAMP_HID_NAMESPACE_BEGIN
 struct Keyboard_internal {
 	STAMP_HID_NAMESPACE::GenericHumanInterfaceDevice controller{512};
 	bool exists = false;
-	HANDLE handle;
+	HANDLE handle = 0;
 
 	std::shared_mutex bindMutex{};
-	std::set<Keyboard*> bindedKeyboards{};
+	std::set<IKeyboardListener*> bindedKeyboards{};
 
 	void Button(STAMP_HID_NAMESPACE::buttonID_t index, bool down) {
 		std::shared_lock lock{ bindMutex };
 		controller.Button(index, down);
-		for(Keyboard* kb : bindedKeyboards) {
-			
+		for(IKeyboardListener* kb : bindedKeyboards) {
+			if(down) {
+				kb->OnButtonDown(index);
+			}
+			else {
+				kb->OnButtonUp(index);
+			}
 		}
 	}
-	void Connect() {
+	void Connect(bool exists) {
+		this->exists = exists;
 		std::shared_lock lock{ bindMutex };
-		for (Keyboard* kb : bindedKeyboards) {
-			kb->OnConnect();
+		for(IKeyboardListener* kb : bindedKeyboards) {
+			if(exists) {
+				kb->OnConnect();
+			}
+			else {
+				kb->OnDisconnect();
+			}
 		}
 	}
-	void Disconnect() {
-		std::shared_lock lock{ bindMutex };
-		for (Keyboard* kb : bindedKeyboards) {
-			kb->OnDisconnect();
-		}
-	}
-	void AddListener(Keyboard* kb) {
+	void AddListener(IKeyboardListener* kb) {
 		std::unique_lock lock{ bindMutex };
 		bindedKeyboards.insert(kb);
 	}
-	void RemoveListener(Keyboard* kb) {
+	void RemoveListener(IKeyboardListener* kb) {
 		std::unique_lock lock{ bindMutex };
 		bindedKeyboards.erase(kb);
 	}
@@ -90,12 +95,18 @@ int WinInput(WPARAM wParam, LPARAM lParam) {
 		RAWKEYBOARD& rawKeyboard = rawInput->data.keyboard;
 		uint16_t scanCode = rawKeyboard.MakeCode;
 		uint16_t flags = rawKeyboard.Flags;
+		bool down = ~flags & RI_KEY_BREAK;
+		bool e0 = flags & RI_KEY_E0;
+		bool e1 = flags & RI_KEY_E1;
+		
+		if (e0) scanCode |= 0xe000;
+		if (e1) scanCode |= 0xe100;
 
 		auto ki = keyboardMap.find(handle);
 		if(ki != keyboardMap.end()) {
 			Keyboard_internal* internals = ki->second;
-			internals->Button(scanCode, flags & RI_KEY_MAKE);
-			globalKeyboard.Button(scanCode, flags & RI_KEY_MAKE);
+			internals->Button(scanCode, down);
+			globalKeyboard.Button(scanCode, down);
 		}
 	} break;
 	}
@@ -112,6 +123,8 @@ int WinInputDeviceChange(WPARAM wParam, LPARAM lParam) {
 	case RIM_TYPEKEYBOARD: {
 		RID_DEVICE_INFO_KEYBOARD& keyboard = info.keyboard;
 		if (isAdded) {
+			if (keyboardMap.find(handle) != keyboardMap.end()) return 0;
+
 			Keyboard_internal* internals = nullptr;
 			for(Keyboard_internal* kb : keyboardCollection) {
 				if (!kb->exists) {
@@ -126,16 +139,15 @@ int WinInputDeviceChange(WPARAM wParam, LPARAM lParam) {
 				keyboardCollection.push_back(internals);
 			}
 			internals->handle = handle;
-			internals->Connect();
+			internals->Connect(true);
 
 			keyboardMap[handle] = internals;
 		}
 		else {
 			auto it = keyboardMap.find(handle);
 			if(it != keyboardMap.end()) {
-				it->second->exists = false;
 				it->second->handle = nullptr;
-				it->second->Disconnect();
+				it->second->Connect(false);
 				keyboardMap.erase(it);
 			}
 		}
@@ -143,13 +155,22 @@ int WinInputDeviceChange(WPARAM wParam, LPARAM lParam) {
 	}
 }
 
+static void UpdateAllHID() {
+	UINT length = 0;
+	GetRawInputDeviceList(nullptr, &length, sizeof(RAWINPUTDEVICELIST));
+	std::vector<RAWINPUTDEVICELIST> deviceList(length);
+	GetRawInputDeviceList(deviceList.data(), &length, sizeof(RAWINPUTDEVICELIST));
+	for (RAWINPUTDEVICELIST& r : deviceList) {
+		WinInputDeviceChange(GIDC_ARRIVAL, (LPARAM)r.hDevice);
+	}
+}
+
 static int InitializeKeyboardCollection() {
-	RAWINPUTDEVICE rid = {
-		HID_USAGE_PAGE_GENERIC, 
-		HID_USAGE_GENERIC_KEYBOARD,
-		RIDEV_INPUTSINK | RIDEV_EXINPUTSINK | RIDEV_DEVNOTIFY,
-		parentHwnd
-	};
+	RAWINPUTDEVICE rid;
+	rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+	rid.usUsage = HID_USAGE_GENERIC_KEYBOARD;
+	rid.dwFlags = RIDEV_INPUTSINK | RIDEV_EXINPUTSINK | RIDEV_DEVNOTIFY;
+	rid.hwndTarget = parentHwnd;
 	if (RegisterRawInputDevices(&rid, 1, sizeof(rid)) == FALSE) {
 		return -1;
 	}
@@ -157,10 +178,17 @@ static int InitializeKeyboardCollection() {
 	Keyboard_internal* kb = new Keyboard_internal();
 	keyboardCollection.push_back(kb);
 
+	UpdateAllHID();
+
 	return 0;
 }
 
 Keyboard::Keyboard(size_t id) {
+	if(id > 256) {
+		data = nullptr;
+		return;
+	}
+
 	static int _ = InitializeKeyboardCollection();
 	//id 0 is global keyboard, id 1+ are specific keyboards
 	if (id > keyboardCollection.size()) {
@@ -178,15 +206,10 @@ Keyboard::Keyboard(size_t id) {
 	else {
 		data = keyboardCollection[id - 1];
 	}
-	
-	if(data) {
-		data->AddListener(this);
-	}
 }
 
 Keyboard::~Keyboard() noexcept {
 	if (!data) return;
-	data->RemoveListener(this);
 	data = nullptr;
 }
 
@@ -204,6 +227,16 @@ bool Keyboard::ButtonPressed(size_t index) const noexcept {
 }
 bool Keyboard::ButtonReleased(size_t index) const noexcept {
 	return data && data->controller.ButtonReleased(index);
+}
+Keyboard_internal* Keyboard::InternalHandle() const noexcept {
+	return data;
+}
+
+IKeyboardListener::IKeyboardListener(size_t id) : keyboard(id) {
+	if(keyboard.InternalHandle() != nullptr) keyboard.InternalHandle()->AddListener(this);
+}
+IKeyboardListener::~IKeyboardListener() noexcept {
+	if(keyboard.InternalHandle() != nullptr) keyboard.InternalHandle()->RemoveListener(this);
 }
 
 #endif

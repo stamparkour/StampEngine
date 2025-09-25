@@ -91,16 +91,9 @@ LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
 	case WM_CREATE: return 0;
 	case WM_INPUT: {
-		bool isInputSink = GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUTSINK;
-		RAWINPUT* input = (RAWINPUT*)lParam;
-
 		WinInput(wParam, lParam);
 	} return 0;
 	case WM_INPUT_DEVICE_CHANGE: {
-		//GIDC_ARRIVAL GIDC_REMOVAL
-		bool added = (wParam == GIDC_ARRIVAL);
-		HANDLE hDevice = (HANDLE)lParam;
-
 		WinInputDeviceChange(wParam, lParam);
 	} return 0;
 	// is input accepted

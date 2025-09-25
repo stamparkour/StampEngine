@@ -1651,6 +1651,9 @@
     <ClInclude Include="stamp\state.h">
       <Filter>libraries\stamp</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\event.h">
+      <Filter>libraries\stamp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\script\test.lua">

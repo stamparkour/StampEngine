@@ -189,9 +189,12 @@ public:
 	bool ButtonUp(buttonID_t index) const noexcept override;
 	bool ButtonPressed(buttonID_t index) const noexcept override;
 	bool ButtonReleased(buttonID_t index) const noexcept override;
+
+	class Keyboard_internal* InternalHandle() const noexcept;
 };
 
 class IKeyboardListener : public IHumanInterfaceDevice {
+	friend class Keyboard_internal;
 private:
 	Keyboard keyboard;
 protected:
@@ -207,12 +210,14 @@ protected:
 public:
 	virtual ~IKeyboardListener() noexcept override;
 
-	bool Exists() const noexcept override;
+	bool Exists() const noexcept override { return keyboard.Exists(); }
 
-	bool ButtonDown(buttonID_t index) const noexcept override { keyboard.ButtonDown(index); }
-	bool ButtonUp(buttonID_t index) const noexcept override { keyboard.ButtonUp(index); }
-	bool ButtonPressed(buttonID_t index) const noexcept override { keyboard.ButtonPressed(index); }
-	bool ButtonReleased(buttonID_t index) const noexcept override { keyboard.ButtonReleased(index); }
+	bool ButtonDown(buttonID_t index) const noexcept override { return keyboard.ButtonDown(index); }
+	bool ButtonUp(buttonID_t index) const noexcept override { return keyboard.ButtonUp(index); }
+	bool ButtonPressed(buttonID_t index) const noexcept override { return keyboard.ButtonPressed(index); }
+	bool ButtonReleased(buttonID_t index) const noexcept override { return keyboard.ButtonReleased(index); }
+
+	class Keyboard_internal* InternalHandle() const noexcept { return keyboard.InternalHandle(); }
 };
 
 class KeyboardCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
