@@ -39,12 +39,7 @@ struct Keyboard_internal {
 		std::shared_lock lock{ bindMutex };
 		controller.Button(index, down);
 		for(Keyboard* kb : bindedKeyboards) {
-			if (down) {
-				kb->OnButtonDown(index);
-			}
-			else {
-				kb->OnButtonUp(index);
-			}
+			
 		}
 	}
 	void Connect() {

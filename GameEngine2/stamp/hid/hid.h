@@ -21,11 +21,15 @@
 #include <stamp/hid/define.h>
 #include <stamp/noncopyable.h>
 #include <vector>
+#include <functional>
 
 STAMP_HID_NAMESPACE_BEGIN
 
 using buttonID_t = size_t;
 using axisID_t = size_t;
+
+using buttonEvent_t = std::function<void(buttonID_t)>;
+
 
 class IHumanInterfaceDevice {
 	friend class Window_Base;
@@ -45,15 +49,21 @@ public:
 	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept = 0;
 };
 
-class GenericHumanInterfaceDevice : IHumanInterfaceDevice {
+class GenericHumanInterfaceDevice : public IHumanInterfaceDevice {
 	std::vector<bool> buttons;
 	std::vector<bool> buttons_prev;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_prev;
 	std::vector<STAMP_DEFAULT_FLOATINGPOINT> axes_delta;
+
+	std::set<buttonEvent_t> downEvents{};
+	std::set<buttonEvent_t> upEvents{};
 protected:
 public:
 	GenericHumanInterfaceDevice(size_t button_count = 0, size_t axis_count = 0);
+
+	//copy and assignment operator/constructor
+
 	~GenericHumanInterfaceDevice() noexcept;
 
 	virtual bool Exists() const noexcept override;
@@ -71,6 +81,11 @@ public:
 
 	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override;
 	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override;
+
+	void SubscribeDownEvent(buttonEvent_t event);
+	void SubscribeUpEvent(buttonEvent_t event);
+	void UnsubscribeDownEvent(buttonEvent_t event);
+	void UnsubscribeUpEvent(buttonEvent_t event);
 };
 
 STAMP_HID_NAMESPACE_END
