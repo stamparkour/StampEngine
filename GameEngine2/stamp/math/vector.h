@@ -66,6 +66,11 @@ struct Vector_Base {
 	explicit operator const T* () const noexcept;
 	explicit operator T* () noexcept;
 	explicit operator bool() const noexcept;
+
+	template<size_t Q>
+	auto& get();
+	template<size_t Q>
+	const auto& get() const;
 };
 
 template<Quantity T, size_t D>
@@ -238,6 +243,18 @@ template<typename V, typename T, size_t D>
 inline Vector_Base<V, T, D>::operator bool() const noexcept {
 	auto self = static_cast<const V*>(this);
 	for (size_t i = 0; i < D; ++i) if (!self->V[i]) return false; return true;
+}
+template<typename V, typename T, size_t D>
+template<size_t Q>
+inline auto& Vector_Base<V, T, D>::get() {
+	auto self = static_cast<const V*>(this);
+	return std::get<Q>(self->V);
+}
+template<typename V, typename T, size_t D>
+template<size_t Q>
+inline const auto& Vector_Base<V, T, D>::get() const {
+	auto self = static_cast<const V*>(this);
+	return std::get<Q>(self->V);
 }
 // ------------ Generic Logic ------------
 template<Quantity T, size_t D>

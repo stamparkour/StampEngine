@@ -24,4 +24,6 @@
 #define STAMP_HID_NAMESPACE_BEGIN						namespace STAMP_HID_NAMESPACE {
 #define STAMP_HID_NAMESPACE_END							}
 
+#define STAMP_HID_KEYBOARD_MAX_INDEX 256
+
 #endif

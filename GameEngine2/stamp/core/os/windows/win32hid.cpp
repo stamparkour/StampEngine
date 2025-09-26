@@ -155,18 +155,10 @@ int WinInputDeviceChange(WPARAM wParam, LPARAM lParam) {
 	}
 }
 
-static void UpdateAllHID() {
-	UINT length = 0;
-	GetRawInputDeviceList(nullptr, &length, sizeof(RAWINPUTDEVICELIST));
-	std::vector<RAWINPUTDEVICELIST> deviceList(length);
-	GetRawInputDeviceList(deviceList.data(), &length, sizeof(RAWINPUTDEVICELIST));
-	for (RAWINPUTDEVICELIST& r : deviceList) {
-		WinInputDeviceChange(GIDC_ARRIVAL, (LPARAM)r.hDevice);
-	}
-}
-
-static int InitializeKeyboardCollection() {
+int WinIntitializeHID() {
 	RAWINPUTDEVICE rid;
+
+	//keyboard
 	rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
 	rid.usUsage = HID_USAGE_GENERIC_KEYBOARD;
 	rid.dwFlags = RIDEV_INPUTSINK | RIDEV_EXINPUTSINK | RIDEV_DEVNOTIFY;
@@ -178,18 +170,25 @@ static int InitializeKeyboardCollection() {
 	Keyboard_internal* kb = new Keyboard_internal();
 	keyboardCollection.push_back(kb);
 
+	//mark all plugged in devices as active
 	UpdateAllHID();
+}
 
-	return 0;
+static void UpdateAllHID() {
+	UINT length = 0;
+	GetRawInputDeviceList(nullptr, &length, sizeof(RAWINPUTDEVICELIST));
+	std::vector<RAWINPUTDEVICELIST> deviceList(length);
+	GetRawInputDeviceList(deviceList.data(), &length, sizeof(RAWINPUTDEVICELIST));
+	for (RAWINPUTDEVICELIST& r : deviceList) {
+		WinInputDeviceChange(GIDC_ARRIVAL, (LPARAM)r.hDevice);
+	}
 }
 
 Keyboard::Keyboard(size_t id) {
-	if(id > 256) {
+	if(id > STAMP_HID_KEYBOARD_MAX_INDEX) {
 		data = nullptr;
 		return;
 	}
-
-	static int _ = InitializeKeyboardCollection();
 	//id 0 is global keyboard, id 1+ are specific keyboards
 	if (id > keyboardCollection.size()) {
 		size_t size = keyboardCollection.size();
