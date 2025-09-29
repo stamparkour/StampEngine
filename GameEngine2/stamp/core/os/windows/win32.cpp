@@ -308,12 +308,6 @@ STAMP_MATH_NAMESPACE::Recti Window::RectBound() const noexcept {
 STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;
 }
-void Window::VSync(bool enabled) noexcept {
-	windowData->vsync = enabled;
-}
-bool Window::VSync() const noexcept {
-	return windowData->vsync;
-}
 void Window::Visibility(window::visibility_t visibility) noexcept {
 	windowData->visibility = visibility;
 	//if (this->windowData && this->windowData->hWnd) {

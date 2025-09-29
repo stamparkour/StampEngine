@@ -1654,6 +1654,9 @@
     <ClInclude Include="stamp\event.h">
       <Filter>libraries\stamp</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\graphics\alignment.h">
+      <Filter>libraries\stamp\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\script\test.lua">

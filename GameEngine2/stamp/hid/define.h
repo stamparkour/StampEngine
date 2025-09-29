@@ -26,4 +26,11 @@
 
 #define STAMP_HID_KEYBOARD_MAX_INDEX 256
 
+// hid device bind a announcement group.
+// where all hid devices bound will recieve the same events ( connect, disconect)
+// and some device and increment/decrement an active counter (like having a scene only track windows with that specific scene)
+
+// a keyboard will be able to detect which scene is present (by tracking current scene though threadlocal pointer)
+// and show no input when all keyboards disconnect.
+
 #endif
