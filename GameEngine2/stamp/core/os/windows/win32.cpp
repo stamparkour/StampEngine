@@ -14,6 +14,7 @@
 
 #include <stamp/define.h>
 #if defined(STAMP_PLATFORM_WINDOWS) && defined(STAMP_DEPLOY)
+#include <stamp/core/os/windows/win32hid.h>
 #include <iostream>
 #include <stamp/state.h>
 #include <stamp/graphics/window.h>
@@ -56,8 +57,6 @@ struct Window_internal {
 
 STAMP_GRAPHICS_NAMESPACE_END
 
-extern int WinInput(WPARAM wParam, LPARAM lParam);
-extern int WinInputDeviceChange(WPARAM wParam, LPARAM lParam);
 
 static HINSTANCE hInst;
 static HINSTANCE hPrevInst;
@@ -65,6 +64,7 @@ static PWSTR pCmdLine;
 static int nCmdShow;
 static ATOM parentClassAtom;
 static ATOM classAtom;
+
 HWND parentHwnd = NULL;
 std::atomic_int win32_windowsActive = 0;
 
@@ -89,7 +89,10 @@ LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	//std::cout << "Parent Window Message: hex " << std::hex << uMsg << " " << (int)wParam << " " << (int)lParam << std::endl;
 
 	switch (uMsg) {
-	case WM_CREATE: return 0;
+	case WM_CREATE: {
+		parentHwnd = hWnd;
+		WinIntitializeHID();
+	} return 0;
 	case WM_INPUT: {
 		WinInput(wParam, lParam);
 	} return 0;

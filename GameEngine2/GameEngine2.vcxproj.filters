@@ -60,6 +60,9 @@
     <Filter Include="libraries\stamp\core\os\win32">
       <UniqueIdentifier>{dc5402a7-7bdd-4288-b3a6-8c8c80df1038}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libraries\gl">
+      <UniqueIdentifier>{1de49a1e-59f8-430d-9f57-2e2274aa7a36}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -600,6 +603,12 @@
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
     <ClCompile Include="stamp\core\os\windows\win32hid.cpp">
+      <Filter>libraries\stamp\core\os\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\core\os\windows\win32keyboard.cpp">
+      <Filter>libraries\stamp\core\os\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\core\os\windows\win32mouse.cpp">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1653,6 +1662,24 @@
     </ClInclude>
     <ClInclude Include="stamp\event.h">
       <Filter>libraries\stamp</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\os\windows\win32hid.h">
+      <Filter>libraries\stamp\core\os\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\os\windows\define.h">
+      <Filter>libraries\stamp\core\os\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\glew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\glxew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\wglew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\eglew.h">
+      <Filter>libraries\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

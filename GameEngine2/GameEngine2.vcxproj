@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -384,6 +384,8 @@
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="stamp\core\bit_internal.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32.cpp" />
+    <ClCompile Include="stamp\core\os\windows\win32keyboard.cpp" />
+    <ClCompile Include="stamp\core\os\windows\win32mouse.cpp" />
     <ClCompile Include="stamp\core\string_internal.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
@@ -397,6 +399,10 @@
     <ClCompile Include="stamp\test\vectorTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="gl\eglew.h" />
+    <ClInclude Include="gl\glew.h" />
+    <ClInclude Include="gl\glxew.h" />
+    <ClInclude Include="gl\wglew.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeBuilder.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeToBuffer.h" />
     <ClInclude Include="Jolt\AABBTree\NodeCodec\NodeCodecQuadTreeHalfFloat.h" />
@@ -722,6 +728,8 @@
     <ClInclude Include="sol\sol.hpp" />
     <ClInclude Include="stamp\core\bit_internal.h" />
     <ClInclude Include="stamp\core\define.h" />
+    <ClInclude Include="stamp\core\os\windows\define.h" />
+    <ClInclude Include="stamp\core\os\windows\win32hid.h" />
     <ClInclude Include="stamp\core\string_internal.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\event.h" />

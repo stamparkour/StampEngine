@@ -193,15 +193,15 @@ public:
 	class Keyboard_internal* InternalHandle() const noexcept;
 };
 
-class IKeyboardListener : public IHumanInterfaceDevice {
+class IKeyboardListener : public IHumanInterfaceDevice, STAMP_NAMESPACE::INonCopyable {
 	friend class Keyboard_internal;
 private:
 	Keyboard keyboard;
 protected:
 	IKeyboardListener(size_t id);
 
-	STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override { return 0; }
-	STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override { return 0; }
+	STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept final override { return 0; }
+	STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept final override { return 0; }
 
 	virtual void OnButtonDown(buttonID_t index) = 0;
 	virtual void OnButtonUp(buttonID_t index) = 0;
@@ -210,12 +210,12 @@ protected:
 public:
 	virtual ~IKeyboardListener() noexcept override;
 
-	bool Exists() const noexcept override { return keyboard.Exists(); }
+	bool Exists() const noexcept final override { return keyboard.Exists(); }
 
-	bool ButtonDown(buttonID_t index) const noexcept override { return keyboard.ButtonDown(index); }
-	bool ButtonUp(buttonID_t index) const noexcept override { return keyboard.ButtonUp(index); }
-	bool ButtonPressed(buttonID_t index) const noexcept override { return keyboard.ButtonPressed(index); }
-	bool ButtonReleased(buttonID_t index) const noexcept override { return keyboard.ButtonReleased(index); }
+	bool ButtonDown(buttonID_t index) const noexcept final override { return keyboard.ButtonDown(index); }
+	bool ButtonUp(buttonID_t index) const noexcept final override { return keyboard.ButtonUp(index); }
+	bool ButtonPressed(buttonID_t index) const noexcept final override { return keyboard.ButtonPressed(index); }
+	bool ButtonReleased(buttonID_t index) const noexcept final override { return keyboard.ButtonReleased(index); }
 
 	class Keyboard_internal* InternalHandle() const noexcept { return keyboard.InternalHandle(); }
 };

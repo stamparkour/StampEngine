@@ -1,8 +1,8 @@
-//stamp/core/define.h
+//stamp/core/windows/os/define.h
 
 #pragma once
-#ifndef STAMP_CORE_DEFINE_H
-#define STAMP_CORE_DEFINE_H
+#ifndef STAMP_CORE_WIN32_DEFINE_H
+#define STAMP_CORE_WIN32_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -18,10 +18,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/define.h>
+#include <stamp/core/define.h>
+#include <Windows.h>
+#include <Windowsx.h>
+#include <stdio.h>
+#include <atomic>
 
-#define STAMP_CORE_NAMESPACE				STAMP_NAMESPACE::core
-#define STAMP_CORE_NAMESPACE_BEGIN			namespace STAMP_CORE_NAMESPACE {
-#define STAMP_CORE_NAMESPACE_END			}
+#define STAMP_CORE_WIN32_NAMESPACE			STAMP_CORE_NAMESPACE::win32
+#define STAMP_CORE_WIN32_NAMESPACE_BEGIN	namespace STAMP_CORE_WIN32_NAMESPACE {
+#define STAMP_CORE_WIN32_NAMESPACE_END		}
+
+extern HWND parentHwnd;
+extern std::atomic_int win32_windowsActive;
 
 #endif

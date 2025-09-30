@@ -1,8 +1,8 @@
-//stamp/core/define.h
+//stamp/core/windows/os/define.h
 
 #pragma once
-#ifndef STAMP_CORE_DEFINE_H
-#define STAMP_CORE_DEFINE_H
+#ifndef STAMP_CORE_WIN32_WIN32HID_H
+#define STAMP_CORE_WIN32_WIN32HID_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -18,10 +18,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/define.h>
+#include <stamp/core/os/windows/define.h>
 
-#define STAMP_CORE_NAMESPACE				STAMP_NAMESPACE::core
-#define STAMP_CORE_NAMESPACE_BEGIN			namespace STAMP_CORE_NAMESPACE {
-#define STAMP_CORE_NAMESPACE_END			}
+int WinInput(WPARAM wParam, LPARAM lParam);
+int WinInputDeviceChange(WPARAM wParam, LPARAM lParam);
+int WinIntitializeHID();
+
+int WinKeyboardRawInput(RAWINPUT* rawInput);
+int WinKeyboardRawInputChange(HANDLE handle, RID_DEVICE_INFO* info, bool isAdded);
+int WinKeyboardInitialize();
+
+int WinMouseRawInput(RAWINPUT* rawInput);
+int WinMouseRawInputChange(HANDLE handle, RID_DEVICE_INFO* info, bool isAdded);
+int WinMouseInitialize();
 
 #endif

@@ -18,10 +18,12 @@ using namespace std;
 
 class MyKeyboard : public stamp::hid::IKeyboardListener {
 public:
-	MyKeyboard(size_t id) : IKeyboardListener(id) {}
+	const char* msg;
+
+	MyKeyboard(size_t id, const char* msg) : IKeyboardListener(id), msg(msg) {}
 
 	virtual void OnButtonDown(stamp::hid::buttonID_t index) {
-		std::cout << "Button Down: " << std::hex << index << std::endl;
+		std::cout << msg << ": Button Down: " << std::hex << index << std::endl;
 	}
 	virtual void OnButtonUp(stamp::hid::buttonID_t index) {
 
@@ -67,18 +69,12 @@ int StampEngineInit(int argv, char* argc[]) {
 		}
 	};
 
-	stamp::graphics::Window window2{ stamp::graphics::window::CreationSettings{
-			.title = U"Stamp Engine - Window",
-			.rect = { {100, 100}, {800, 600}},
-			.visibility = stamp::graphics::window::visibility::Visible,
-			.vsync = true,
-		}
-	};
-
-	MyKeyboard keyboard(0);
+	MyKeyboard keyboardA(0, "A");
+	MyKeyboard keyboardB(1, "B");
+	MyKeyboard keyboardC(2, "C");
+	MyKeyboard keyboardD(3, "D");
 
 	window.WaitForWindowClose().wait();
-	window2.WaitForWindowClose().wait();
 
 	return 0;
 }
