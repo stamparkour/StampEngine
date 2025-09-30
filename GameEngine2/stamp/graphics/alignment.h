@@ -1,8 +1,8 @@
 //stamp/graphics/define.h
 
 #pragma once
-#ifndef STAMP_GRAPHICS_DEFINE_H
-#define STAMP_GRAPHICS_DEFINE_H
+#ifndef STAMP_GRAHPICS_ALIGNMENT_H
+#define STAMP_GRAHPICS_ALIGNMENT_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -19,12 +19,31 @@
 // limitations under the License.
 
 
-#include <utility>
-#include <stamp/define.h>
+#include <stamp/graphics/define.h>
+#include <stamp/math/vector.h>
 
-#define STAMP_GRAPHICS_NAMESPACE					STAMP_NAMESPACE::graphics
-#define STAMP_GRAPHICS_NAMESPACE_BEGIN				namespace STAMP_GRAPHICS_NAMESPACE {
-#define STAMP_GRAPHICS_NAMESPACE_END				}
+STAMP_GRAPHICS_NAMESPACE_BEGIN
 
+using rigid_alignment_t = size_t;
+namespace rigid_alignment {
+	enum : rigid_alignment_t {
+		TopLeft = 0b0000,
+		Top = 0b0001,
+		TopRight = 0b0010,
+		Left = 0b0100,
+		Center = 0b0101,
+		Right = 0b0110,
+		BottomLeft = 0b1000,
+		Bottom = 0b1001,
+		BottomRight = 0b1010
+	};
+
+	template<STAMP_MATH_NAMESPACE::Quantity T>
+	inline STAMP_MATH_NAMESPACE::Vector2<T> Vector(rigid_alignment_t value) {
+		return {};
+	}
+}
+
+STAMP_GRAPHICS_NAMESPACE_END
 
 #endif

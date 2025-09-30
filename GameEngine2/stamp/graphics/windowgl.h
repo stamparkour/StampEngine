@@ -25,15 +25,38 @@
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
+class IChildWindowgl;
+
 namespace windowgl {
 	void UnbindGLContext();
+	void ShareContext(IChildWindowgl*, IChildWindowgl*);
+
+	struct CreationSettings {
+		bool vsync;
+	};
 }
 
-class IWindowgl : public Window {
+class ChildWindowgl : public Window {
 protected:
-	IWindowgl(const window::CreationSettings& settings);
+	ChildWindowgl(const windowgl::CreationSettings& settings);
 public:
-	virtual ~IWindowgl();
+	virtual ~ChildWindowgl();
+
+	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
+	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
+
+	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
+
+	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
+	virtual window::visibility_t Visibility() const noexcept = 0;
+
+	virtual void Active(bool active) noexcept = 0;
+	virtual bool Active() const noexcept = 0;
+
+	virtual void Parent(IWindow*) noexcept = 0;
+	virtual IWindow* Parent() const noexcept = 0;
+
 	void BindGLContext();
 };
 
