@@ -44,6 +44,10 @@ struct Rect {
 			Vector2<T> max;
 		};
 	};
+
+	Rect() : A(), B() {}
+	Rect(Vector2<T> A) : A(A), B() {}
+	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
 };
 
 STAMP_MATH_NAMESPACE_END

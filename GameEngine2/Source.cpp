@@ -65,7 +65,6 @@ int StampEngineInit(int argv, char* argc[]) {
 			.title = U"Stamp Engine - Window",
 			.rect = { {100, 100}, {800, 600}},
 			.visibility = stamp::graphics::window::visibility::Visible,
-			.vsync = true,
 		}
 	};
 

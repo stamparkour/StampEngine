@@ -36,7 +36,6 @@ struct Window_internal {
 	STAMP_MATH_NAMESPACE::Recti prevRect{};
 	STAMP_MATH_NAMESPACE::Recti rectBound{};
 	window::visibility_t visibility = window::visibility::Visible;
-	bool vsync = false;
 	bool inputEnabled = true;
 	bool active = true;
 
@@ -162,16 +161,16 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		if (type == SIZE_MINIMIZED) {
 			winData->visibility = window::visibility::Minimized;
 			winData->prevRect = winData->rect;
-			winData->rect.Size({ width, height });
+			winData->rect.size = { width, height };
 		}
 		else if( type == SIZE_MAXIMIZED) {
 			winData->visibility = window::visibility::Maximized;
 			winData->prevRect = winData->rect;
-			winData->rect.Size({ width, height });
+			winData->rect.size = { width, height };
 		}
 		else if(type == SIZE_RESTORED) {
 			winData->visibility = window::visibility::Visible;
-			winData->rect.Size({ width, height });
+			winData->rect.size = { width, height };
 		}
 	} return 0;
 	case WM_SHOWWINDOW: {
@@ -185,7 +184,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		int y = HIWORD(lParam);
 		//std::cout << "MOVE: " << x << ", " << y << std::endl;
 
-		winData->rect.TopLeft({ x, y });
+		winData->rect.topLeft = { x, y };
 	} return 0;
 	case WM_STYLECHANGED: {
 

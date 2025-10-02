@@ -40,9 +40,14 @@ namespace rigid_alignment {
 
 	template<STAMP_MATH_NAMESPACE::Quantity T>
 	inline STAMP_MATH_NAMESPACE::Vector2<T> Vector(rigid_alignment_t value) {
-		return {};
+		return {(value & 3) * 2 - 1, 1 - (value >> 2 & 3) * 2};
 	}
 }
+
+template<STAMP_MATH_NAMESPACE::Quantity T>
+struct Bounds {
+	STAMP_MATH_NAMESPACE::Vector2<T> topleft;
+};
 
 STAMP_GRAPHICS_NAMESPACE_END
 
