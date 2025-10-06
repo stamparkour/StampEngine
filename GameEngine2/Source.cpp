@@ -73,7 +73,7 @@ int StampEngineInit(int argv, char* argc[]) {
 	MyKeyboard keyboardC(2, "C");
 	MyKeyboard keyboardD(3, "D");
 
-	window.WaitForWindowClose().wait();
+	window.WindowClosePromise().wait();
 
 	return 0;
 }

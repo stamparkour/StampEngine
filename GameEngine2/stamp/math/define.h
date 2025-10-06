@@ -52,40 +52,40 @@
 	TEMPLATE using T##ld = T<long double ARGS>
 #define STAMP_TEMPLATE_ALL_QUANTITY(T) STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(T,,)
 
-#define STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE, TYPE2, TEMPLATE) \
-TEMPLATE TYPE	operator	+	(const TYPE& a, TYPE2 b)	noexcept { return a + static_cast<TYPE>(b); } \
-TEMPLATE TYPE&	operator	+=	(TYPE& a, TYPE2 b)			noexcept { return a += static_cast<TYPE>(b); } \
-TEMPLATE TYPE	operator	-	(const TYPE& a, TYPE2 b)	noexcept { return a - static_cast<TYPE>(b); } \
-TEMPLATE TYPE&	operator	-=	(TYPE& a, TYPE2 b)			noexcept { return a -= static_cast<TYPE>(b); } \
-TEMPLATE TYPE	operator	*	(const TYPE& a, TYPE2 b)	noexcept { return a * static_cast<TYPE>(b); } \
-TEMPLATE TYPE&	operator	*=	(TYPE& a, TYPE2 b)			noexcept { return a *= static_cast<TYPE>(b); } \
-TEMPLATE TYPE	operator	/	(const TYPE& a, TYPE2 b)	noexcept { return a / static_cast<TYPE>(b); } \
-TEMPLATE TYPE&	operator	/=	(TYPE& a, TYPE2 b)			noexcept { return a /= static_cast<TYPE>(b); } \
-TEMPLATE TYPE	operator	+	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) + b; } \
-TEMPLATE TYPE	operator	-	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) - b; } \
-TEMPLATE TYPE	operator	*	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) * b; } \
-TEMPLATE TYPE	operator	/	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) / b; }
-#define STAMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T>, T, template<Quantity T>)
+#define STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE_CLASS, TYPE_OTHER, TYPE_CAST, TYPE_RETURN, TEMPLATE_ASSIGNMENT, TEMPLATE) \
+TEMPLATE TYPE_RETURN			operator	+	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a + static_cast<TYPE_CAST>(b); } \
+TEMPLATE TYPE_RETURN			operator	-	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a - static_cast<TYPE_CAST>(b); } \
+TEMPLATE TYPE_RETURN			operator	*	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a * static_cast<TYPE_CAST>(b); } \
+TEMPLATE TYPE_RETURN			operator	/	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a / static_cast<TYPE_CAST>(b); } \
+TEMPLATE TYPE_RETURN			operator	+	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_CAST>(a) + b; } \
+TEMPLATE TYPE_RETURN			operator	-	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_CAST>(a) - b; } \
+TEMPLATE TYPE_RETURN			operator	*	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_CAST>(a) * b; } \
+TEMPLATE TYPE_RETURN			operator	/	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_CAST>(a) / b; } \
+TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	+=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a += static_cast<TYPE_CAST>(b); } \
+TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	-=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a -= static_cast<TYPE_CAST>(b); } \
+TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	*=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a *= static_cast<TYPE_CAST>(b); } \
+TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	/=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a /= static_cast<TYPE_CAST>(b); }
+#define STAMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<TR>, template<Quantity T1 COMMA Quantity T2>, template<Quantity T1 COMMA Quantity T2 COMMA Quantity TR = std::common_type_t<T1 COMMA T2>>)
 
 
-#define STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE, TYPE1, TYPE2, TEMPLATE) \
-TEMPLATE TYPE1	operator	==	(const TYPE& a, TYPE2 b)	noexcept { return a == static_cast<TYPE>(b); } \
-TEMPLATE bool	operator	!=	(const TYPE& a, TYPE2 b)	noexcept { return a != static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	>	(const TYPE& a, TYPE2 b)	noexcept { return a > static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	<	(const TYPE& a, TYPE2 b)	noexcept { return a < static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	>=	(const TYPE& a, TYPE2 b)	noexcept { return a >= static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	<=	(const TYPE& a, TYPE2 b)	noexcept { return a <= static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	&&	(const TYPE& a, TYPE2 b)	noexcept { return a && static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	||	(const TYPE& a, TYPE2 b)	noexcept { return a || static_cast<TYPE>(b); } \
-TEMPLATE TYPE1	operator	==	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) == b; } \
-TEMPLATE bool	operator	!=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) != b; } \
-TEMPLATE TYPE1	operator	>	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) > b; } \
-TEMPLATE TYPE1	operator	<	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) < b; } \
-TEMPLATE TYPE1	operator	>=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) >= b; } \
-TEMPLATE TYPE1	operator	<=	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) <= b; } \
-TEMPLATE TYPE1	operator	&&	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) && b; } \
-TEMPLATE TYPE1	operator	||	(TYPE2 a, const TYPE& b)	noexcept { return static_cast<TYPE>(a) || b; }
-#define STAMP_COMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T>, TYPE<bool>, T, template<Quantity T>)
+#define STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE_CLASS, TYPE_OTHER, TYPE_COMPARE, TYPE_RETURN, TEMPLATE) \
+TEMPLATE TYPE_RETURN	operator	==	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a == static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE bool			operator	!=	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a != static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	>	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a > static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	<	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a < static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	>=	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a >= static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	<=	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a <= static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	&&	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a && static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	||	(const TYPE_CLASS& a, TYPE_OTHER b)	noexcept { return a || static_cast<TYPE_COMPARE>(b); } \
+TEMPLATE TYPE_RETURN	operator	==	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) == b; } \
+TEMPLATE bool			operator	!=	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) != b; } \
+TEMPLATE TYPE_RETURN	operator	>	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) > b; } \
+TEMPLATE TYPE_RETURN	operator	<	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) < b; } \
+TEMPLATE TYPE_RETURN	operator	>=	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) >= b; } \
+TEMPLATE TYPE_RETURN	operator	<=	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) <= b; } \
+TEMPLATE TYPE_RETURN	operator	&&	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) && b; } \
+TEMPLATE TYPE_RETURN	operator	||	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) || b; }
+#define STAMP_COMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<bool>, template<Quantity T1, Quantity T2>)
 
 #define STAMP_MATHCONST_NAMESPACE				STAMP_NAMESPACE::mathconst
 #define STAMP_MATHCONST_NAMESPACE_BEGIN			namespace STAMP_MATHCONST_NAMESPACE {
@@ -127,10 +127,11 @@ constexpr double E = 2.718281828459045;
 STAMP_MATHCONST_NAMESPACE_END
 STAMP_MATH_NAMESPACE_BEGIN
 
+
 template<typename T>
 concept Quantity = requires(T a, T b) {
 	a = b;
-	a + b; a - b; a* b; a / b;
+	a + b; a - b; a * b; a / b;
 	a += b; a -= b; a *= b; a /= b;
 	a == b; a != b;
 	a < b; a > b; a <= b; a >= b;

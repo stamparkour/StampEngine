@@ -36,13 +36,13 @@ STAMP_MATH_NAMESPACE_BEGIN
 template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT, size_t Rows = 2, size_t Cols = Rows>
 struct Matrix;
 STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(Matrix, template<size_t Rows COMMA size_t Cols = Rows>, COMMA Rows COMMA Cols);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Matrix2 = Matrix<T,2>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix2);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Matrix3 = Matrix<T, 3>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix3);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Matrix4 = Matrix<T, 4>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix4);
 
@@ -50,13 +50,13 @@ STAMP_TEMPLATE_ALL_QUANTITY(Matrix4);
 template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT, size_t Rows = 2, size_t Cols = Rows>
 using Mat = Matrix<T, Rows, Cols>;
 STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(Mat, template<size_t Rows COMMA size_t Cols = Rows>, COMMA Rows COMMA Cols);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Mat2 = Mat<T, 2>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix2);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Mat3 = Mat<T, 3>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix3);
-template<Quantity T>
+template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
 using Mat4 = Mat<T, 4>;
 STAMP_TEMPLATE_ALL_QUANTITY(Matrix4);
 #endif

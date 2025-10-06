@@ -20,30 +20,43 @@
 #include <stamp/graphics/window.h>
 #include <stamp/graphics/windowgl.h>
 #include <atomic>
+#include <map>
+
+#define WM_STAMP_DISPLAY (WM_USER+0)
 
 using namespace STAMP_GRAPHICS_NAMESPACE;
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
+using window_update_t = size_t;
+
+
 struct Window_internal {
 	//thread
 	//is allive
 	bool isAlive = true;
-	std::promise<void> windowClosePromise{};
-
-	STAMP_NAMESPACE::sstring title{};
-	STAMP_MATH_NAMESPACE::Recti rect{};
-	STAMP_MATH_NAMESPACE::Recti prevRect{};
-	STAMP_MATH_NAMESPACE::Recti rectBound{};
-	window::visibility_t visibility = window::visibility::Visible;
 	bool inputEnabled = true;
 	bool active = true;
 
+	std::promise<void> windowClosePromise{};
+
 	std::thread windowThread;
-	std::thread manageThread;
 	Window* window = nullptr;
 	HWND hWnd = NULL;
 	window::CreationSettings settings;
+
+	STAMP_NAMESPACE::sstring title{};
+
+	STAMP_MATH_NAMESPACE::Vector2f alignment{ -1,1 };
+	STAMP_MATH_NAMESPACE::Recti rect{};
+	STAMP_MATH_NAMESPACE::Recti clientRect{};
+	STAMP_MATH_NAMESPACE::Rectf relativeClientRect{};
+	STAMP_MATH_NAMESPACE::Recti previousRect{};
+	STAMP_MATH_NAMESPACE::Rectf relativeRect{};
+	STAMP_MATH_NAMESPACE::Rectf relativePreviousRect{};
+	STAMP_MATH_NAMESPACE::Recti rectBound{};
+
+	window::visibility_t visibility = window::visibility::Visible;
 
 	Window_internal() = default;
 
@@ -56,6 +69,13 @@ struct Window_internal {
 
 STAMP_GRAPHICS_NAMESPACE_END
 
+struct MonitorDetail {
+	STAMP_MATH_NAMESPACE::Recti rect{};
+	STAMP_MATH_NAMESPACE::Recti workAreaRect{};
+	bool isPrimary;
+};
+
+static std::map<HMONITOR, MonitorDetail> monitorMap;
 
 static HINSTANCE hInst;
 static HINSTANCE hPrevInst;
@@ -65,7 +85,6 @@ static ATOM parentClassAtom;
 static ATOM classAtom;
 
 HWND parentHwnd = NULL;
-std::atomic_int win32_windowsActive = 0;
 
 static void Win32CreateConsole() {
 #ifndef STAMP_UNITTEST
@@ -142,49 +161,27 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_ACTIVATE: {
 		bool active = (LOWORD(wParam) != WA_INACTIVE);
 		winData->active = active;
-
-		if (active) win32_windowsActive++;
-		else win32_windowsActive--;
 	} return 0;
-	case WM_SIZING: {
-
-	} return TRUE;
-	case WM_MOVING: {
-
-	} return TRUE;
-	case WM_SIZE: {
-		int width = LOWORD(lParam);
-		int height = HIWORD(lParam);
-		int type = (int)wParam; // SIZE_RESTORED, SIZE_MINIMIZED, SIZE_MAXIMIZED, SIZE_MAXSHOW, SIZE_MAXHIDE
-		//std::cout << "SIZE: " << width << ", " << height << ", " << type << std::endl;
-
-		if (type == SIZE_MINIMIZED) {
-			winData->visibility = window::visibility::Minimized;
-			winData->prevRect = winData->rect;
-			winData->rect.size = { width, height };
-		}
-		else if( type == SIZE_MAXIMIZED) {
-			winData->visibility = window::visibility::Maximized;
-			winData->prevRect = winData->rect;
-			winData->rect.size = { width, height };
-		}
-		else if(type == SIZE_RESTORED) {
-			winData->visibility = window::visibility::Visible;
-			winData->rect.size = { width, height };
-		}
+	case WM_WINDOWPOSCHANGING: {
 	} return 0;
-	case WM_SHOWWINDOW: {
-		bool show = (wParam != 0);
-		if (!show) {
-			winData->visibility = window::visibility::Hidden;
-		}
-	} return 0;
-	case WM_MOVE: {
-		int x = LOWORD(lParam);
-		int y = HIWORD(lParam);
-		//std::cout << "MOVE: " << x << ", " << y << std::endl;
+	case WM_WINDOWPOSCHANGED: {
+		bool minimized = IsIconic(hWnd);
+		bool maximized = IsZoomed(hWnd);
 
-		winData->rect.topLeft = { x, y };
+		WINDOWPOS* position = (WINDOWPOS*)lParam;
+
+		auto& monitor = monitorMap[MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST)];
+
+		POINT clientTopLeft = { 0, 0 };
+		ClientToScreen(hWnd, &clientTopLeft);
+		RECT clientRect;
+		GetClientRect(hWnd, &clientRect);
+		clientRect.left += clientTopLeft.x;
+		clientRect.right += clientTopLeft.x;
+		clientRect.top += clientTopLeft.y;
+		clientRect.bottom += clientTopLeft.y;
+
+		//winData->
 	} return 0;
 	case WM_STYLECHANGED: {
 
@@ -262,6 +259,28 @@ void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 	}
 }
 
+BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
+	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
+
+	MONITORINFO info;
+	info.cbSize = sizeof(MONITORINFO);
+	GetMonitorInfo(monitor, &info);
+
+	auto& i = m[monitor];
+	i.rect = { info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right, info.rcMonitor.bottom };
+	i.workAreaRect = { info.rcWork.left, info.rcWork.top, info.rcWork.right, info.rcWork.bottom };
+	i.isPrimary = info.dwFlags & MONITORINFOF_PRIMARY;
+
+	return TRUE;
+}
+
+void ScanMonitors() {
+	using std::swap;
+	std::map<HMONITOR, MonitorDetail> m{};
+	EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, (LPARAM) & m);
+	swap(monitorMap, m);
+}
+
 Window::Window(const window::CreationSettings& settings) {
 	windowData = new Window_internal();
 	windowData->title = settings.title;
@@ -291,12 +310,28 @@ void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
 	//	SetWindowTextW(this->windowData->hWnd, (LPCWSTR)wtitle.c_str());
 	//}
 }
+STAMP_NAMESPACE::sstring Window::Title() const noexcept {
+	return windowData->title;
+}
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 	windowData->rect = rect;
 	MoveWindow(windowData->hWnd, rect.A.x, rect.A.y, rect.B.x, rect.B.y, TRUE);
 }
 STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return windowData->rect;
+}
+void Window::RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept {
+
+}
+STAMP_MATH_NAMESPACE::Rectf Window::RelativeRect() const noexcept {
+	return STAMP_MATH_NAMESPACE::Rectf();
+}
+void Window::Alignment(alignment_t alignment) noexcept {
+}
+void Window::Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept {
+}
+STAMP_MATH_NAMESPACE::Vector2f Window::Alignment() const noexcept {
+	return STAMP_MATH_NAMESPACE::Vector2f();
 }
 void Window::RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept {
 	windowData->rectBound = { fixedSize, fixedSize };
@@ -306,9 +341,6 @@ void Window::RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 }
 STAMP_MATH_NAMESPACE::Recti Window::RectBound() const noexcept {
 	return windowData->rectBound;
-}
-STAMP_NAMESPACE::sstring Window::Title() const noexcept {
-	return windowData->title;
 }
 void Window::Visibility(window::visibility_t visibility) noexcept {
 	windowData->visibility = visibility;
@@ -340,7 +372,7 @@ bool Window::Active() const noexcept {
 //	return windowData->inputEnabled;
 //}
 
-std::future<void> Window::WaitForWindowClose() const noexcept {
+std::future<void> Window::WindowClosePromise() const noexcept {
 	return windowData->windowClosePromise.get_future();
 }
 
@@ -351,6 +383,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	::nCmdShow = nCmdShow;
 
 	Win32CreateConsole();
+	ScanMonitors();
 
 	const wchar_t PCLASS_NAME[] = L"Stamp Parent Window Class";
 	WNDCLASSEXW  wc = { };

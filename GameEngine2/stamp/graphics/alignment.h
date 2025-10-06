@@ -1,8 +1,8 @@
 //stamp/graphics/define.h
 
 #pragma once
-#ifndef STAMP_GRAHPICS_ALIGNMENT_H
-#define STAMP_GRAHPICS_ALIGNMENT_H
+#ifndef STAMP_GRAPHICS_ALIGNMENT_H
+#define STAMP_GRAPHICS_ALIGNMENT_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -20,13 +20,15 @@
 
 
 #include <stamp/graphics/define.h>
+#include <stamp/math/matrix.h>
 #include <stamp/math/vector.h>
+#include <stamp/math/rect.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
-using rigid_alignment_t = size_t;
-namespace rigid_alignment {
-	enum : rigid_alignment_t {
+using alignment_t = size_t;
+namespace alignment {
+	enum : alignment_t {
 		TopLeft = 0b0000,
 		Top = 0b0001,
 		TopRight = 0b0010,
@@ -39,15 +41,29 @@ namespace rigid_alignment {
 	};
 
 	template<STAMP_MATH_NAMESPACE::Quantity T>
-	inline STAMP_MATH_NAMESPACE::Vector2<T> Vector(rigid_alignment_t value) {
+	inline STAMP_MATH_NAMESPACE::Vector2<T> Vector(alignment_t value) {
 		return {(value & 3) * 2 - 1, 1 - (value >> 2 & 3) * 2};
 	}
 }
 
+using offset_mode_t = size_t;
+namespace offset_mode {
+	enum : offset_mode_t {
+		Absolute,
+		Relative
+	};
+}
+
 template<STAMP_MATH_NAMESPACE::Quantity T>
-struct Bounds {
-	STAMP_MATH_NAMESPACE::Vector2<T> topleft;
-};
+STAMP_MATH_NAMESPACE::Vector2<T> ConvertAlignment(const STAMP_MATH_NAMESPACE::Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignIn, const STAMP_MATH_NAMESPACE::Vector2<T>& vec, const STAMP_MATH_NAMESPACE::Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignOut, const STAMP_MATH_NAMESPACE::Vector2<T>& size) {
+	return (alignIn - alignOut) * size / 2 + vec;
+}
+//pivot alignment
+//offset from alignment
+//left right up down sizes
+
+//tree for parent child ui
+//binary tree for mouse events
 
 STAMP_GRAPHICS_NAMESPACE_END
 

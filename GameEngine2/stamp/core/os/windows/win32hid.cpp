@@ -31,7 +31,6 @@ using namespace STAMP_HID_NAMESPACE;
 
 
 int WinInput(WPARAM wParam, LPARAM lParam) {
-	if (win32_windowsActive <= 0) return 0;
 
 	HRAWINPUT hrawInput = (HRAWINPUT)lParam;
 	bool sink = wParam & RIM_INPUTSINK;

@@ -30,6 +30,7 @@
 
 // Defines the default value type for all library functions
 #define STAMP_DEFAULT_FLOATINGPOINT double
+#define STAMP_DEFAULT_ALIGN_FLOATINGPOINT float
 #define STAMP_DEFAULT_CHAR char32_t
 
 // network endianness 1: big-endian, 0: little-endian

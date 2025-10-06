@@ -79,6 +79,40 @@ int WinMouseRawInput(RAWINPUT* rawInput) {
 	return 0;
 }
 int WinMouseRawInputChange(HANDLE handle, RID_DEVICE_INFO* info, bool isAdded) {
+	wchar_t buf[512]{};
+	UINT size = sizeof(buf);
+	if (GetRawInputDeviceInfo(handle, RIDI_DEVICENAME, &buf, &size) < 0) return -1;
+
+	RID_DEVICE_INFO_KEYBOARD& keyboard = info->keyboard;
+	if (isAdded) {
+		if (mouseMap.find(handle) != mouseMap.end()) return 0;
+
+		Mouse_internal* internals = nullptr;
+		for (Mouse_internal* m : mouseCollection) {
+			if (!m->exists) {
+				m->exists = true;
+				internals = m;
+				break;
+			}
+		}
+		if (!internals) {
+			internals = new Mouse_internal();
+			internals->exists = true;
+			mouseCollection.push_back(internals);
+		}
+		internals->handle = handle;
+		internals->Connect(true);
+
+		mouseMap[handle] = internals;
+	}
+	else {
+		auto it = mouseMap.find(handle);
+		if (it != mouseMap.end()) {
+			it->second->handle = nullptr;
+			it->second->Connect(false);
+			mouseMap.erase(it);
+		}
+	}
 	return 0;
 }
 int WinMouseInitialize() {

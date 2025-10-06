@@ -37,7 +37,13 @@ struct Rect {
 		};
 		struct {
 			Vector2<T> topLeft;
-			Vector2<T> size;
+			Vector2<T> bottomRight;
+		};
+		struct {
+			T left;
+			T top;
+			T right;
+			T bottom;
 		};
 		struct {
 			Vector2<T> min;
@@ -48,6 +54,7 @@ struct Rect {
 	Rect() : A(), B() {}
 	Rect(Vector2<T> A) : A(A), B() {}
 	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
+	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({right, bottom }) {}
 };
 
 STAMP_MATH_NAMESPACE_END

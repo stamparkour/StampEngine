@@ -25,7 +25,7 @@
 #include <stamp/noncopyable.h>
 #include <stamp/math/rect.h>
 #include <stamp/memory.h>
-#include <stdio.h>
+#include <stamp/graphics/alignment.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
@@ -53,19 +53,6 @@ namespace window {
 	};
 }
 
-namespace childWindow {
-	namespace bound {
-		enum : size_t {
-			proportional, // all sizes are relative to the parent size
-			fixed, // all sizes are relative to the pixels of the screen
-			
-		};
-	}
-	struct Bounds {
-
-	};
-}
-
 
 class IWindow {
 	friend struct Window_internal;
@@ -73,18 +60,27 @@ protected:
 public:
 	IWindow() {}
 	virtual ~IWindow() {}
-
+	 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
 
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
 
+	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
+
+	virtual void Alignment(alignment_t alignment) noexcept = 0;
+	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
+
 	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
 	virtual window::visibility_t Visibility() const noexcept = 0;
 
 	virtual void Active(bool active) noexcept = 0;
 	virtual bool Active() const noexcept = 0;
+
+	virtual std::future<void> WindowClosePromise() const noexcept = 0;
 };
 
 class IChildWindow : public IWindow {
@@ -101,6 +97,13 @@ public:
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
 
+	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
+
+	virtual void Alignment(alignment_t alignment) noexcept = 0;
+	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
+	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
+
 	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
 	virtual window::visibility_t Visibility() const noexcept = 0;
 
@@ -109,6 +112,8 @@ public:
 
 	virtual void Parent(IWindow*) noexcept = 0;
 	virtual IWindow* Parent() const noexcept = 0;
+
+	virtual std::future<void> WindowClosePromise() const noexcept = 0;
 };
 
 class Window : public IWindow {
@@ -132,6 +137,13 @@ public:
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept override;
 
+	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept;
+	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept;
+
+	virtual void Alignment(alignment_t alignment) noexcept;
+	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept;
+	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept;
+
 	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept;
 	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
 	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
@@ -142,7 +154,7 @@ public:
 	virtual void Active(bool active) noexcept override;
 	virtual bool Active() const noexcept override;
 
-	virtual std::future<void> WaitForWindowClose() const noexcept;
+	virtual std::future<void> WindowClosePromise() const noexcept override;
 };
 
 STAMP_GRAPHICS_NAMESPACE_END
