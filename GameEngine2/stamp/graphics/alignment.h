@@ -40,7 +40,7 @@ namespace alignment {
 		BottomRight = 0b1010
 	};
 
-	template<STAMP_MATH_NAMESPACE::Quantity T>
+	template<STAMP_MATH_NAMESPACE::Field T>
 	inline STAMP_MATH_NAMESPACE::Vector2<T> Vector(alignment_t value) {
 		return {(value & 3) * 2 - 1, 1 - (value >> 2 & 3) * 2};
 	}
@@ -54,7 +54,7 @@ namespace offset_mode {
 	};
 }
 
-template<STAMP_MATH_NAMESPACE::Quantity T>
+template<STAMP_MATH_NAMESPACE::Field T>
 STAMP_MATH_NAMESPACE::Vector2<T> ConvertAlignment(const STAMP_MATH_NAMESPACE::Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignIn, const STAMP_MATH_NAMESPACE::Vector2<T>& vec, const STAMP_MATH_NAMESPACE::Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignOut, const STAMP_MATH_NAMESPACE::Vector2<T>& size) {
 	return (alignIn - alignOut) * size / 2 + vec;
 }

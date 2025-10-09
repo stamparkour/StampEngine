@@ -23,12 +23,12 @@
 
 STAMP_MATH_NAMESPACE_BEGIN
 
-template<Quantity T = STAMP_DEFAULT_FLOATINGPOINT>
+template<Field T = STAMP_DEFAULT_FLOATINGPOINT>
 struct Rect;
 
 STAMP_TEMPLATE_ALL_QUANTITY(Rect);
 
-template<Quantity T>
+template<Field T>
 struct Rect {
 	union {
 		struct {

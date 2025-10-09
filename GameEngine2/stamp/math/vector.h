@@ -27,8 +27,6 @@
 
 //optional headers: <iostream> <string>
 #include <stamp/math/define.h>
-#include <concepts>
-
 
 STAMP_MATH_NAMESPACE_BEGIN
 
@@ -174,10 +172,10 @@ template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T
 template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	-	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	*	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	/	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	+=	(Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	-=	(Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	*=	(Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	/=	(Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	+=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	-=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	*=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	/=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	==	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2>	bool			operator	!=	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	>	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
@@ -186,9 +184,9 @@ template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	>=	(const
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	<=	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	&&	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	||	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T>	Vector<T, D>	operator	-	(const Vector<T, D>& v)							noexcept;
-template <size_t D, typename T>	Vector<bool, D>	operator	~	(const Vector<T, D>& v)							noexcept;
-template <size_t D, typename T>	bool			operator	!	(const Vector<T, D>& v)							noexcept;
+template <size_t D, typename T>	Vector<T, D>	operator	-	(const Vector<T, D>& v)												noexcept;
+template <size_t D, typename T>	Vector<bool, D>	operator	~	(const Vector<T, D>& v)												noexcept;
+template <size_t D, typename T>	bool			operator	!	(const Vector<T, D>& v)												noexcept;
 
 
 STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Vector<T1 COMMA D>, T2, Vector<T2 COMMA D>, Vector<TR COMMA D>, template <size_t D COMMA typename T1 COMMA typename T2>, template <size_t D COMMA typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
@@ -210,10 +208,10 @@ template <typename T, size_t D> T 				mag2(const Vector<T, D>& v)	noexcept;
 template <typename T, size_t D> Vector<T, D>	norm(const Vector<T, D>& v)	noexcept;
 #endif
 
-template <typename T, size_t D> Vector<bool, D>	equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b);
+template <size_t D, typename T1, typename T2> Vector<bool, D>	equal_aprox(const Vector<T1, D>& a, const Vector<T2, D>& b);
 
 #if defined(STAMP_MATH_ALGORITHM_SHORT_NAMES) || defined(STAMP_MATH_VECTOR_SHORT_NAMES)
-template <typename T, size_t D> Vector<bool, D> eq_e(const Vector<T, D>& a, const Vector<T, D>& b);
+template <size_t D, typename T1, typename T2> Vector<bool, D> eq_e(const Vector<T1, D>& a, const Vector<T2, D>& b);
 #endif
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T, size_t D> std::ostream& operator <<(std::ostream& stream, const Vector<T, D>& v);
@@ -431,7 +429,9 @@ inline T summation(const Vector<T, D>& v) noexcept {
 }
 template <typename T, size_t D>
 inline Vector<T, D> normal(const Vector<T, D>& v) noexcept {
-	return v / Vector<T,D>(magnitude(v));
+	auto m = magnitude(v);
+	if (m == 0) return {};
+	return v / Vector<T,D>(m);
 }
 template <typename T, size_t D>
 inline T dot(const Vector<T, D>& a, const Vector<T, D>& b) noexcept {
@@ -465,15 +465,15 @@ inline Vector<T, D> norm(const Vector<T, D>& v)	noexcept {
 }
 #endif
 
-template <typename T, size_t D>
-inline Vector<bool, D> equal_aprox(const Vector<T, D>& a, const Vector<T, D>& b) {
+template <size_t D, typename T1, typename T2>
+inline Vector<bool, D> equal_aprox(const Vector<T1, D>& a, const Vector<T2, D>& b) {
 	Vector<bool, D> o;
 	for (size_t i = 0; i < D; ++i) o.V[i] = equal_aprox(a.V[i], b.V[i]);
 	return o;
 }
 #if defined(STAMP_MATH_ALGORITHM_SHORT_NAMES) || defined(STAMP_MATH_VECTOR_SHORT_NAMES)
-template <typename T, size_t D> 
-inline Vector<bool, D>	eq_e(const Vector<T, D>& a, const Vector<T, D>& b) {
+template <size_t D, typename T1, typename T2>
+inline Vector<bool, D>	eq_e(const Vector<T1, D>& a, const Vector<T2, D>& b) {
 	return equal_aprox(a, b);
 }
 #endif

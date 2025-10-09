@@ -12,6 +12,8 @@
 #include <stamp/hid/keyboard.h>
 #include <Windows.h>
 
+#ifdef STAMP_DEPLOY
+
 using namespace stamp::math;
 using namespace stamp;
 using namespace std;
@@ -39,9 +41,12 @@ public:
 int StampEngineInit(int argv, char* argc[]) {
 	std::cout << "Hello, Stamp Engine!" << std::endl;
 
-	//Vector2<float> v1(3.0f, 4.0f);
-	//Vector2<float> v2(5.0f, 4.0f);
+	Vector2<float> v1(3.0f, 4.0f);
+	Vector2<int> v2(5, 4);
 	//std::swap(v1, v2);
+
+	auto k = v1 + v2;
+
 
 	//Vector<float, 2> v3{ 0 };
 	//auto k = static_cast<Vector<int, 3>>(v3);
@@ -77,3 +82,5 @@ int StampEngineInit(int argv, char* argc[]) {
 
 	return 0;
 }
+
+#endif

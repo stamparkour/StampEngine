@@ -21,11 +21,12 @@
 // provides short names for all math headers
 // #define STAMP_MATH_ALL_SHORT_NAMES
 
-#include <exception>
 #include <initializer_list>
 #include <cmath>
 #include <algorithm>
 #include <utility>
+#include <type_traits>
+#include <concepts>
 #include <stamp/define.h>
 
 #ifndef min
@@ -65,7 +66,7 @@ TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	+=	(TYPE_CLASS& a, TYPE_OTHER b)		noexc
 TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	-=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a -= static_cast<TYPE_CAST>(b); } \
 TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	*=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a *= static_cast<TYPE_CAST>(b); } \
 TEMPLATE_ASSIGNMENT TYPE_CLASS& operator	/=	(TYPE_CLASS& a, TYPE_OTHER b)		noexcept { return a /= static_cast<TYPE_CAST>(b); }
-#define STAMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<TR>, template<Quantity T1 COMMA Quantity T2>, template<Quantity T1 COMMA Quantity T2 COMMA Quantity TR = std::common_type_t<T1 COMMA T2>>)
+#define STAMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<TR>, template<typename T1 COMMA typename T2>, template<typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>)
 
 
 #define STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE_CLASS, TYPE_OTHER, TYPE_COMPARE, TYPE_RETURN, TEMPLATE) \
@@ -85,7 +86,7 @@ TEMPLATE TYPE_RETURN	operator	>=	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { 
 TEMPLATE TYPE_RETURN	operator	<=	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) <= b; } \
 TEMPLATE TYPE_RETURN	operator	&&	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) && b; } \
 TEMPLATE TYPE_RETURN	operator	||	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { return static_cast<TYPE_COMPARE>(a) || b; }
-#define STAMP_COMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<bool>, template<Quantity T1, Quantity T2>)
+#define STAMP_COMP_OPERATOR_ALL_QUANTITY(TYPE) STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(TYPE<T1>, T2, TYPE<T2>, TYPE<bool>, template<typename T1, typename T2>)
 
 #define STAMP_MATHCONST_NAMESPACE				STAMP_NAMESPACE::mathconst
 #define STAMP_MATHCONST_NAMESPACE_BEGIN			namespace STAMP_MATHCONST_NAMESPACE {
@@ -95,9 +96,13 @@ TEMPLATE TYPE_RETURN	operator	||	(TYPE_OTHER a, const TYPE_CLASS& b)	noexcept { 
 #define STAMP_MATH_NAMESPACE_BEGIN				namespace STAMP_MATH_NAMESPACE {
 #define STAMP_MATH_NAMESPACE_END				}
 
-#define STAMP_MATH_MATRIX_NAMESPACE				STAMP_MATH_NAMESPACE::matrix
-#define STAMP_MATH_MATRIX_NAMESPACE_BEGIN		namespace STAMP_MATH_MATRIX_NAMESPACE {
-#define STAMP_MATH_MATRIX_NAMESPACE_END			}
+#define STAMP_MATH_MATRIX4_NAMESPACE			STAMP_MATH_NAMESPACE::matrix4
+#define STAMP_MATH_MATRIX4_NAMESPACE_BEGIN		namespace STAMP_MATH_MATRIX4_NAMESPACE {
+#define STAMP_MATH_MATRIX4_NAMESPACE_END		}
+
+#define STAMP_MATH_MATRIX3_NAMESPACE			STAMP_MATH_NAMESPACE::matrix3
+#define STAMP_MATH_MATRIX3_NAMESPACE_BEGIN		namespace STAMP_MATH_MATRIX3_NAMESPACE {
+#define STAMP_MATH_MATRIX3_NAMESPACE_END		}
 
 #define STAMP_MATH_QUATERNION_NAMESPACE			STAMP_MATH_NAMESPACE::quat
 #define STAMP_MATH_QUATERNION_NAMESPACE_BEGIN	namespace STAMP_MATH_QUATERNION_NAMESPACE {
@@ -129,12 +134,22 @@ STAMP_MATH_NAMESPACE_BEGIN
 
 
 template<typename T>
-concept Quantity = requires(T a, T b) {
-	a = b;
-	a + b; a - b; a * b; a / b;
-	a += b; a -= b; a *= b; a /= b;
-	a == b; a != b;
-	a < b; a > b; a <= b; a >= b;
+concept Field = requires(T a, T b) {
+	{ a = b } -> std::same_as<T&>;
+	{ a + b } -> std::convertible_to<T>;
+	{ a - b } -> std::convertible_to<T>;
+	{ a* b } -> std::convertible_to<T>;
+	{ a / b } -> std::convertible_to<T>;
+	{ a += b } -> std::same_as<T&>;
+	{ a -= b } -> std::same_as<T&>;
+	{ a *= b } -> std::same_as<T&>;
+	{ a /= b } -> std::same_as<T&>;
+	{ a == b } -> std::convertible_to<bool>;
+	{ a != b } -> std::convertible_to<bool>;
+	{ a < b }  -> std::convertible_to<bool>;
+	{ a > b }  -> std::convertible_to<bool>;
+	{ a <= b } -> std::convertible_to<bool>;
+	{ a >= b } -> std::convertible_to<bool>;
 };
 
 enum struct RotationOrder {
@@ -146,19 +161,19 @@ enum struct RotationOrder {
 	ZYX
 };
 
-template<Quantity T> bool equal_aprox(T a, T b);
-
-#ifdef STAMP_MATH_ALGORITHM_SHORT_NAMES
-template<Quantity T> bool eq_e(T a, T b);
-#endif
-
 //Definitions
 
-template<Quantity T> inline bool equal_aprox(T a, T b) {
-	return abs(a - b) < std::numeric_limits<T>::epsilon;
+template<typename T1, typename T2> inline bool equal_aprox(T1 a, T2 b) requires requires(T1 a, T2 b) { a.equal_aprox(b); } {
+	return a.equal_aprox(b);
+}
+template<::std::integral T1, ::std::integral T2> inline bool equal_aprox(T1 a, T2 b) {
+	return a == b;
+}
+template<::std::floating_point T1, ::std::floating_point T2> inline bool equal_aprox(T1 a, T2 b) {
+	return abs(a - b) < abs(std::nextafter(a, b));
 }
 #ifdef STAMP_MATH_ALGORITHM_SHORT_NAMES
-template<Quantity T> inline bool eq_e(T a, T b) {
+template<typename T1, typename T2> inline bool eq_e(T a, T b) {
 	return equal_aprox(a, b);
 }
 #endif
