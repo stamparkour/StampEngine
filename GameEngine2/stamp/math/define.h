@@ -135,11 +135,11 @@ STAMP_MATH_NAMESPACE_BEGIN
 
 template<typename T>
 concept Field = requires(T a, T b) {
-	{ a = b } -> std::same_as<T&>;
-	{ a + b } -> std::convertible_to<T>;
-	{ a - b } -> std::convertible_to<T>;
-	{ a* b } -> std::convertible_to<T>;
-	{ a / b } -> std::convertible_to<T>;
+	{ a = b }  -> std::same_as<T&>;
+	{ a + b }  -> std::convertible_to<T>;
+	{ a - b }  -> std::convertible_to<T>;
+	{ a * b }  -> std::convertible_to<T>;
+	{ a / b }  -> std::convertible_to<T>;
 	{ a += b } -> std::same_as<T&>;
 	{ a -= b } -> std::same_as<T&>;
 	{ a *= b } -> std::same_as<T&>;

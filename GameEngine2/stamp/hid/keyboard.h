@@ -177,7 +177,7 @@ private:
 	STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept override { return 0; }
 	STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept override { return 0; }
 public:
-	Keyboard(size_t id);
+	Keyboard(size_t id, InputGroup* inputGroup = nullptr);
 
 	//add swap and copy constructor/assignment
 

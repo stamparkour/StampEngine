@@ -49,13 +49,13 @@ struct Quaternion final {
 	T j;
 	T k;
 
-	Quaternion	()								noexcept : x(0), i(0), j(0), k(0) {}
-	Quaternion	(T x)							noexcept : x(x), i(0), j(0), k(0) {}
-	Quaternion	(T x, T i, T j, T k)			noexcept : x(x), i(i), j(j), k(k) {}
-	explicit Quaternion	(const Vector2<T>& v)	noexcept : x(v.x), i(v.y), j(0), k(0) {}
-	explicit Quaternion	(const Vector3<T>& v)	noexcept : x(0), i(v.x), j(v.y), k(v.z) {}
-	Quaternion	(T x, const Vector3<T>& v)		noexcept : x(x), i(v.x), j(v.y), k(v.z) {}
-	explicit Quaternion	(const Vector4<T>& v)	noexcept : x(v.x), i(v.y), j(v.z), k(v.w) {}
+	Quaternion	()								noexcept requires Field<T> {} : x(0),   i(0),   j(0),   k(0)   {}
+	Quaternion	(T x)							noexcept requires Field<T> {} : x(x),   i(0),   j(0),   k(0)   {}
+	Quaternion	(T x, T i, T j, T k)			noexcept requires Field<T> {} : x(x),   i(i),   j(j),   k(k)   {}
+	explicit Quaternion	(const Vector2<T>& v)	noexcept requires Field<T> {} : x(v.x), i(v.y), j(0),   k(0)   {}
+	explicit Quaternion	(const Vector3<T>& v)	noexcept requires Field<T> {} : x(0),   i(v.x), j(v.y), k(v.z) {}
+	Quaternion	(T x, const Vector3<T>& v)		noexcept requires Field<T> {} : x(x),   i(v.x), j(v.y), k(v.z) {}
+	explicit Quaternion	(const Vector4<T>& v)	noexcept requires Field<T> {} : x(v.x), i(v.y), j(v.z), k(v.w) {}
 
 	template <typename T1> explicit	operator Quaternion<T1>	()	const	noexcept;
 	template <typename T1> explicit	operator			T1	()	const	noexcept;
@@ -160,59 +160,59 @@ inline Quaternion<T>::operator Matrix<T, 4, 4>() const noexcept {
 		0,0,0,1
 	};
 }
-template<typename T>
-inline Quaternion<T> operator + (const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
-	return { a.x + b.x, a.i + b.i, a.j + b.j, a.k + b.k };
+template<typename T1, typename T2, typename TR>
+inline Quaternion<TR> operator + (const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
+	return { (TR)(a.x + b.x), (TR)(a.i + b.i), (TR)(a.j + b.j), (TR)(a.k + b.k) };
 }
-template<typename T>
-inline Quaternion<T>& operator +=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Quaternion<T1>& operator +=(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return *this = *this + b;
 }
-template<typename T>
-inline Quaternion<T> operator -(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2, typename TR>
+inline Quaternion<TR> operator -(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return { a.x - b.x, a.i - b.i, a.j - b.j, a.k - b.k };
 }
-template<typename T>
-inline Quaternion<T>& operator -=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Quaternion<T1>& operator -=(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return *this = *this - b;
 }
-template<typename T>
-inline Quaternion<T> operator *(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2, typename TR>
+inline Quaternion<TR> operator *(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return { a.x * b.x - a.i * b.i - a.j * b.j - a.k * b.k,
 		a.x * b.i + a.i * b.x + a.j * b.k - a.k * b.j,
 		a.x * b.j - a.i * b.k + a.j * b.x + a.k * b.i,
 		a.x * b.k + a.i * b.j - a.j * b.i + a.k * b.x };
 }
-template<typename T>
-inline Quaternion<T>& operator *=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Quaternion<T1>& operator *=(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return *this = *this * b;
 }
-template<typename T>
-inline Quaternion<T> operator /(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2, typename TR>
+inline Quaternion<TR> operator /(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return a * inverse(b);
 }
-template<typename T>
-inline Quaternion<T>& operator /=(Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Quaternion<T1>& operator /=(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return *this = *this / b;
 }
 #ifdef STAMP_MATH_QUATERNION_EQUAL_APROX
-template<typename T>
-inline Quaternion<bool>& operator==(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Quaternion<bool>& operator==(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return equal_aprox(a, b);
 }
 #else
-template<typename T>
-inline Vector4<bool>& operator==(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline Vector4<bool>& operator==(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return Vector4<bool>(a.x == b.x, a.i == b.i, a.j == b.j, a.k == b.k);
 }
 #endif
-template<typename T>
-inline bool operator!=(const Quaternion<T>& a, const Quaternion<T>& b) noexcept {
+template<typename T1, typename T2>
+inline bool operator!=(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return !(a == b);
 }
-template<typename T>
-inline Vector3<T> operator *(const Quaternion<T>& a, const Vector3<T>& b) noexcept {
-	Quaternion<T> v = *this * (Quaternion<T>)b * inverse(*this);
+template<typename T1, typename T2, typename TR>
+inline Vector3<TR> operator *(const Quaternion<T1>& a, const Vector3<T2>& b) noexcept {
+	Quaternion<TR> v = *this * (Quaternion<TR>)b * inverse(*this);
 	return (Vector3<T>)v;
 }
 template<typename T> 

@@ -63,9 +63,12 @@ template<typename V, typename T, size_t D>
 struct Vector_Base {
 	template<typename T1> operator Vector<T1, D>() const noexcept;
 	template<typename T1, size_t D1> explicit operator Vector<T1, D1>() const noexcept;
+	template<typename T1, size_t D1> operator Vector<T1, D1>() const noexcept requires std::common_type<T1, T>;
 	explicit operator const T* () const noexcept;
 	explicit operator T* () noexcept;
 	explicit operator bool() const noexcept;
+
+	Vector_Base() requires Field<T> {}
 
 	template<size_t Q>
 	auto& get();

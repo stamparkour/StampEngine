@@ -1,5 +1,7 @@
 //stamp/define.h
 
+//make sure all define files are not pragma and include stamp/define.h outside the ifdef block
+
 #ifndef STAMP_DEFINE_H
 #define STAMP_DEFINE_H
 

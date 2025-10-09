@@ -72,6 +72,8 @@ struct Matrix_Base {
 	const T& operator [] (size_t i, size_t j) const noexcept;
 	T& operator [] (size_t i, size_t j) noexcept;
 	template<typename T1, size_t R1, size_t C1> explicit operator Matrix<T1, R1, C1>();
+
+	Matrix_Base() requires Field<T> {}
 };
 
 template<typename T, size_t R, size_t C>
@@ -83,7 +85,7 @@ struct Matrix : Matrix_Base<Matrix<T, R, C>, T, R, C> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(std::initializer_list<T> values) { 
-		assert(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
+		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m); 
 	}
 
@@ -102,7 +104,7 @@ struct Matrix<T, R, 1> : Matrix_Base<Matrix<T, R, 1>, T, R, 1> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
+		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Rows>& m) noexcept;
@@ -122,7 +124,7 @@ struct Matrix<T, 1, C> : Matrix_Base<Matrix<T, 1, C>, T, 1, C> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
+		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Cols>& m) noexcept;
@@ -143,7 +145,7 @@ struct Matrix<T, 1, 1> : Matrix_Base<Matrix<T, 1, 1>, T, 1, 1> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
+		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 
