@@ -62,13 +62,12 @@ STAMP_TEMPLATE_ALL_QUANTITY(Vec4);
 template<typename V, typename T, size_t D>
 struct Vector_Base {
 	template<typename T1> operator Vector<T1, D>() const noexcept;
-	template<typename T1, size_t D1> explicit operator Vector<T1, D1>() const noexcept;
-	template<typename T1, size_t D1> operator Vector<T1, D1>() const noexcept requires std::common_type<T1, T>;
+	template<typename T1, size_t D1> operator Vector<T1, D1>() const noexcept;
 	explicit operator const T* () const noexcept;
 	explicit operator T* () noexcept;
 	explicit operator bool() const noexcept;
 
-	Vector_Base() requires Field<T> {}
+	constexpr Vector_Base() requires Field<T> {}
 
 	template<size_t Q>
 	auto& get();
@@ -86,8 +85,8 @@ struct Vector final : public Vector_Base<Vector<T, D>, T, D> {
 	constexpr static size_t dimensions = D;
 
 	T V[D] = {};
-	Vector() noexcept {}
-	Vector(T x) noexcept {
+	constexpr Vector() noexcept {}
+	constexpr Vector(T x) noexcept {
 		for (int i = 0; i < dimensions; i++) V[i] = x;
 	}
 };
@@ -104,9 +103,9 @@ struct Vector<T, 2> final : public Vector_Base<Vector<T, 2>, T, 2> {
 		struct { T x, y; };
 	};
 
-	Vector() noexcept {}
-	Vector(T x) noexcept : x(x), y(x) {}
-	Vector(T x, T y)	noexcept : x(x), y(y) {}
+	constexpr Vector() noexcept {}
+	constexpr Vector(T x) noexcept : x(x), y(x) {}
+	constexpr Vector(T x, T y)	noexcept : x(x), y(y) {}
 
 	const static Vector2<T> UNIT;
 	const static Vector2<T> UP;
@@ -124,11 +123,11 @@ struct Vector<T, 3> final : public Vector_Base<Vector<T, 3>, T, 3> {
 		struct { T x, y, z; };
 	};
 
-	Vector() noexcept {}
-	Vector(T x) noexcept : x(x), y(x), z(x) {}
-	Vector(T x, T y, T z)				noexcept : x(x),	y(y),	z(z) {}
-	Vector(const Vector2<T>& a, T z)	noexcept : x(a.x),	y(a.y),	z(z) {}
-	Vector(T x, const Vector2<T>& a)	noexcept : x(x),	y(a.x),	z(a.y) {}
+	constexpr Vector() noexcept {}
+	constexpr Vector(T x) noexcept : x(x), y(x), z(x) {}
+	constexpr Vector(T x, T y, T z)				noexcept : x(x),	y(y),	z(z) {}
+	constexpr Vector(const Vector2<T>& a, T z)	noexcept : x(a.x),	y(a.y),	z(z) {}
+	constexpr Vector(T x, const Vector2<T>& a)	noexcept : x(x),	y(a.x),	z(a.y) {}
 
 	const static Vector3<T> UNIT;
 	const static Vector3<T> UP;
@@ -148,16 +147,16 @@ struct Vector<T, 4> final : public Vector_Base<Vector<T, 4>, T, 4> {
 		struct { T x, y, z, w; };
 	};
 
-	Vector() noexcept {}
-	Vector(T x) noexcept : x(x), y(x), z(x), w(x) {}
-	Vector(T x, T y)									noexcept :	x(x),	y(y),	z(x),	w(y) {}
-	Vector(T x, T y, T z, T w)							noexcept :	x(x),	y(y),	z(z),	w(w) {}
-	Vector(const Vector2<T>& a, T z, T w)				noexcept :	x(a.x),	y(a.y),	z(z),	w(w) {}
-	Vector(T x, const Vector2<T>& a, T w)				noexcept :	x(x),	y(a.x),	z(a.y), w(w) {}
-	Vector(T x, T y, const Vector2<T>& a)				noexcept :	x(x),	y(y),	z(a.x),	w(a.y) {}
-	Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept :	x(a.x),	y(a.y), z(b.x), w(b.y) {}
-	Vector(const Vector3<T>& a, T w)					noexcept :	x(a.x),	y(a.y),	z(a.z),	w(w) {}
-	Vector(T x, const Vector3<T>& a)					noexcept :	x(x),	y(a.x),	z(a.y),	w(a.z) {}
+	constexpr Vector() noexcept {}
+	constexpr Vector(T x) noexcept : x(x), y(x), z(x), w(x) {}
+	constexpr Vector(T x, T y)									noexcept :	x(x),	y(y),	z(x),	w(y) {}
+	constexpr Vector(T x, T y, T z, T w)						noexcept :	x(x),	y(y),	z(z),	w(w) {}
+	constexpr Vector(const Vector2<T>& a, T z, T w)				noexcept :	x(a.x),	y(a.y),	z(z),	w(w) {}
+	constexpr Vector(T x, const Vector2<T>& a, T w)				noexcept :	x(x),	y(a.x),	z(a.y), w(w) {}
+	constexpr Vector(T x, T y, const Vector2<T>& a)				noexcept :	x(x),	y(y),	z(a.x),	w(a.y) {}
+	constexpr Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept :	x(a.x),	y(a.y), z(b.x), w(b.y) {}
+	constexpr Vector(const Vector3<T>& a, T w)					noexcept :	x(a.x),	y(a.y),	z(a.z),	w(w) {}
+	constexpr Vector(T x, const Vector3<T>& a)					noexcept :	x(x),	y(a.x),	z(a.y),	w(a.z) {}
 
 	const static Vector4<T> UNIT;
 	const static Vector4<T> UP;
@@ -220,7 +219,7 @@ template <size_t D, typename T1, typename T2> Vector<bool, D> eq_e(const Vector<
 template <typename T, size_t D> std::ostream& operator <<(std::ostream& stream, const Vector<T, D>& v);
 #endif
 #ifdef STAMP_STRING_HEADER_INCLUDED
-template <typename T, size_t D, typename S> std::basic_string<S> to_string(const Vector<T, D>& v);
+template <typename T, size_t D> std::string to_string(const Vector<T, D>& v);
 #endif
 
 // Definitions
@@ -228,21 +227,21 @@ template <typename T, size_t D, typename S> std::basic_string<S> to_string(const
 //----------- Vector Base Logic ----------
 
 template<typename V, typename T, size_t D>
-template<typename T1>
-inline Vector_Base<V, T, D>::operator Vector<T1, D>() const noexcept {
-	auto self = static_cast<const V*>(this);
-	Vector<T1, D> o;
-	for (size_t i = 0; i < D; ++i)
-		o.V[i] = self->V[i];
-	return o;
-}
-template<typename V, typename T, size_t D>
 template<typename T1, size_t D1> 
 inline Vector_Base<V, T, D>::operator Vector<T1, D1>() const noexcept {
 	auto self = static_cast<const V*>(this);
 	Vector<T1, D1> o;
 	for (size_t i = 0; i < D1; ++i)
 		o.V[i] = (i < V::dimensions ? static_cast<T1>(self->V[i]) : 0);
+	return o;
+}
+template<typename V, typename T, size_t D>
+template<typename T1>
+inline Vector_Base<V, T, D>::operator Vector<T1, D>() const noexcept {
+	auto self = static_cast<const V*>(this);
+	Vector<T1, D> o;
+	for (size_t i = 0; i < D; ++i)
+		o.V[i] = static_cast<T1>(self->V[i]);
 	return o;
 }
 template<typename V, typename T, size_t D>
@@ -296,42 +295,46 @@ inline auto Vector_Base<V, T, D>::end() const {
 template <size_t D, typename T1, typename T2, typename TR>
 inline Vector<TR, D> operator+(const Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
 	Vector<TR, D> o;
-	for(size_t i = 0; i < D; ++i) o.V[i] = (TR)(a.V[i] + b.V[i]);
+	for(size_t i = 0; i < D; ++i) o.V[i] = static_cast<TR>(a.V[i] + b.V[i]);
 	return o;
 }
 template <size_t D, typename T1, typename T2>
 inline Vector<T1, D>& operator+=(Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
-	return a = a + b;
+	for (size_t i = 0; i < D; ++i) a.V[i] += b.V[i];
+	return a;
 }
 template <size_t D, typename T1, typename T2, typename TR>
 inline Vector<TR, D> operator-(const Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
 	Vector<TR, D> o;
-	for (size_t i = 0; i < D; ++i) o.V[i] = (TR)(a.V[i] - b.V[i]);
+	for (size_t i = 0; i < D; ++i) o.V[i] = static_cast<TR>(a.V[i] - b.V[i]);
 	return o;
 }
 template <size_t D, typename T1, typename T2>
 inline Vector<T1, D>& operator-=(Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
-	return a = a - b;
+	for (size_t i = 0; i < D; ++i) a.V[i] -= b.V[i];
+	return a;
 }
 template <size_t D, typename T1, typename T2, typename TR>
 inline Vector<TR, D> operator*(const Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
 	Vector<TR, D> o;
-	for (size_t i = 0; i < D; ++i) o.V[i] = (TR)(a.V[i] * b.V[i]);
+	for (size_t i = 0; i < D; ++i) o.V[i] = static_cast<TR>(a.V[i] * b.V[i]);
 	return o;
 }
 template <size_t D, typename T1, typename T2>
 inline Vector<T1, D>& operator*=(Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
-	return a = a * b;
+	for (size_t i = 0; i < D; ++i) a.V[i] *= b.V[i];
+	return a;
 }
 template <size_t D, typename T1, typename T2, typename TR>
 inline Vector<TR, D> operator/(const Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
 	Vector<TR, D> o;
-	for (size_t i = 0; i < D; ++i) o.V[i] = (TR)(a.V[i] / b.V[i]);
+	for (size_t i = 0; i < D; ++i) o.V[i] = static_cast<TR>(a.V[i] / b.V[i]);
 	return o;
 }
 template <size_t D, typename T1, typename T2>
 inline Vector<T1, D>& operator/=(Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
-	return a = a / b;
+	for (size_t i = 0; i < D; ++i) a.V[i] /= b.V[i];
+	return a;
 }
 #ifdef STAMP_MATH_VECTOR_EQUAL_APROX
 template <size_t D, typename T1, typename T2>
@@ -400,7 +403,7 @@ inline Vector<bool, D> operator~(const Vector<T, D>& v) noexcept {
 }
 template<size_t D, typename T>
 inline bool operator!(const Vector<T, D>& v) noexcept {
-	return _or(~v);
+	return !(_and(v));
 }
 
 // ------------ Vector2 Logic ------------
@@ -496,7 +499,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Vector<T, D>& v) {
 
 #ifdef STAMP_STRING_HEADER_INCLUDED
 template <typename T, size_t D>
-inline std::string to_string_templated(const Vector<T, D>& v) {
+inline std::string to_string(const Vector<T, D>& v) {
 	using std::to_string;
 
 	std::string result = "(";
@@ -506,10 +509,6 @@ inline std::string to_string_templated(const Vector<T, D>& v) {
 	}
 	result += ")";
 	return result;
-}
-template <typename T, size_t D>
-inline std::string to_string(const Vector<T, D>& v) {
-	return to_string_templated(v);
 }
 #endif
 

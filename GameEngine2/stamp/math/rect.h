@@ -55,7 +55,37 @@ struct Rect {
 	Rect(Vector2<T> A) : A(A), B() {}
 	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
 	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({right, bottom }) {}
+
+	Vector2<T> size() const noexcept { return B - A; }
 };
+
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
+template <typename T> std::ostream& operator <<(std::ostream& stream, const Rect<T>& v);
+#endif
+#ifdef STAMP_STRING_HEADER_INCLUDED
+template <typename T> std::string to_string(const Rect<T>& v);
+#endif
+
+// Definitions
+
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
+template <typename T>
+inline std::ostream& operator <<(std::ostream& stream, const Rect<T>& v) {
+	stream << "Rect(";
+	stream << v.A << ", " << v.B;
+	stream << ")";
+	return stream;
+}
+#endif
+#ifdef STAMP_STRING_HEADER_INCLUDED
+template <typename T>
+inline std::string to_string(const Rect<T>& v) {
+	std::string result = "Rect(";
+	result += to_string(v.A) + ", " + to_string(v.B);
+	result += ")";
+	return result;
+}
+#endif
 
 STAMP_MATH_NAMESPACE_END
 

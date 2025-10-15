@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <utility>
+#include <cmath>
 #include <stamp/math/vector.h>
 #include <stamp/math/quaternion.h>
 #include <stamp/math/matrix.h>
@@ -18,6 +19,8 @@ using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
+stamp::graphics::Window* window;
+
 class MyKeyboard : public stamp::hid::IKeyboardListener {
 public:
 	const char* msg;
@@ -25,7 +28,12 @@ public:
 	MyKeyboard(size_t id, const char* msg) : IKeyboardListener(id), msg(msg) {}
 
 	virtual void OnButtonDown(stamp::hid::buttonID_t index) {
-		std::cout << msg << ": Button Down: " << std::hex << index << std::endl;
+		std::cout << msg << ": Button Down: " << std::hex << index << std::dec << std::endl;
+
+		if (index == stamp::hid::scancodeUS::UpArrow) window->Alignment(window->Alignment() + Vector2f(0, 0.05));
+		if (index == stamp::hid::scancodeUS::DownArrow) window->Alignment(window->Alignment() + Vector2f(0, -0.05));
+		if (index == stamp::hid::scancodeUS::LeftArrow) window->Alignment(window->Alignment() + Vector2f(-0.05, 0));
+		if (index == stamp::hid::scancodeUS::RightArrow) window->Alignment(window->Alignment() + Vector2f(0.05, 0));
 	}
 	virtual void OnButtonUp(stamp::hid::buttonID_t index) {
 
@@ -44,8 +52,6 @@ int StampEngineInit(int argv, char* argc[]) {
 	Vector2<float> v1(3.0f, 4.0f);
 	Vector2<int> v2(5, 4);
 	//std::swap(v1, v2);
-
-	auto k = v1 + v2;
 
 
 	//Vector<float, 2> v3{ 0 };
@@ -66,7 +72,7 @@ int StampEngineInit(int argv, char* argc[]) {
 	//lua.safe_script_file("resources\\script\\test.lua");
 
 
-	stamp::graphics::Window window{ stamp::graphics::window::CreationSettings{
+	window = new stamp::graphics::Window{ stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",
 			.rect = { {100, 100}, {800, 600}},
 			.visibility = stamp::graphics::window::visibility::Visible,
@@ -74,11 +80,19 @@ int StampEngineInit(int argv, char* argc[]) {
 	};
 
 	MyKeyboard keyboardA(0, "A");
-	MyKeyboard keyboardB(1, "B");
-	MyKeyboard keyboardC(2, "C");
-	MyKeyboard keyboardD(3, "D");
 
-	window.WindowClosePromise().wait();
+	window->Alignment({ 0.0f, 0.0f });
+
+	int k = 0;
+	bool toggle = false;
+	while (window->IsAlive()) {
+		Sleep(2);
+		window->Rect({ -100 + k, -100, 100 + k, 100 });
+		if (std::abs(k) > 400) toggle = !toggle;
+		k += toggle ? 80 : -80;
+	}
+
+	window->WindowClosePromise().wait();
 
 	return 0;
 }

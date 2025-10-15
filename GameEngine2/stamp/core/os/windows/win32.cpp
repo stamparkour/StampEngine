@@ -14,17 +14,19 @@
 
 #include <stamp/define.h>
 #if defined(STAMP_PLATFORM_WINDOWS) && defined(STAMP_DEPLOY)
-#include <stamp/core/os/windows/win32hid.h>
 #include <iostream>
+#include <atomic>
+#include <map>
+#include <stamp/math/alignment.h>
+#include <stamp/core/os/windows/win32hid.h>
 #include <stamp/state.h>
 #include <stamp/graphics/window.h>
 #include <stamp/graphics/windowgl.h>
-#include <atomic>
-#include <map>
 
-#define WM_STAMP_DISPLAY (WM_USER+0)
+#define WM_STAMP_FULLSCREEN (WM_USER+0)
 
 using namespace STAMP_GRAPHICS_NAMESPACE;
+using namespace STAMP_MATH_NAMESPACE;
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
@@ -43,19 +45,27 @@ struct Window_internal {
 	std::thread windowThread;
 	Window* window = nullptr;
 	HWND hWnd = NULL;
+	HWND zDepthhWnd = NULL;
 	window::CreationSettings settings;
 
 	STAMP_NAMESPACE::sstring title{};
 
 	STAMP_MATH_NAMESPACE::Vector2f alignment{ -1,1 };
+	STAMP_MATH_NAMESPACE::Recti parentRect{};
+	STAMP_MATH_NAMESPACE::Recti rawRect{};
+	STAMP_MATH_NAMESPACE::Recti previousRawRect{};
+
 	STAMP_MATH_NAMESPACE::Recti rect{};
+	STAMP_MATH_NAMESPACE::Rectf relativeRect{};
+	STAMP_MATH_NAMESPACE::Recti previousRect{};
+	STAMP_MATH_NAMESPACE::Rectf relativePreviousRect{};
+
 	STAMP_MATH_NAMESPACE::Recti clientRect{};
 	STAMP_MATH_NAMESPACE::Rectf relativeClientRect{};
-	STAMP_MATH_NAMESPACE::Recti previousRect{};
-	STAMP_MATH_NAMESPACE::Rectf relativeRect{};
-	STAMP_MATH_NAMESPACE::Rectf relativePreviousRect{};
-	STAMP_MATH_NAMESPACE::Recti rectBound{};
 
+	STAMP_MATH_NAMESPACE::Recti rectBound{0,0,0xFFFF,0xFFFF};
+
+	bool isBorderless = false;
 	window::visibility_t visibility = window::visibility::Visible;
 
 	Window_internal() = default;
@@ -64,6 +74,24 @@ struct Window_internal {
 		if (!isAlive) return;
 		isAlive = false;
 		windowClosePromise.set_value();
+	}
+
+	void Print() {
+		std::cout << "Window Internal Data:" << std::endl;
+		std::cout << " Title: " << title << std::endl;
+		std::cout << " Rect: " << rect << std::endl;
+		std::cout << " Previous Rect: " << previousRect << std::endl;
+		std::cout << " Relative Previous Rect: " << relativePreviousRect << std::endl;
+		std::cout << " Relative Rect: " << relativeRect << std::endl;
+		std::cout << " Client Rect: " << clientRect << std::endl;
+		std::cout << " Relative Client Rect: " << relativeClientRect << std::endl;
+		std::cout << " Parent Rect: " << parentRect << std::endl;
+		std::cout << " Alignment: " << alignment << std::endl;
+		std::cout << " Rect Bound: " << rectBound << std::endl;
+		std::cout << " Visibility: " << stamp::graphics::window::visibility::to_string(visibility) << std::endl;
+		std::cout << " Active: " << (active ? "true": "false") << std::endl;
+		std::cout << " Input Enabled: " << (inputEnabled ? "true" : "false") << std::endl;
+		std::cout << " Is Borderless: " << (isBorderless ? "true" : "false") << std::endl;
 	}
 };
 
@@ -85,6 +113,28 @@ static ATOM parentClassAtom;
 static ATOM classAtom;
 
 HWND parentHwnd = NULL;
+
+BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
+	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
+
+	MONITORINFO info;
+	info.cbSize = sizeof(MONITORINFO);
+	GetMonitorInfo(monitor, &info);
+
+	auto& i = m[monitor];
+	i.rect = { info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right, info.rcMonitor.bottom };
+	i.workAreaRect = { info.rcWork.left, info.rcWork.top, info.rcWork.right, info.rcWork.bottom };
+	i.isPrimary = info.dwFlags & MONITORINFOF_PRIMARY;
+
+	return TRUE;
+}
+
+void ScanMonitors() {
+	using std::swap;
+	std::map<HMONITOR, MonitorDetail> m{};
+	EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, (LPARAM)&m);
+	swap(monitorMap, m);
+}
 
 static void Win32CreateConsole() {
 #ifndef STAMP_UNITTEST
@@ -116,6 +166,9 @@ LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	} return 0;
 	case WM_INPUT_DEVICE_CHANGE: {
 		WinInputDeviceChange(wParam, lParam);
+	} return 0;
+	case WM_DISPLAYCHANGE: {
+		ScanMonitors();
 	} return 0;
 	// is input accepted
 	case WM_ENABLE: {
@@ -151,6 +204,10 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	} return 0;
 	case WM_GETMINMAXINFO: {
 		MINMAXINFO* m = (MINMAXINFO*)lParam;
+		if (winData->isBorderless) {
+			m->ptMaxSize.x = winData->parentRect.B.x - winData->parentRect.A.x;
+			m->ptMaxSize.y = winData->parentRect.B.y - winData->parentRect.A.y;
+		}
 	} return 0;
 	// is input accepted
 	case WM_ENABLE: {
@@ -161,8 +218,38 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_ACTIVATE: {
 		bool active = (LOWORD(wParam) != WA_INACTIVE);
 		winData->active = active;
+
+		if (winData->isBorderless) {
+			if (active) {
+				//make window borderless fullscreen
+				Recti newRect = winData->parentRect;
+				newRect.A -= winData->rect.A - winData->clientRect.A;
+				newRect.B += winData->rect.B - winData->clientRect.B;
+				SetWindowPos(hWnd, HWND_TOPMOST, newRect.A.x, newRect.A.y, newRect.B.x, newRect.B.y, SWP_NOACTIVATE);
+			}
+			else {
+				ShowWindow(hWnd, SW_MINIMIZE);
+			}
+		}
 	} return 0;
 	case WM_WINDOWPOSCHANGING: {
+		WINDOWPOS* position = (WINDOWPOS*)lParam;
+
+		bool minimized = IsIconic(hWnd);
+		bool maximized = IsZoomed(hWnd);
+
+		if (maximized || minimized) return 0;
+
+		if (!(position->flags & SWP_NOSIZE)) {
+			if (winData->rectBound.A.x != winData->rectBound.B.x) {
+				position->cx = max(winData->rectBound.A.x, min(winData->rectBound.B.x, position->cx));
+				position->cy = max(winData->rectBound.A.y, min(winData->rectBound.B.y, position->cy));
+			}
+			else {
+				position->cx = winData->rectBound.A.x;
+				position->cy = winData->rectBound.A.y;
+			}
+		}
 	} return 0;
 	case WM_WINDOWPOSCHANGED: {
 		bool minimized = IsIconic(hWnd);
@@ -171,17 +258,70 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		WINDOWPOS* position = (WINDOWPOS*)lParam;
 
 		auto& monitor = monitorMap[MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST)];
+		auto monitorOrigin = monitor.rect.A;
+		auto monitorSize = monitor.rect.size();
+
+		winData->parentRect = monitor.rect;
+
+		RECT winRectRaw;
+		GetWindowRect(hWnd, &winRectRaw);
 
 		POINT clientTopLeft = { 0, 0 };
 		ClientToScreen(hWnd, &clientTopLeft);
-		RECT clientRect;
-		GetClientRect(hWnd, &clientRect);
-		clientRect.left += clientTopLeft.x;
-		clientRect.right += clientTopLeft.x;
-		clientRect.top += clientTopLeft.y;
-		clientRect.bottom += clientTopLeft.y;
+		RECT clientRectRaw;
+		GetClientRect(hWnd, &clientRectRaw);
+		Rect<int> clientRect;
+		clientRect.left = clientRectRaw.left + clientTopLeft.x;
+		clientRect.right = clientRectRaw.right + clientTopLeft.x;
+		clientRect.top = clientRectRaw.top + clientTopLeft.y;
+		clientRect.bottom = clientRectRaw.bottom + clientTopLeft.y;
 
-		//winData->
+		auto prevVis = winData->visibility;
+		
+		if (maximized) {
+			if (winData->isBorderless) {
+				winData->visibility = window::visibility::Borderless;
+			}
+			else {
+				winData->visibility = window::visibility::Maximized;
+			}
+		}
+		else if(minimized) {
+			if (winData->isBorderless) {
+				winData->visibility = window::visibility::BorderlessMinimized;
+				std::cout << "Minimized" << std::endl;
+			}
+			else {
+				winData->visibility = window::visibility::Minimized;
+				std::cout << "Minimized" << std::endl;
+			}
+			return 0;
+		}
+		else {
+			winData->visibility = window::visibility::Visible;
+		}
+
+		winData->zDepthhWnd = position->hwndInsertAfter;
+
+		winData->clientRect.A = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, clientRect.A - monitorOrigin, monitorSize);
+		winData->clientRect.B = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, clientRect.B - monitorOrigin, monitorSize);
+		
+		winData->relativeClientRect.A = (clientRect.A - monitorOrigin) / monitorSize;
+		winData->relativeClientRect.B = (clientRect.B - monitorOrigin) / monitorSize;
+
+		winData->rawRect = { winRectRaw.left, winRectRaw.top, winRectRaw.right, winRectRaw.bottom };
+
+		winData->rect.A = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, winData->rawRect.A - monitorOrigin, monitorSize);
+		winData->rect.B = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, winData->rawRect.B - monitorOrigin, monitorSize);
+
+		winData->relativeRect.A = (winData->rect.A - monitorOrigin) / monitorSize;
+		winData->relativeRect.B = (winData->rect.B - monitorOrigin) / monitorSize;
+
+		if (winData->visibility == window::visibility::Visible) {
+			winData->previousRect = winData->rect;
+			winData->relativePreviousRect = winData->relativeRect;
+			winData->previousRawRect = winData->rawRect;
+		}
 	} return 0;
 	case WM_STYLECHANGED: {
 
@@ -231,7 +371,8 @@ void ParentWindowLoop(std::promise<void>* promise) {
 void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 	Window* window = windowData->window;
 	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(windowData->settings.title);
-	HWND hwnd = CreateWindowExW(
+	HWND hwnd;
+	windowData->hWnd = hwnd = CreateWindowExW(
 		WS_EX_APPWINDOW,					// Optional window styles.
 		(LPCWSTR)classAtom,					// Window class
 		(LPCWSTR)wtitle.c_str(),			// Window text
@@ -252,35 +393,14 @@ void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 		return;
 	}
 
+	ShowWindow(hwnd, nCmdShow);
+
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
 }
-
-BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
-	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
-
-	MONITORINFO info;
-	info.cbSize = sizeof(MONITORINFO);
-	GetMonitorInfo(monitor, &info);
-
-	auto& i = m[monitor];
-	i.rect = { info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right, info.rcMonitor.bottom };
-	i.workAreaRect = { info.rcWork.left, info.rcWork.top, info.rcWork.right, info.rcWork.bottom };
-	i.isPrimary = info.dwFlags & MONITORINFOF_PRIMARY;
-
-	return TRUE;
-}
-
-void ScanMonitors() {
-	using std::swap;
-	std::map<HMONITOR, MonitorDetail> m{};
-	EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, (LPARAM) & m);
-	swap(monitorMap, m);
-}
-
 Window::Window(const window::CreationSettings& settings) {
 	windowData = new Window_internal();
 	windowData->title = settings.title;
@@ -313,25 +433,36 @@ void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
 STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;
 }
+STAMP_MATH_NAMESPACE::Recti Window::ParentRect() const noexcept {
+	return windowData->parentRect;
+}
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
-	windowData->rect = rect;
-	MoveWindow(windowData->hWnd, rect.A.x, rect.A.y, rect.B.x, rect.B.y, TRUE);
+	Recti r;
+	r.A = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.A, windowData->parentRect.size()) + windowData->parentRect.A;
+	r.B = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.B, windowData->parentRect.size()) + windowData->parentRect.A;
+	
+	SetWindowPos(windowData->hWnd, nullptr, r.A.x, r.A.y, r.B.x - r.A.x, r.B.y - r.A.y, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 }
 STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return windowData->rect;
 }
-void Window::RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept {
-
+void Window::RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rrect) noexcept {
+	Recti rect { (Vector2i)(rrect.A * (windowData->parentRect.size())), (Vector2i)(rrect.B * (windowData->parentRect.size())) };
+	Recti r;
+	r.A = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.A, windowData->parentRect.size()) + windowData->parentRect.A;
+	r.B = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.B, windowData->parentRect.size()) + windowData->parentRect.A;
+	
+	SetWindowPos(windowData->hWnd, nullptr, r.A.x, r.A.y, r.B.x - r.A.x, r.B.y - r.A.y, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 }
 STAMP_MATH_NAMESPACE::Rectf Window::RelativeRect() const noexcept {
-	return STAMP_MATH_NAMESPACE::Rectf();
-}
-void Window::Alignment(alignment_t alignment) noexcept {
+	return windowData->relativeRect;
 }
 void Window::Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept {
+	windowData->alignment = alignment;
+	SetWindowPos(windowData->hWnd, nullptr, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
 }
 STAMP_MATH_NAMESPACE::Vector2f Window::Alignment() const noexcept {
-	return STAMP_MATH_NAMESPACE::Vector2f();
+	return windowData->alignment;
 }
 void Window::RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept {
 	windowData->rectBound = { fixedSize, fixedSize };
@@ -343,11 +474,36 @@ STAMP_MATH_NAMESPACE::Recti Window::RectBound() const noexcept {
 	return windowData->rectBound;
 }
 void Window::Visibility(window::visibility_t visibility) noexcept {
-	windowData->visibility = visibility;
-	//if (this->windowData && this->windowData->hWnd) {
-	//	//expand for min and max and fullscreen
-	//	ShowWindow(this->windowData->hWnd, visibility == window::visibility::Visible ? SW_SHOW : SW_HIDE);
-	//}
+	if (visibility == windowData->visibility) return;
+	bool prevIsBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(windowData->visibility);
+	bool isBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(visibility);
+	if (isBorderless && !prevIsBorderless) {
+		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->previousRawRect.A.x, windowData->previousRawRect.A.y, windowData->previousRawRect.B.x - windowData->previousRawRect.A.x, windowData->previousRawRect.B.y - windowData->previousRawRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+		windowData->isBorderless = true;
+	}
+	else if (!isBorderless && prevIsBorderless) {
+		windowData->isBorderless = false;
+		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->previousRawRect.A.x, windowData->previousRawRect.A.y, windowData->previousRawRect.B.x - windowData->previousRawRect.A.x, windowData->previousRawRect.B.y - windowData->previousRawRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+	}
+
+	switch (visibility) {
+	case window::visibility::Hidden: {
+		ShowWindow(windowData->hWnd, SW_HIDE);
+	} break;
+	case window::visibility::Visible: {
+		ShowWindow(windowData->hWnd, SW_SHOWNORMAL);
+	} break;
+	case window::visibility::Minimized:
+	case window::visibility::BorderlessMinimized: {
+		if (!IsIconic(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MINIMIZE);
+	} break;
+	case window::visibility::Borderless:
+	case window::visibility::Maximized: {
+		if(!IsZoomed(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MAXIMIZE);
+	} break;
+	}
 }
 window::visibility_t Window::Visibility() const noexcept {
 	return windowData->visibility;
@@ -371,7 +527,12 @@ bool Window::Active() const noexcept {
 //bool Window::InputEnabled() const noexcept {
 //	return windowData->inputEnabled;
 //}
-
+void Window::Close() noexcept {
+	PostMessage(windowData->hWnd, WM_CLOSE, 0, 0);
+}
+bool Window::IsAlive() const noexcept {
+	return windowData->isAlive;
+}
 std::future<void> Window::WindowClosePromise() const noexcept {
 	return windowData->windowClosePromise.get_future();
 }

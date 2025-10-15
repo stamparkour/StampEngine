@@ -50,6 +50,13 @@ std::u16string to_utf16(const std::u32string& str);
 std::u32string to_utf32(const std::u8string& str);
 std::u32string to_utf32(const std::u16string& str);
 
+std::string to_utf8_s(const std::u16string& str);
+std::string to_utf8_s(const std::u32string& str);
+
+#ifdef STAMP_OSTREAM_HEADER_INCLUDED
+std::ostream& operator <<(std::ostream& stream, const sstring& v);
+#endif
+
 STAMP_NAMESPACE_END
 
 #endif

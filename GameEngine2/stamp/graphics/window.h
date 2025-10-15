@@ -25,7 +25,7 @@
 #include <stamp/noncopyable.h>
 #include <stamp/math/rect.h>
 #include <stamp/memory.h>
-#include <stamp/graphics/alignment.h>
+#include <stamp/math/alignment.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
@@ -37,11 +37,52 @@ namespace window {
 		enum : visibility_t {
 			Hidden,
 			Visible,
-			Minimized,
 			Maximized,
+			Minimized,
 			Borderless,
+			BorderlessMinimized,
 			//Fullscreen,
 		};
+
+		constexpr const char* to_string(visibility_t v) {
+			switch (v) {
+			case Hidden: return "Hidden";
+			case Visible: return "Visible";
+			case Maximized: return "Maximized";
+			case Minimized: return "Minimized";
+			case Borderless: return "Borderless";
+			case BorderlessMinimized: return "BorderlessMinimized";
+			//case Fullscreen: return "Fullscreen";
+			default: return "Unknown";
+			}
+		}
+
+		constexpr const bool IsBorderlessVisibility(visibility_t v) {
+			switch (v) {
+			case Borderless:
+			case BorderlessMinimized:
+				return true;
+			default: return false;
+			}
+		}
+
+		constexpr const bool IsMaximizedVisibility(visibility_t v) {
+			switch (v) {
+			case Borderless:
+			case Maximized:
+				return true;
+			default: return false;
+			}
+		}
+
+		constexpr const bool IsMinimizedVisibility(visibility_t v) {
+			switch (v) {
+			case Minimized:
+			case BorderlessMinimized:
+				return true;
+			default: return false;
+			}
+		}
 	}
 
 	struct CreationSettings {
@@ -64,13 +105,14 @@ public:
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
 
+	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept = 0;
+
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
 
 	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
 
-	virtual void Alignment(alignment_t alignment) noexcept = 0;
 	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
 
@@ -93,6 +135,14 @@ public:
 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
+	
+	//non-virtual setposition function
+	//non-virtual setsize function
+	//get children windows
+	//get/set raw rect
+
+	//get readonly parent window (for displays and stuff)
+	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept = 0;
 
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
@@ -100,7 +150,6 @@ public:
 	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
 
-	virtual void Alignment(alignment_t alignment) noexcept = 0;
 	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
 
@@ -134,13 +183,14 @@ public:
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept override;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept override;
 
+	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept override;
+
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept override;
 
 	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept;
 	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept;
 
-	virtual void Alignment(alignment_t alignment) noexcept;
 	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept;
 	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept;
 
@@ -154,6 +204,8 @@ public:
 	virtual void Active(bool active) noexcept override;
 	virtual bool Active() const noexcept override;
 
+	void Close() noexcept;
+	bool IsAlive() const noexcept;
 	virtual std::future<void> WindowClosePromise() const noexcept override;
 };
 

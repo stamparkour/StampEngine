@@ -29,12 +29,7 @@
 #include <concepts>
 #include <stamp/define.h>
 
-#ifndef min
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#endif
-#ifndef max
-#define max(x,y) ((x) > (y) ? (x) : (y))
-#endif
+
 #define STAMP_DEFAULT_ROTATION_ORDER RotationOrder::ZXY
 #define STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(T, TEMPLATE, ARGS) \
 	TEMPLATE using T##b = T<bool ARGS>;					\

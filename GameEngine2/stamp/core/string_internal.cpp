@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+#include <iostream>
 #include <stamp/core/string_internal.h>
 
 using namespace STAMP_NAMESPACE;
@@ -192,4 +192,18 @@ std::u32string STAMP_NAMESPACE::to_utf32(const std::u16string& str) {
 		result += to_utf32(str.c_str() + i, r);
 	}
 	return result;
+}
+
+std::string STAMP_NAMESPACE::to_utf8_s(const std::u16string& str) {
+	std::u8string u8 = to_utf8(str);
+	return std::string(u8.begin(), u8.end());
+}
+std::string STAMP_NAMESPACE::to_utf8_s(const std::u32string& str) {
+	std::u8string u8 = to_utf8(str);
+	return std::string(u8.begin(), u8.end());
+}
+
+std::ostream& STAMP_NAMESPACE::operator <<(std::ostream& stream, const sstring& v) {
+	stream << to_utf8_s(v);
+	return stream;
 }

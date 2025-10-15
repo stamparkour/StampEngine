@@ -49,13 +49,13 @@ struct Quaternion final {
 	T j;
 	T k;
 
-	Quaternion	()								noexcept requires Field<T> {} : x(0),   i(0),   j(0),   k(0)   {}
-	Quaternion	(T x)							noexcept requires Field<T> {} : x(x),   i(0),   j(0),   k(0)   {}
-	Quaternion	(T x, T i, T j, T k)			noexcept requires Field<T> {} : x(x),   i(i),   j(j),   k(k)   {}
-	explicit Quaternion	(const Vector2<T>& v)	noexcept requires Field<T> {} : x(v.x), i(v.y), j(0),   k(0)   {}
-	explicit Quaternion	(const Vector3<T>& v)	noexcept requires Field<T> {} : x(0),   i(v.x), j(v.y), k(v.z) {}
-	Quaternion	(T x, const Vector3<T>& v)		noexcept requires Field<T> {} : x(x),   i(v.x), j(v.y), k(v.z) {}
-	explicit Quaternion	(const Vector4<T>& v)	noexcept requires Field<T> {} : x(v.x), i(v.y), j(v.z), k(v.w) {}
+	Quaternion	()								noexcept requires Field<T> : x(0),   i(0),   j(0),   k(0)   {}
+	Quaternion	(T x)							noexcept requires Field<T> : x(x),   i(0),   j(0),   k(0)   {}
+	Quaternion	(T x, T i, T j, T k)			noexcept requires Field<T> : x(x),   i(i),   j(j),   k(k)   {}
+	explicit Quaternion	(const Vector2<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(0),   k(0)   {}
+	explicit Quaternion	(const Vector3<T>& v)	noexcept requires Field<T> : x(0),   i(v.x), j(v.y), k(v.z) {}
+	Quaternion	(T x, const Vector3<T>& v)		noexcept requires Field<T> : x(x),   i(v.x), j(v.y), k(v.z) {}
+	explicit Quaternion	(const Vector4<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(v.z), k(v.w) {}
 
 	template <typename T1> explicit	operator Quaternion<T1>	()	const	noexcept;
 	template <typename T1> explicit	operator			T1	()	const	noexcept;
@@ -213,7 +213,7 @@ inline bool operator!=(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcep
 template<typename T1, typename T2, typename TR>
 inline Vector3<TR> operator *(const Quaternion<T1>& a, const Vector3<T2>& b) noexcept {
 	Quaternion<TR> v = *this * (Quaternion<TR>)b * inverse(*this);
-	return (Vector3<T>)v;
+	return (Vector3<TR>)v;
 }
 template<typename T> 
 inline Quaternion<T> operator -(const Quaternion<T>& a) noexcept {

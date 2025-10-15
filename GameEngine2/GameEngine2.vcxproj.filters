@@ -1681,11 +1681,11 @@
     <ClInclude Include="gl\eglew.h">
       <Filter>libraries\gl</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\graphics\alignment.h">
-      <Filter>libraries\stamp\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\hid\inputgroup.h">
       <Filter>libraries\stamp\hid</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\math\alignment.h">
+      <Filter>libraries\stamp\math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

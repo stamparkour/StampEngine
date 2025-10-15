@@ -1,4 +1,4 @@
-//stamp/hid/define.h
+ //stamp/hid/define.h
 
 #pragma once
 #ifndef STAMP_HID_INPUTGROUP_H
