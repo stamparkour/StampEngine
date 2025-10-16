@@ -169,7 +169,7 @@ inline Quaternion<T1>& operator +=(Quaternion<T1>& a, const Quaternion<T2>& b) n
 	return *this = *this + b;
 }
 template<typename T1, typename T2, typename TR>
-inline Quaternion<TR> operator -(Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
+inline Quaternion<TR> operator -(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
 	return { a.x - b.x, a.i - b.i, a.j - b.j, a.k - b.k };
 }
 template<typename T1, typename T2>

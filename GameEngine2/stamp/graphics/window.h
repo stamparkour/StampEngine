@@ -94,7 +94,6 @@ namespace window {
 	};
 }
 
-
 class IWindow {
 	friend struct Window_internal;
 protected:
@@ -105,7 +104,7 @@ public:
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
 
-	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept = 0;
+	virtual threadsafe_ptr<IWindow> Parent() noexcept = 0;
 
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
@@ -121,52 +120,13 @@ public:
 
 	virtual void Active(bool active) noexcept = 0;
 	virtual bool Active() const noexcept = 0;
-
-	virtual std::future<void> WindowClosePromise() const noexcept = 0;
-};
-
-class IChildWindow : public IWindow {
-	friend struct Window_internal;
-	friend struct WindowChild_internal;
-protected:
-public:
-	IChildWindow() {}
-	virtual ~IChildWindow() {}
-
-	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
-	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
-	
-	//non-virtual setposition function
-	//non-virtual setsize function
-	//get children windows
-	//get/set raw rect
-
-	//get readonly parent window (for displays and stuff)
-	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept = 0;
-
-	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
-
-	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
-
-	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
-
-	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
-	virtual window::visibility_t Visibility() const noexcept = 0;
-
-	virtual void Active(bool active) noexcept = 0;
-	virtual bool Active() const noexcept = 0;
-
-	virtual void Parent(IWindow*) noexcept = 0;
-	virtual IWindow* Parent() const noexcept = 0;
 
 	virtual std::future<void> WindowClosePromise() const noexcept = 0;
 };
 
 class Window : public IWindow {
 	friend struct Window_internal;
+	friend struct stamp::threadsafe_ptr<Window>;
 private:
 	struct Window_internal* windowData;
 protected:
@@ -174,16 +134,18 @@ protected:
 	virtual void OnResize(const STAMP_MATH_NAMESPACE::Recti& newRect) {}
 	virtual void OnMove(const STAMP_MATH_NAMESPACE::Vector2i& newPosition) {}
 	virtual void OnClose() {}
+
+	Window(const window::CreationSettings& settings);
 public:
 	//should be protected but is testing
-	Window(const window::CreationSettings& settings);
+	static stamp::threadsafe_ptr<Window> Construct(const window::CreationSettings& settings) { return stamp::make_threadsafe<Window>(settings); }
 
 	virtual ~Window();
 
 	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept override;
 	virtual STAMP_NAMESPACE::sstring Title() const noexcept override;
 
-	virtual STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept override;
+	virtual threadsafe_ptr<IWindow> Parent() noexcept;
 
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept override;

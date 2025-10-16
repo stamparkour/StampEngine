@@ -387,6 +387,7 @@
     <ClCompile Include="stamp\core\os\windows\win32keyboard.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32mouse.cpp" />
     <ClCompile Include="stamp\core\string_internal.cpp" />
+    <ClCompile Include="stamp\core\time.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
     <ClCompile Include="stamp\hid\lualib.cpp" />
@@ -731,6 +732,7 @@
     <ClInclude Include="stamp\core\os\windows\define.h" />
     <ClInclude Include="stamp\core\os\windows\win32hid.h" />
     <ClInclude Include="stamp\core\string_internal.h" />
+    <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\event.h" />
     <ClInclude Include="stamp\hid\inputgroup.h" />

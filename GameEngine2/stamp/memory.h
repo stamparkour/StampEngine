@@ -35,24 +35,36 @@
 STAMP_NAMESPACE_BEGIN
 
 template <typename T>
+class threadsafe_ptr;
+template <typename T>
+using tsp = threadsafe_ptr<T>;
+
+template <typename T>
 class stamp_ptr_internal;
 
 template<typename T>
 using Stamp_Deleter = void(*)(stamp_ptr_internal<T>*);
 
 template <typename T>
-class stamp_ptr_internal final {
-public:
+struct stamp_ptr_internal_counter {
 	std::shared_mutex accessMutex{};
 	Stamp_Deleter<T> deleter;
 	std::atomic_int readCount = 0;
 	std::atomic_int refrenceCount = 0;
+};
+
+template <typename T>
+class stamp_ptr_internal final {
+public:
+	stamp_ptr_internal_counter<T>* counter = nullptr;
 	T* ptr = nullptr;
 
 	stamp_ptr_internal(T* ptr, Stamp_Deleter<T> deleter = Deleter) {
 		this->ptr = ptr;
-		this->deleter = deleter;
+		counter = new stamp_ptr_internal_counter<T>();
+		this->counter->deleter = deleter;
 	}
+	stamp_ptr_internal() {}
 
 	static inline void Deleter(stamp_ptr_internal<T>* ptri) {
 		if (ptri->ptr) {
@@ -81,8 +93,8 @@ private:
 	readonly_ptr(stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptri = ptri;
-		this->ptri->accessMutex.lock_shared();
-		this->ptri->readCount++;
+		this->ptri->counter->accessMutex.lock_shared();
+		this->ptri->counter->readCount++;
 	}
 public:
 	readonly_ptr(nullptr_t) {
@@ -94,8 +106,8 @@ public:
 
 	readonly_ptr& operator=(nullptr_t) {
 		if (!ptri) return;
-		this->ptri->accessMutex.unlock_shared();
-		this->ptri->readCount--;
+		this->ptri->counter->accessMutex.unlock_shared();
+		this->ptri->counter->readCount--;
 
 		this->ptri = nullptr;
 	}
@@ -104,7 +116,7 @@ public:
 
 	int readCount() const noexcept {
 		if (!ptri) return 0;
-		return ptri->readCount;
+		return ptri->counter->readCount;
 	}
 
 	bool operator==(nullptr_t) const noexcept {
@@ -138,8 +150,8 @@ public:
 
 	~readonly_ptr() {
 		if (!ptri) return;
-		this->ptri->readCount--;
-		this->ptri->accessMutex.unlock_shared();
+		this->ptri->counter->readCount--;
+		this->ptri->counter->accessMutex.unlock_shared();
 		this->ptri = nullptr;
 	}
 };
@@ -156,7 +168,7 @@ private:
 	writable_ptr(stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptri = ptri;
-		this->ptri->accessMutex.lock();
+		this->ptri->counter->accessMutex.lock();
 	}
 public:
 	writable_ptr(nullptr_t) {
@@ -166,7 +178,7 @@ public:
 	writable_ptr(writable_ptr<T>&&) = delete;
 	writable_ptr& operator=(nullptr_t) {
 		if (!ptri) return;
-		this->ptri->accessMutex.unlock();
+		this->ptri->counter->accessMutex.unlock();
 		
 		this->ptri = nullptr;
 	}
@@ -204,7 +216,7 @@ public:
 
 	~writable_ptr() {
 		if (!ptri) return;
-		this->ptri->accessMutex.unlock();
+		this->ptri->counter->accessMutex.unlock();
 	}
 };
 
@@ -213,6 +225,8 @@ class threadsafe_ptr final : INonAddressable {
 public:
 	template<typename T, typename... Args>
 	friend threadsafe_ptr<T> make_threadsafe(Args&&... args);
+	template<typename T>
+	friend class enable_threadsafe_from_this;
 
 	using element_type = T;
 private:
@@ -221,7 +235,12 @@ private:
 	threadsafe_ptr(stamp_ptr_internal<T>* ptri) {
 		this->ptri = ptri;
 		if (ptri == nullptr) return;
-		ptri->refrenceCount++;
+		ptri->counter->refrenceCount++;
+	}
+	
+	template<typename... Args>
+	static void construct_at(void* p, Args... args) {
+		new (p) T(std::forward<Args>(args)...);
 	}
 public:
 	threadsafe_ptr() {
@@ -229,8 +248,21 @@ public:
 	}
 	threadsafe_ptr(element_type* ptr) {
 		if (ptr == nullptr) return;
-		ptri = new stamp_ptr_internal<T>(ptr);
-		ptri->refrenceCount++;
+		if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
+			if(ptr->ptri) {
+				ptri = ptr->ptri;
+				ptri->counter->refrenceCount++;
+			}
+			else {
+				ptri = new stamp_ptr_internal<T>(ptr);
+				ptri->counter->refrenceCount++;
+				ptr->ptri = ptri;
+			}
+		}
+		else {
+			ptri = new stamp_ptr_internal<T>(ptr);
+			ptri->counter->refrenceCount++;
+		}
 	}
 	threadsafe_ptr(nullptr_t) {
 		ptri = nullptr;
@@ -239,7 +271,7 @@ public:
 	threadsafe_ptr(const threadsafe_ptr<T>& v) noexcept {
 		ptri = v.ptri;
 		if (ptri == nullptr) return;
-		ptri->refrenceCount++;
+		ptri->counter->refrenceCount++;
 	}
 	threadsafe_ptr(threadsafe_ptr<T>&& v) noexcept = default;
 
@@ -248,13 +280,13 @@ public:
 		if (ptri == v.ptri) return *this;
 
 		if (ptri) {
-			ptri->refrenceCount--;
-			if (ptri->refrenceCount == 0) {
+			ptri->counter->refrenceCount--;
+			if (ptri->counter->refrenceCount == 0) {
 
 				auto p = ptri;
-				p->accessMutex.lock();
+				p->counter->accessMutex.lock();
 				ptri = nullptr;
-				p->accessMutex.unlock();
+				p->counter->accessMutex.unlock();
 
 				ptri->deleter(ptri);
 			}
@@ -262,7 +294,7 @@ public:
 
 		ptri = v.ptri;
 		if (ptri == nullptr) return *this;
-		ptri->refrenceCount++;
+		ptri->counter->refrenceCount++;
 
 		return *this;
 	}
@@ -280,32 +312,39 @@ public:
 	bool operator!=(const threadsafe_ptr<T>& v) const noexcept {
 		return !(*this == v);
 	}
-	operator bool() const noexcept {
+	explicit operator bool() const noexcept {
 		return ptri != nullptr && ptri->ptr != nullptr;
 	}
+	template<typename T1>
+	explicit operator threadsafe_ptr<T1>() const noexcept {
+		if (!ptri) return threadsafe_ptr<T1>(nullptr);
+		threadsafe_ptr<T1> v(new stamp_ptr_internal<T>());
+		v.ptri->counter = ptri->counter;
+		v.ptri->ptr = staic_cast<T1*>(ptri->ptr);
+	}
 	int use_count() {
-		return ptri->refrenceCount;
+		return ptri->counter->refrenceCount;
 	}
 	bool unique() {
-		return ptri->refrenceCount == 1;
+		return ptri->counter->refrenceCount == 1;
 	}
 	readonly_ptr<T> get_readonly() const {
 		return readonly_ptr<T>(ptri);
 	}
-	writable_ptr<T> get_writable() {
+	writable_ptr<T> get() {
 		return writable_ptr<T>(ptri);
 	}
 
 	~threadsafe_ptr() {
 		if (!ptri) return;
-		if (--ptri->refrenceCount > 0) return;
+		if (--ptri->counter->refrenceCount > 0) return;
 
 		auto p = ptri;
-		p->accessMutex.lock();
+		p->counter->accessMutex.lock();
 		ptri = nullptr;
-		p->accessMutex.unlock();
+		p->counter->accessMutex.unlock();
 
-		p->deleter(p);
+		p->counter->deleter(p);
 	}
 };
 
@@ -324,11 +363,32 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 
 	MAKE_THREADSAFE* mem = 0;
 	mem = (MAKE_THREADSAFE*)::operator new(sizeof(MAKE_THREADSAFE), std::align_val_t{ alignof(MAKE_THREADSAFE) });
-	new (&(mem->value)) T( std::forward<Args>(args)... );
+	threadsafe_ptr<T>::construct_at(&(mem->value), std::forward<Args>(args)...);
 	new (&(mem->ptri)) stamp_ptr_internal<T>(&(mem->value), deleter);
+
+	if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
+		mem->value.ptri = &(mem->ptri);
+	}
 
 	return threadsafe_ptr<T>(&(mem->ptri));
 }
+
+template<typename T>
+class enable_threadsafe_from_this {
+	template<typename U, typename... Args>
+	friend threadsafe_ptr<U> make_threadsafe(Args&&... args);
+	template<typename U>
+	friend class threadsafe_ptr;
+	
+	stamp_ptr_internal<T>* ptri = nullptr;
+protected:
+	enable_threadsafe_from_this() {}
+public:
+
+	threadsafe_ptr<T> threadsafe_from_this() {
+		return threadsafe_ptr<T>(ptri);
+	}
+};
 
 STAMP_NAMESPACE_END
 

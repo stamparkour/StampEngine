@@ -18,7 +18,7 @@ public:
 	}
 	TEST_METHOD(Constructor) {
 		threadsafe_ptr<int> ptr{ new int(7) };
-		Assert::IsTrue(ptr);
+		Assert::IsTrue((bool)ptr);
 		Assert::AreEqual(*ptr.get_readonly(), 7);
 	}
 	TEST_METHOD(MakeThreadSafe) {
@@ -29,7 +29,7 @@ public:
 		threadsafe_ptr<int> ptr = make_threadsafe<int>(3);
 		Assert::AreEqual(*ptr.get_readonly(), 3);
 		{
-			auto w = ptr.get_writable();
+			auto w = ptr.get();
 			*w = 5;
 		}
 		Assert::AreEqual(*ptr.get_readonly(), 5);
