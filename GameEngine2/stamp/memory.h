@@ -331,7 +331,7 @@ public:
 	readonly_ptr<T> get_readonly() const {
 		return readonly_ptr<T>(ptri);
 	}
-	writable_ptr<T> get() {
+	writable_ptr<T> get() requires !std::is_const_v<T> {
 		return writable_ptr<T>(ptri);
 	}
 

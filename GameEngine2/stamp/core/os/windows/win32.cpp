@@ -279,12 +279,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		auto prevVis = winData->visibility;
 		
 		if (maximized) {
-			if (winData->isBorderless) {
-				winData->visibility = window::visibility::Borderless;
-			}
-			else {
-				winData->visibility = window::visibility::Maximized;
-			}
+			winData->visibility = window::visibility::Maximized;
 		}
 		else if(minimized) {
 			if (winData->isBorderless) {
@@ -298,7 +293,12 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			return 0;
 		}
 		else {
-			winData->visibility = window::visibility::Visible;
+			if (winData->isBorderless) {
+				winData->visibility = window::visibility::Borderless;
+			}
+			else {
+				winData->visibility = window::visibility::Visible;
+			}
 		}
 
 		winData->zDepthhWnd = position->hwndInsertAfter;
@@ -499,7 +499,9 @@ void Window::Visibility(window::visibility_t visibility) noexcept {
 	case window::visibility::BorderlessMinimized: {
 		if (!IsIconic(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MINIMIZE);
 	} break;
-	case window::visibility::Borderless:
+	case window::visibility::Borderless: {
+		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->parentRect.A.x, windowData->parentRect.A.y, windowData->parentRect.B.x - windowData->parentRect.A.x, windowData->parentRect.B.y - windowData->parentRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+	} break;
 	case window::visibility::Maximized: {
 		if(!IsZoomed(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MAXIMIZE);
 	} break;

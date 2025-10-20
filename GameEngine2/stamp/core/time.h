@@ -20,9 +20,14 @@
 
 
 #include <stamp/core/define.h>
-#include <string>
 
 STAMP_NAMESPACE_BEGIN
+
+namespace time {
+	double TimeTickLength();
+	long long getTimeRaw();
+	double getTime();
+}
 
 STAMP_NAMESPACE_END
 

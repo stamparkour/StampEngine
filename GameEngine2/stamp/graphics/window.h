@@ -109,12 +109,6 @@ public:
 	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
 	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
 
-	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept = 0;
-
-	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept = 0;
-
 	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
 	virtual window::visibility_t Visibility() const noexcept = 0;
 
