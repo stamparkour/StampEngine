@@ -1,8 +1,5 @@
 //stamp/network/define.h
 
-#pragma once
-#ifndef STAMP_NETWORK_DEFINE_H
-#define STAMP_NETWORK_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -20,6 +17,9 @@
 
 
 #include <stamp/define.h>
+
+#ifndef STAMP_NETWORK_DEFINE_H
+#define STAMP_NETWORK_DEFINE_H
 
 #define STAMP_NETWORK_NAMESPACE				STAMP_NAMESPACE::network
 #define STAMP_NETWORK_NAMESPACE_BEGIN		namespace STAMP_NETWORK_NAMESPACE {

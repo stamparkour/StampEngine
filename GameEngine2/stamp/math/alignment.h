@@ -50,18 +50,15 @@ namespace alignment {
 	constexpr auto BottomRight = alignment_t<T>{ 1, -1 };
 };
 
-using offset_mode_t = size_t;
-namespace offset_mode {
-	enum : offset_mode_t {
-		Absolute,
-		Relative
+template<Field T>
+Matrix3<T> AlignmentMatrix(const Vector2<T>& align, const Vector2<T>& alignOffset, const Vector2<T>& offset, const Vector2<T>& scale, const Vector2<T>& scaleParent = {1, 1}) {
+	return Matrix3<T>{
+		scale.x / scaleParent.x, 0, align.x + (offset.x - alignOffset.x * scale.x) / scaleParent.x,
+		0, scale.y / scaleParent.y, align.y + (offset.y - alignOffset.y * scale.y) / scaleParent.y,
+		0, 0, 1
 	};
 }
 
-template<Field T>
-Vector2<T> ConvertAlignment(const Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignIn, const Vector2<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>& alignOut, const Vector2<T>& vec, const Vector2<T>& size) {
-	return static_cast<Vector2<T>>(((alignOut - alignIn) * Vector<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>(-0.5, 0.5)) * size + vec);
-}
 //pivot alignment
 //offset from alignment
 //left right up down sizes

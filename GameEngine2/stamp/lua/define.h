@@ -1,8 +1,5 @@
 //stamp/lua/define.h
 
-#pragma once
-#ifndef STAMP_LUA_DEFINE_H
-#define STAMP_LUA_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -20,6 +17,10 @@
 
 
 #include <stamp/define.h>
+
+#ifndef STAMP_LUA_DEFINE_H
+#define STAMP_LUA_DEFINE_H
+
 #ifdef STAMP_LUA_AVAILABLE
 #include <sol/sol.hpp>
 

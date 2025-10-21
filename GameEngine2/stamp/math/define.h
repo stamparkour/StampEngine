@@ -1,9 +1,5 @@
 //stamp/math/define.h
 
-#pragma once
-#ifndef STAMP_MATH_DEFINE_H
-#define STAMP_MATH_DEFINE_H
-
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,14 +17,18 @@
 // provides short names for all math headers
 // #define STAMP_MATH_ALL_SHORT_NAMES
 
-#include <initializer_list>
+#ifndef STAMP_MATH_DEFINE_H
 #include <cmath>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
 #include <concepts>
+#endif
+
 #include <stamp/define.h>
 
+#ifndef STAMP_MATH_DEFINE_H
+#define STAMP_MATH_DEFINE_H
 
 #define STAMP_DEFAULT_ROTATION_ORDER RotationOrder::ZXY
 #define STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(T, TEMPLATE, ARGS) \

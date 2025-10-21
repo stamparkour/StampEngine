@@ -1,8 +1,5 @@
 //stamp/hid/define.h
 
-#pragma once
-#ifndef STAMP_HID_DEFINE_H
-#define STAMP_HID_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -19,6 +16,9 @@
 // limitations under the License.
 
 #include <stamp/define.h>
+
+#ifndef STAMP_HID_DEFINE_H
+#define STAMP_HID_DEFINE_H
 
 #define STAMP_HID_NAMESPACE								STAMP_NAMESPACE::hid
 #define STAMP_HID_NAMESPACE_BEGIN						namespace STAMP_HID_NAMESPACE {

@@ -27,7 +27,8 @@
 
 //optional headers: <iostream> <string>
 #include <stamp/math/define.h>
-#include <cassert>
+#include <initializer_list>
+#include <assert.h>
 #include <stamp/math/vector.h>
 
 STAMP_MATH_NAMESPACE_BEGIN

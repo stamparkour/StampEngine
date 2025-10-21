@@ -1,8 +1,5 @@
 //stamp/graphics/define.h
 
-#pragma once
-#ifndef STAMP_GRAPHICS_DEFINE_H
-#define STAMP_GRAPHICS_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -19,8 +16,14 @@
 // limitations under the License.
 
 
+#ifndef STAMP_GRAPHICS_DEFINE_H
 #include <utility>
+#endif
+
 #include <stamp/define.h>
+
+#ifndef STAMP_GRAPHICS_DEFINE_H
+#define STAMP_GRAPHICS_DEFINE_H
 
 #define STAMP_GRAPHICS_NAMESPACE					STAMP_NAMESPACE::graphics
 #define STAMP_GRAPHICS_NAMESPACE_BEGIN				namespace STAMP_GRAPHICS_NAMESPACE {

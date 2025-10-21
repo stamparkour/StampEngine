@@ -1,8 +1,5 @@
 //stamp/core/define.h
 
-#pragma once
-#ifndef STAMP_CORE_DEFINE_H
-#define STAMP_CORE_DEFINE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -19,6 +16,9 @@
 // limitations under the License.
 
 #include <stamp/define.h>
+
+#ifndef STAMP_CORE_DEFINE_H
+#define STAMP_CORE_DEFINE_H
 
 #define STAMP_CORE_NAMESPACE				STAMP_NAMESPACE::core
 #define STAMP_CORE_NAMESPACE_BEGIN			namespace STAMP_CORE_NAMESPACE {

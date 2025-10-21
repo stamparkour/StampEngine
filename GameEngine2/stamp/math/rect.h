@@ -52,12 +52,22 @@ struct Rect {
 	};
 
 	Rect() : A(), B() {}
+	Rect(T v) : A(v), B(v) {}
 	Rect(Vector2<T> A) : A(A), B() {}
 	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
 	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({right, bottom }) {}
 
 	Vector2<T> size() const noexcept { return B - A; }
 };
+
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	+	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	-	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	/	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	Rect<T1>& operator	+=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	Rect<T1>& operator	-=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	Rect<T1>& operator	*=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	Rect<T1>& operator	/=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T> std::ostream& operator <<(std::ostream& stream, const Rect<T>& v);
@@ -67,6 +77,59 @@ template <typename T> std::string to_string(const Rect<T>& v);
 #endif
 
 // Definitions
+
+template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator+(const Rect<T1>& a, const Rect<T2>& b) noexcept {
+	Rect<TR> o{};
+	o.A = a.A + b.A;
+	o.B = a.B + b.B;
+	return o;
+}
+template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator-(const Rect<T1>& a, const Rect<T2>& b) noexcept {
+	Rect<TR> o{};
+	o.A = a.A - b.A;
+	o.B = a.B - b.B;
+	return o;
+}
+template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator*(const Rect<T1>& a, const Rect<T2>& b) noexcept {
+	Rect<TR> o{};
+	o.A = a.A * b.A;
+	o.B = a.B * b.B;
+	return o;
+}
+template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator/(const Rect<T1>& a, const Rect<T2>& b) noexcept {
+	Rect<TR> o{};
+	o.A = a.A / b.A;
+	o.B = a.B / b.B;
+	return o;
+}
+template<typename T1, typename T2>
+inline Rect<T1>& operator+=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+	a.A += b.A;
+	a.B += b.B;
+	return a;
+}
+template<typename T1, typename T2>
+inline Rect<T1>& operator-=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+	a.A -= b.A;
+	a.B -= b.B;
+	return a;
+}
+template<typename T1, typename T2>
+inline Rect<T1>& operator*=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+	a.A *= b.A;
+	a.B *= b.B;
+	return a;
+}
+template<typename T1, typename T2>
+inline Rect<T1>& operator/=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+	a.A /= b.A;
+	a.B /= b.B;
+	return a;
+}
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T>
