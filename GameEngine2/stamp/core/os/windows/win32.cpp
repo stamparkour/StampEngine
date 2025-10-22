@@ -433,8 +433,11 @@ void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
 STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;
 }
-STAMP_MATH_NAMESPACE::Recti Window::ParentRect() const noexcept {
-	return windowData->parentRect;
+STAMP_MATH_NAMESPACE::Recti Window::WorkArea() const noexcept {
+
+}
+STAMP_MATH_NAMESPACE::Recti Window::ScreenArea() const noexcept {
+
 }
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 	Recti r;
@@ -445,27 +448,6 @@ void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 }
 STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return windowData->rect;
-}
-void Window::RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rrect) noexcept {
-	Recti rect { (Vector2i)(rrect.A * (windowData->parentRect.size())), (Vector2i)(rrect.B * (windowData->parentRect.size())) };
-	Recti r;
-	r.A = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.A, windowData->parentRect.size()) + windowData->parentRect.A;
-	r.B = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.B, windowData->parentRect.size()) + windowData->parentRect.A;
-	
-	SetWindowPos(windowData->hWnd, nullptr, r.A.x, r.A.y, r.B.x - r.A.x, r.B.y - r.A.y, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
-}
-STAMP_MATH_NAMESPACE::Rectf Window::RelativeRect() const noexcept {
-	return windowData->relativeRect;
-}
-void Window::Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept {
-	windowData->alignment = alignment;
-	SetWindowPos(windowData->hWnd, nullptr, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
-}
-STAMP_MATH_NAMESPACE::Vector2f Window::Alignment() const noexcept {
-	return windowData->alignment;
-}
-void Window::RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept {
-	windowData->rectBound = { fixedSize, fixedSize };
 }
 void Window::RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 	windowData->rectBound = rect;

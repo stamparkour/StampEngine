@@ -94,31 +94,7 @@ namespace window {
 	};
 }
 
-class IWindow {
-	friend struct Window_internal;
-protected:
-public:
-	IWindow() {}
-	virtual ~IWindow() {}
-	 
-	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept = 0;
-	virtual STAMP_NAMESPACE::sstring Title() const noexcept = 0;
-
-	virtual threadsafe_ptr<IWindow> Parent() noexcept = 0;
-
-	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept = 0;
-	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept = 0;
-
-	virtual void Visibility(window::visibility_t visibility) noexcept = 0;
-	virtual window::visibility_t Visibility() const noexcept = 0;
-
-	virtual void Active(bool active) noexcept = 0;
-	virtual bool Active() const noexcept = 0;
-
-	virtual std::future<void> WindowClosePromise() const noexcept = 0;
-};
-
-class Window : public IWindow {
+class Window {
 	friend struct Window_internal;
 	friend struct stamp::threadsafe_ptr<Window>;
 private:
@@ -128,6 +104,7 @@ protected:
 	virtual void OnResize(const STAMP_MATH_NAMESPACE::Recti& newRect) {}
 	virtual void OnMove(const STAMP_MATH_NAMESPACE::Vector2i& newPosition) {}
 	virtual void OnClose() {}
+	virtual void OnFocus(bool isFocused) {}
 
 	Window(const window::CreationSettings& settings);
 public:
@@ -136,33 +113,29 @@ public:
 
 	virtual ~Window();
 
-	virtual void Title(const STAMP_NAMESPACE::sstring& title) noexcept override;
-	virtual STAMP_NAMESPACE::sstring Title() const noexcept override;
+	void Title(const STAMP_NAMESPACE::sstring& title) noexcept;
+	STAMP_NAMESPACE::sstring Title() const noexcept;
 
-	virtual threadsafe_ptr<IWindow> Parent() noexcept;
+	STAMP_MATH_NAMESPACE::Recti WorkArea() const noexcept;
+	STAMP_MATH_NAMESPACE::Recti ScreenArea() const noexcept;
 
-	virtual void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept override;
-	virtual STAMP_MATH_NAMESPACE::Recti Rect() const noexcept override;
+	void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
+	STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
 
-	virtual void RelativeRect(const STAMP_MATH_NAMESPACE::Rectf& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Rectf RelativeRect() const noexcept;
+	void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect);
+	STAMP_MATH_NAMESPACE::Recti RectBound() const;
 
-	virtual void Alignment(const STAMP_MATH_NAMESPACE::Vector2f& alignment) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Vector2f Alignment() const noexcept;
+	void Visibility(window::visibility_t visibility) noexcept;
+	window::visibility_t Visibility() const noexcept;
 
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Vector2i& fixedSize) noexcept;
-	virtual void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	virtual STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
-
-	virtual void Visibility(window::visibility_t visibility) noexcept override;
-	virtual window::visibility_t Visibility() const noexcept override;
-
-	virtual void Active(bool active) noexcept override;
-	virtual bool Active() const noexcept override;
+	void Focus(bool focus) noexcept;
+	bool Focus() const noexcept;
 
 	void Close() noexcept;
 	bool IsAlive() const noexcept;
-	virtual std::future<void> WindowClosePromise() const noexcept override;
+	std::future<void> WindowClosePromise() const noexcept;
+
+	void* GetFramebuffer() const;
 };
 
 STAMP_GRAPHICS_NAMESPACE_END

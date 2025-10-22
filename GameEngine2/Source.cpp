@@ -81,7 +81,6 @@ int StampEngineInit(int argv, char* argc[]) {
 
 	MyKeyboard keyboardA(0, "A");
 
-	window->Alignment({ 0.0f, 0.0f });
 
 	int k = 0;
 	bool toggle = false;
