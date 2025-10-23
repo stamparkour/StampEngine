@@ -28,7 +28,6 @@
 //optional headers: <iostream> <string>
 #include <stamp/math/define.h>
 #include <initializer_list>
-#include <assert.h>
 #include <stamp/math/vector.h>
 
 STAMP_MATH_NAMESPACE_BEGIN
@@ -85,8 +84,8 @@ struct Matrix : Matrix_Base<Matrix<T, R, C>, T, R, C> {
 	T m[Rows][Cols] = {};
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
-	Matrix(std::initializer_list<T> values) { 
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+	Matrix(const std::initializer_list<T> values) { 
+		static_assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m); 
 	}
 
@@ -104,8 +103,8 @@ struct Matrix<T, R, 1> : Matrix_Base<Matrix<T, R, 1>, T, R, 1> {
 	};
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
-	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+	Matrix(const std::initializer_list<T> values) {
+		static_assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Rows>& m) noexcept;
@@ -124,8 +123,8 @@ struct Matrix<T, 1, C> : Matrix_Base<Matrix<T, 1, C>, T, 1, C> {
 	};
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
-	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+	Matrix(const std::initializer_list<T> values) {
+		static_assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Cols>& m) noexcept;
@@ -145,8 +144,8 @@ struct Matrix<T, 1, 1> : Matrix_Base<Matrix<T, 1, 1>, T, 1, 1> {
 
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
-	Matrix(std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+	Matrix(const std::initializer_list<T> values) {
+		static_assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 
@@ -154,8 +153,8 @@ struct Matrix<T, 1, 1> : Matrix_Base<Matrix<T, 1, 1>, T, 1, 1> {
 };
 
 template<size_t Rows, size_t Cols, size_t C, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Matrix<TR, Rows, C>		operator *	(const Matrix<T1, Rows, Cols>& a, const Matrix<T2, Cols, C>& b)		noexcept;
-template<size_t Q, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>								Vector<TR, Q>			operator *	(const Matrix<T1, Q, Q>& a, const Vector<T2, Q>& b)					noexcept;
-template<size_t Q, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>								Vector<TR, Q>			operator *	(const Vector<T1, Q>& b, const Matrix<T2, Q, Q>& a)					noexcept;
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>				Vector<TR, Rows>			operator *	(const Matrix<T1, Rows, Cols>& a, const Vector<T2, Cols>& b)	noexcept;
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>				Vector<TR, Cols>			operator *	(const Vector<T1, Rows>& b, const Matrix<T2, Rows, Cols>& a)	noexcept;
 template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>				Matrix<TR, Rows, Cols>	operator +	(const Matrix<T1, Cols, Rows>& a, const Matrix<T2, Cols, Rows>& b)	noexcept;
 template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>				Matrix<TR, Rows, Cols>	operator -	(const Matrix<T1, Rows, Cols>& a, const Matrix<T2, Rows, Cols>& b)	noexcept;
 template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>				Matrix<TR, Rows, Cols>	operator -	(const Matrix<T1, Rows, Cols>& a)									noexcept;
@@ -294,14 +293,14 @@ inline Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& a) noexcept 
 	}
 	return result;
 }
-template<size_t Q, typename T1, typename T2, typename TR>
-inline Vector<TR, Q> operator*(const Matrix<T1, Q, Q>& a, const Vector<T2, Q>& b) noexcept {
-	Matrix<T2, Q, 1> B{ b };
-	Matrix<TR, Q, 1> result = a * B;
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>> 
+inline Vector<TR, Rows> operator *(const Matrix<T1, Rows, Cols>& a, const Vector<T2, Cols>& b) noexcept {
+	Matrix<T2, Cols, 1> B{ b };
+	Matrix<TR, Rows, 1> result = a * B;
 	return result.v;
 }
-template<size_t Q, typename T1, typename T2, typename TR>
-inline Vector<TR, Q> operator*(const Vector<T1, Q>& b, const Matrix<T2, Q, Q>& a) noexcept {
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>
+inline Vector<TR, Cols> operator *(const Vector<T2, Rows>& a, const Matrix<T1, Rows, Cols>& b) noexcept {
 	Matrix<T1, 1, Q> B{ b };
 	Matrix<TR, 1, Q> result = B * a;
 	return result.v;
