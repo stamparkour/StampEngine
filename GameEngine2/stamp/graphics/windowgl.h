@@ -54,8 +54,6 @@ public:
 	virtual void Active(bool active) noexcept = 0;
 	virtual bool Active() const noexcept = 0;
 
-	virtual void Parent(IWindow*) noexcept = 0;
-	virtual IWindow* Parent() const noexcept = 0;
 
 	void BindGLContext();
 };

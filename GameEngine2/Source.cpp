@@ -19,7 +19,7 @@ using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
-stamp::graphics::Window* window;
+stamp::threadsafe_ptr<stamp::graphics::Window> window;
 
 class MyKeyboard : public stamp::hid::IKeyboardListener {
 public:
@@ -29,11 +29,6 @@ public:
 
 	virtual void OnButtonDown(stamp::hid::buttonID_t index) {
 		std::cout << msg << ": Button Down: " << std::hex << index << std::dec << std::endl;
-
-		if (index == stamp::hid::scancodeUS::UpArrow) window->Alignment(window->Alignment() + Vector2f(0, 0.05));
-		if (index == stamp::hid::scancodeUS::DownArrow) window->Alignment(window->Alignment() + Vector2f(0, -0.05));
-		if (index == stamp::hid::scancodeUS::LeftArrow) window->Alignment(window->Alignment() + Vector2f(-0.05, 0));
-		if (index == stamp::hid::scancodeUS::RightArrow) window->Alignment(window->Alignment() + Vector2f(0.05, 0));
 	}
 	virtual void OnButtonUp(stamp::hid::buttonID_t index) {
 
@@ -72,26 +67,17 @@ int StampEngineInit(int argv, char* argc[]) {
 	//lua.safe_script_file("resources\\script\\test.lua");
 
 
-	window = new stamp::graphics::Window{ stamp::graphics::window::CreationSettings{
+	window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
 			.title = U"Stamp Engine - Window",
 			.rect = { {100, 100}, {800, 600}},
 			.visibility = stamp::graphics::window::visibility::Visible,
 		}
-	};
+	);
 
 	MyKeyboard keyboardA(0, "A");
 
 
-	int k = 0;
-	bool toggle = false;
-	while (window->IsAlive()) {
-		Sleep(2);
-		window->Rect({ -100 + k, -100, 100 + k, 100 });
-		if (std::abs(k) > 400) toggle = !toggle;
-		k += toggle ? 80 : -80;
-	}
-
-	window->WindowClosePromise().wait();
+	window.get_unsafe()->WindowClosePromise().wait();
 
 	return 0;
 }

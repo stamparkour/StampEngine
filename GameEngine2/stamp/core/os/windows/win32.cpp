@@ -32,13 +32,19 @@ STAMP_GRAPHICS_NAMESPACE_BEGIN
 
 using window_update_t = size_t;
 
+enum struct WindowState {
+	Hidden,
+	Other,
+	Minimized,
+	Maximized,
+};
 
 struct Window_internal {
 	//thread
 	//is allive
 	bool isAlive = true;
 	bool inputEnabled = true;
-	bool active = true;
+	bool focus = true;
 
 	std::promise<void> windowClosePromise{};
 
@@ -50,22 +56,17 @@ struct Window_internal {
 
 	STAMP_NAMESPACE::sstring title{};
 
-	STAMP_MATH_NAMESPACE::Vector2f alignment{ -1,1 };
 	STAMP_MATH_NAMESPACE::Recti parentRect{};
-	STAMP_MATH_NAMESPACE::Recti rawRect{};
-	STAMP_MATH_NAMESPACE::Recti previousRawRect{};
+	STAMP_MATH_NAMESPACE::Recti parentWorkAreaRect{};
 
 	STAMP_MATH_NAMESPACE::Recti rect{};
-	STAMP_MATH_NAMESPACE::Rectf relativeRect{};
 	STAMP_MATH_NAMESPACE::Recti previousRect{};
-	STAMP_MATH_NAMESPACE::Rectf relativePreviousRect{};
 
 	STAMP_MATH_NAMESPACE::Recti clientRect{};
-	STAMP_MATH_NAMESPACE::Rectf relativeClientRect{};
 
 	STAMP_MATH_NAMESPACE::Recti rectBound{0,0,0xFFFF,0xFFFF};
 
-	bool isBorderless = false;
+	WindowState state = WindowState::Other;
 	window::visibility_t visibility = window::visibility::Visible;
 
 	Window_internal() = default;
@@ -81,17 +82,13 @@ struct Window_internal {
 		std::cout << " Title: " << title << std::endl;
 		std::cout << " Rect: " << rect << std::endl;
 		std::cout << " Previous Rect: " << previousRect << std::endl;
-		std::cout << " Relative Previous Rect: " << relativePreviousRect << std::endl;
-		std::cout << " Relative Rect: " << relativeRect << std::endl;
 		std::cout << " Client Rect: " << clientRect << std::endl;
-		std::cout << " Relative Client Rect: " << relativeClientRect << std::endl;
 		std::cout << " Parent Rect: " << parentRect << std::endl;
-		std::cout << " Alignment: " << alignment << std::endl;
+		std::cout << " Work Area Rect: " << parentWorkAreaRect << std::endl;
 		std::cout << " Rect Bound: " << rectBound << std::endl;
 		std::cout << " Visibility: " << stamp::graphics::window::visibility::to_string(visibility) << std::endl;
-		std::cout << " Active: " << (active ? "true": "false") << std::endl;
+		std::cout << " Active: " << (focus ? "true": "false") << std::endl;
 		std::cout << " Input Enabled: " << (inputEnabled ? "true" : "false") << std::endl;
-		std::cout << " Is Borderless: " << (isBorderless ? "true" : "false") << std::endl;
 	}
 };
 
@@ -204,7 +201,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	} return 0;
 	case WM_GETMINMAXINFO: {
 		MINMAXINFO* m = (MINMAXINFO*)lParam;
-		if (winData->isBorderless) {
+		if (winData->visibility == window::visibility::BorderlessMaximized) {
 			m->ptMaxSize.x = winData->parentRect.B.x - winData->parentRect.A.x;
 			m->ptMaxSize.y = winData->parentRect.B.y - winData->parentRect.A.y;
 		}
@@ -217,19 +214,19 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	// is top-level window
 	case WM_ACTIVATE: {
 		bool active = (LOWORD(wParam) != WA_INACTIVE);
-		winData->active = active;
+		winData->focus = active;
 
-		if (winData->isBorderless) {
-			if (active) {
-				//make window borderless fullscreen
-				Recti newRect = winData->parentRect;
-				newRect.A -= winData->rect.A - winData->clientRect.A;
-				newRect.B += winData->rect.B - winData->clientRect.B;
-				SetWindowPos(hWnd, HWND_TOPMOST, newRect.A.x, newRect.A.y, newRect.B.x, newRect.B.y, SWP_NOACTIVATE);
-			}
-			else {
-				ShowWindow(hWnd, SW_MINIMIZE);
-			}
+		if (active && winData->visibility == window::visibility::BorderlessMinimized) {
+			//make window borderless fullscreen
+			Recti newRect = winData->parentRect;
+			newRect.A -= winData->rect.A - winData->clientRect.A;
+			newRect.B += winData->rect.B - winData->clientRect.B;
+			winData->visibility = window::visibility::BorderlessMaximized;
+			SetWindowPos(hWnd, HWND_TOPMOST, newRect.A.x, newRect.A.y, newRect.B.x, newRect.B.y, SWP_NOACTIVATE);
+		}
+		else if (active && winData->visibility == window::visibility::BorderlessMaximized) {
+			winData->visibility = window::visibility::BorderlessMinimized;
+			ShowWindow(hWnd, SW_MINIMIZE);
 		}
 	} return 0;
 	case WM_WINDOWPOSCHANGING: {
@@ -238,7 +235,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		bool minimized = IsIconic(hWnd);
 		bool maximized = IsZoomed(hWnd);
 
-		if (maximized || minimized) return 0;
+		if (minimized || maximized) return 0;
 
 		if (!(position->flags & SWP_NOSIZE)) {
 			if (winData->rectBound.A.x != winData->rectBound.B.x) {
@@ -256,6 +253,19 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		bool maximized = IsZoomed(hWnd);
 
 		WINDOWPOS* position = (WINDOWPOS*)lParam;
+
+		if (minimized) {
+			winData->state = WindowState::Minimized;
+		}
+		else if (maximized) {
+			winData->state = WindowState::Maximized;
+		}
+		else if (position->flags & SWP_HIDEWINDOW) {
+			winData->state = WindowState::Hidden;
+		}
+		else {
+			winData->state = WindowState::Other;
+		}
 
 		auto& monitor = monitorMap[MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST)];
 		auto monitorOrigin = monitor.rect.A;
@@ -282,7 +292,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			winData->visibility = window::visibility::Maximized;
 		}
 		else if(minimized) {
-			if (winData->isBorderless) {
+			if (window::visibility::IsBorderlessVisibility(winData->visibility)) {
 				winData->visibility = window::visibility::BorderlessMinimized;
 				std::cout << "Minimized" << std::endl;
 			}
@@ -293,34 +303,19 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			return 0;
 		}
 		else {
-			if (winData->isBorderless) {
-				winData->visibility = window::visibility::Borderless;
-			}
-			else {
+			if (!window::visibility::IsBorderlessVisibility(winData->visibility)) {
 				winData->visibility = window::visibility::Visible;
 			}
 		}
 
 		winData->zDepthhWnd = position->hwndInsertAfter;
 
-		winData->clientRect.A = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, clientRect.A - monitorOrigin, monitorSize);
-		winData->clientRect.B = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, clientRect.B - monitorOrigin, monitorSize);
+		winData->clientRect = clientRect;
 		
-		winData->relativeClientRect.A = (clientRect.A - monitorOrigin) / monitorSize;
-		winData->relativeClientRect.B = (clientRect.B - monitorOrigin) / monitorSize;
+		winData->rect = { winRectRaw.left, winRectRaw.top, winRectRaw.right, winRectRaw.bottom };
 
-		winData->rawRect = { winRectRaw.left, winRectRaw.top, winRectRaw.right, winRectRaw.bottom };
-
-		winData->rect.A = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, winData->rawRect.A - monitorOrigin, monitorSize);
-		winData->rect.B = ConvertAlignment(alignment::TopLeft<int>, winData->alignment, winData->rawRect.B - monitorOrigin, monitorSize);
-
-		winData->relativeRect.A = (winData->rect.A - monitorOrigin) / monitorSize;
-		winData->relativeRect.B = (winData->rect.B - monitorOrigin) / monitorSize;
-
-		if (winData->visibility == window::visibility::Visible) {
+		if (window::visibility::IsNormalVisibility(winData->visibility)) {
 			winData->previousRect = winData->rect;
-			winData->relativePreviousRect = winData->relativeRect;
-			winData->previousRawRect = winData->rawRect;
 		}
 	} return 0;
 	case WM_STYLECHANGED: {
@@ -434,17 +429,14 @@ STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;
 }
 STAMP_MATH_NAMESPACE::Recti Window::WorkArea() const noexcept {
-
+	return windowData->parentWorkAreaRect;
 }
 STAMP_MATH_NAMESPACE::Recti Window::ScreenArea() const noexcept {
-
+	return windowData->parentRect;
 }
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
-	Recti r;
-	r.A = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.A, windowData->parentRect.size()) + windowData->parentRect.A;
-	r.B = ConvertAlignment(windowData->alignment, alignment::TopLeft<int>, rect.B, windowData->parentRect.size()) + windowData->parentRect.A;
 	
-	SetWindowPos(windowData->hWnd, nullptr, r.A.x, r.A.y, r.B.x - r.A.x, r.B.y - r.A.y, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+	SetWindowPos(windowData->hWnd, nullptr, rect.A.x, rect.A.y, rect.B.x - rect.A.x, rect.B.y - rect.A.y, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 }
 STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return windowData->rect;
@@ -460,14 +452,10 @@ void Window::Visibility(window::visibility_t visibility) noexcept {
 	bool prevIsBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(windowData->visibility);
 	bool isBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(visibility);
 	if (isBorderless && !prevIsBorderless) {
-		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->previousRawRect.A.x, windowData->previousRawRect.A.y, windowData->previousRawRect.B.x - windowData->previousRawRect.A.x, windowData->previousRawRect.B.y - windowData->previousRawRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
-		windowData->isBorderless = true;
 	}
 	else if (!isBorderless && prevIsBorderless) {
-		windowData->isBorderless = false;
 		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
-		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->previousRawRect.A.x, windowData->previousRawRect.A.y, windowData->previousRawRect.B.x - windowData->previousRawRect.A.x, windowData->previousRawRect.B.y - windowData->previousRawRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	}
 
 	switch (visibility) {
@@ -481,7 +469,7 @@ void Window::Visibility(window::visibility_t visibility) noexcept {
 	case window::visibility::BorderlessMinimized: {
 		if (!IsIconic(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MINIMIZE);
 	} break;
-	case window::visibility::Borderless: {
+	case window::visibility::BorderlessMaximized: {
 		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->parentRect.A.x, windowData->parentRect.A.y, windowData->parentRect.B.x - windowData->parentRect.A.x, windowData->parentRect.B.y - windowData->parentRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	} break;
 	case window::visibility::Maximized: {
@@ -492,14 +480,14 @@ void Window::Visibility(window::visibility_t visibility) noexcept {
 window::visibility_t Window::Visibility() const noexcept {
 	return windowData->visibility;
 }
-void Window::Active(bool active) noexcept {
-	if (active && !windowData->active) {
+void Window::Focus(bool focus) noexcept {
+	if (focus && !windowData->focus) {
 		SetForegroundWindow(windowData->hWnd);
 	}
-	windowData->active = active;
+	windowData->focus = focus;
 }
-bool Window::Active() const noexcept {
-	return windowData->active;
+bool Window::Focus() const noexcept {
+	return windowData->focus;
 }
 
 //void Window::InputEnabled(bool inputEnabled) noexcept {

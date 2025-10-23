@@ -40,6 +40,7 @@ namespace window {
 			Maximized,
 			Minimized,
 			Borderless,
+			BorderlessMaximized,
 			BorderlessMinimized,
 			//Fullscreen,
 		};
@@ -51,6 +52,7 @@ namespace window {
 			case Maximized: return "Maximized";
 			case Minimized: return "Minimized";
 			case Borderless: return "Borderless";
+			case BorderlessMaximized: return "BorderlessMaximized";
 			case BorderlessMinimized: return "BorderlessMinimized";
 			//case Fullscreen: return "Fullscreen";
 			default: return "Unknown";
@@ -60,7 +62,17 @@ namespace window {
 		constexpr const bool IsBorderlessVisibility(visibility_t v) {
 			switch (v) {
 			case Borderless:
+			case BorderlessMaximized:
 			case BorderlessMinimized:
+				return true;
+			default: return false;
+			}
+		}
+
+		constexpr const bool IsNormalVisibility(visibility_t v) {
+			switch (v) {
+			case Borderless:
+			case Visible:
 				return true;
 			default: return false;
 			}
@@ -68,7 +80,7 @@ namespace window {
 
 		constexpr const bool IsMaximizedVisibility(visibility_t v) {
 			switch (v) {
-			case Borderless:
+			case BorderlessMaximized:
 			case Maximized:
 				return true;
 			default: return false;
@@ -94,9 +106,9 @@ namespace window {
 	};
 }
 
-class Window {
+class Window : STAMP_NAMESPACE::enable_threadsafe_from_this<Window> {
 	friend struct Window_internal;
-	friend struct stamp::threadsafe_ptr<Window>;
+	template<typename T, typename... Args> friend stamp::threadsafe_ptr<T> stamp::make_threadsafe(Args&&... args);
 private:
 	struct Window_internal* windowData;
 protected:
@@ -109,7 +121,7 @@ protected:
 	Window(const window::CreationSettings& settings);
 public:
 	//should be protected but is testing
-	static stamp::threadsafe_ptr<Window> Construct(const window::CreationSettings& settings) { return stamp::make_threadsafe<Window>(settings); }
+	static stamp::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return stamp::make_threadsafe<Window>(settings); }
 
 	virtual ~Window();
 
@@ -122,8 +134,8 @@ public:
 	void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
 	STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
 
-	void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect);
-	STAMP_MATH_NAMESPACE::Recti RectBound() const;
+	void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
+	STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
 
 	void Visibility(window::visibility_t visibility) noexcept;
 	window::visibility_t Visibility() const noexcept;
