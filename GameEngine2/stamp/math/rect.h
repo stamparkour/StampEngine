@@ -20,6 +20,7 @@
 
 #include <stamp/math/define.h>
 #include <stamp/math/vector.h>
+#include <stamp/math/matrix.h>
 
 STAMP_MATH_NAMESPACE_BEGIN
 
@@ -40,15 +41,16 @@ struct Rect {
 			Vector2<T> bottomRight;
 		};
 		struct {
+			Vector2<T> min;
+			Vector2<T> max;
+		};
+		struct {
 			T left;
 			T top;
 			T right;
 			T bottom;
 		};
-		struct {
-			Vector2<T> min;
-			Vector2<T> max;
-		};
+		T V[4];
 	};
 
 	Rect() : A(), B() {}
@@ -60,14 +62,18 @@ struct Rect {
 	Vector2<T> size() const noexcept { return B - A; }
 };
 
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	+	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	-	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	/	(const Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	+	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	-	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Matrix3<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Matrix3<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	/	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
 template <typename T1, typename T2>	Rect<T1>& operator	+=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 template <typename T1, typename T2>	Rect<T1>& operator	-=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 template <typename T1, typename T2>	Rect<T1>& operator	*=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 template <typename T1, typename T2>	Rect<T1>& operator	/=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
+
+STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, T2, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T> std::ostream& operator <<(std::ostream& stream, const Rect<T>& v);
@@ -80,14 +86,14 @@ template <typename T> std::string to_string(const Rect<T>& v);
 
 template<typename T1, typename T2, typename TR>
 inline Rect<TR> operator+(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o{};
+	Rect<TR> o;
 	o.A = a.A + b.A;
 	o.B = a.B + b.B;
 	return o;
 }
 template<typename T1, typename T2, typename TR>
 inline Rect<TR> operator-(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o{};
+	Rect<TR> o;
 	o.A = a.A - b.A;
 	o.B = a.B - b.B;
 	return o;
@@ -100,8 +106,22 @@ inline Rect<TR> operator*(const Rect<T1>& a, const Rect<T2>& b) noexcept {
 	return o;
 }
 template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator*(const Matrix3<T1>& a, const Rect<T2>& b) noexcept {
+	Rect<TR> o;
+	o.A = static_cast<Vector2<TR>>(a * Vector3<T2>{b.A, 1});
+	o.B = static_cast<Vector2<TR>>(a * Vector3<T2>{b.B, 1});
+	return o;
+}
+template<typename T1, typename T2, typename TR>
+inline Rect<TR> operator*(const Rect<T1>& a, const Matrix3<T2>& b) noexcept {
+	Rect<TR> o;
+	o.A = static_cast<Vector2<TR>>(Vector3<T2>{a.A, 1} * b);
+	o.B = static_cast<Vector2<TR>>(Vector3<T2>{a.B, 1} * b);
+	return o;
+}
+template<typename T1, typename T2, typename TR>
 inline Rect<TR> operator/(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o{};
+	Rect<TR> o;
 	o.A = a.A / b.A;
 	o.B = a.B / b.B;
 	return o;
