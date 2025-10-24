@@ -75,6 +75,9 @@ template <typename T1, typename T2>	Rect<T1>& operator	/=	(Rect<T1>& a, const Re
 
 STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, T2, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 
+template<Field T>
+bool Collide(const Rect<T>& a, const Rect<T>& b) noexcept;
+
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T> std::ostream& operator <<(std::ostream& stream, const Rect<T>& v);
 #endif
@@ -169,6 +172,11 @@ inline std::string to_string(const Rect<T>& v) {
 	return result;
 }
 #endif
+
+template<Field T>
+inline bool Collide(const Rect<T>& a, const Rect<T>& b) noexcept {
+	return (a.left < b.right) && (a.right > b.left) && (a.top < b.bottom) && (a.bottom > b.top);
+}
 
 STAMP_MATH_NAMESPACE_END
 

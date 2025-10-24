@@ -293,16 +293,16 @@ inline Matrix<T, Rows, Cols> operator-(const Matrix<T, Rows, Cols>& a) noexcept 
 	}
 	return result;
 }
-template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>> 
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR> 
 inline Vector<TR, Rows> operator *(const Matrix<T1, Rows, Cols>& a, const Vector<T2, Cols>& b) noexcept {
 	Matrix<T2, Cols, 1> B{ b };
 	Matrix<TR, Rows, 1> result = a * B;
 	return result.v;
 }
-template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>
+template<size_t Rows, size_t Cols, typename T1, typename T2, typename TR>
 inline Vector<TR, Cols> operator *(const Vector<T2, Rows>& a, const Matrix<T1, Rows, Cols>& b) noexcept {
-	Matrix<T1, 1, Q> B{ b };
-	Matrix<TR, 1, Q> result = B * a;
+	Matrix<T1, 1, Rows> B{ b };
+	Matrix<TR, 1, Cols> result = B * a;
 	return result.v;
 }
 template<size_t Q, typename T1, typename T2>
