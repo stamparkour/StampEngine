@@ -22,10 +22,10 @@ using namespace stamp;
 using namespace std;
 
 struct RectTransform {
-	Vector2f alignment;
-	Vector2f alignmentOffset;
-	Vector2f offset;
-	Vector2f size;
+	Vector2f alignment{ 0,0 };
+	Vector2f alignmentOffset{ 0,0 };
+	Vector2f offset{ 0,0 };
+	Vector2f size{ 100,100 };
 	Vector2f parentSize;
 	Vector2f parentOffset;
 
@@ -53,6 +53,9 @@ int StampEngineInit(int argv, char* argc[]) {
 
 	Keyboard key(0);
 
+	RectTransform windowTransform{};
+	windowTransform.ParentRect(myWindow->ParentRect());
+
 	while (myWindow.get_readonly_unsafe()->IsAlive()) {
 		Sleep(2);
 
@@ -60,8 +63,9 @@ int StampEngineInit(int argv, char* argc[]) {
 		
 		if (key.ButtonDown(scancodeUS::W)) {
 			std::cout << "Hell" << std::endl;
+			windowTransform.offset.y -= 1.0f;
 		}
-		win->Rect({ 100,100,200,200 });
+		win->Rect(windowTransform.Rect());
 	}
 
 	myWindow.get_readonly_unsafe()->WindowClosePromise().wait();
