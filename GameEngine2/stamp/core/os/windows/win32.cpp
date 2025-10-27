@@ -227,8 +227,8 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			winData->visibility = window::visibility::Maximized;
 			winData->SetBorderlessMaximized();
 		}
-		else if (!active && winData->visibility == window::visibility::Maximized && winData->displayMode == window::displaymode::BorderlessFullscreen) {
-			winData->visibility = window::visibility::Minimized;
+		else if (active && winData->visibility == window::visibility::BorderlessMaximized) {
+			winData->visibility = window::visibility::BorderlessMinimized;
 			ShowWindow(hWnd, SW_MINIMIZE);
 		}
 	} return 0;
@@ -411,9 +411,9 @@ Window::~Window() {
 	if (!this->windowData) return;
 	STAMP_GRAPHICS_NAMESPACE::Window_internal* winData = this->windowData;
 	if (windowData->isAlive) {
-		Close();
+		winData->isAlive = false;
+		::DestroyWindow(winData->hWnd);
 	}
-	this->WindowClosePromise().wait();
 	this->windowData = nullptr;
 	delete winData;
 }
@@ -428,10 +428,10 @@ void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
 STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;
 }
-STAMP_MATH_NAMESPACE::Recti Window::ParentRect() const noexcept {
+STAMP_MATH_NAMESPACE::Recti Window::WorkArea() const noexcept {
 	return windowData->parentWorkAreaRect;
 }
-STAMP_MATH_NAMESPACE::Recti Window::MonitorRect() const noexcept {
+STAMP_MATH_NAMESPACE::Recti Window::ScreenArea() const noexcept {
 	return windowData->parentRect;
 }
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
@@ -467,8 +467,22 @@ STAMP_MATH_NAMESPACE::Recti Window::ClientRectOffset() const noexcept {
 }
 void Window::Visibility(window::visibility_t visibility) noexcept {
 	if (visibility == windowData->visibility) return;
-	if (visibility == window::visibility::Visible && DisplayMode() == window::displaymode::BorderlessFullscreen) visibility = window::visibility::Maximized;
+	bool prevIsBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(windowData->visibility);
+	bool isBorderless = stamp::graphics::window::visibility::IsBorderlessVisibility(visibility);
+
+	auto previousVisibility = windowData->visibility;
 	windowData->visibility = visibility;
+
+	if (isBorderless && !prevIsBorderless) {
+		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+	}
+	else if (!isBorderless && prevIsBorderless) {
+		SetWindowLongPtrW(windowData->hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+	}
+
+	if (previousVisibility == window::visibility::BorderlessMaximized) {
+		SetWindowPos(windowData->hWnd, HWND_NOTOPMOST, windowData->previousRect.A.x, windowData->previousRect.A.y, windowData->previousRect.B.x - windowData->previousRect.A.x, windowData->previousRect.B.y - windowData->previousRect.A.y, SWP_NOACTIVATE);
+	}
 
 	switch (visibility) {
 	case window::visibility::Hidden: {
@@ -479,6 +493,9 @@ void Window::Visibility(window::visibility_t visibility) noexcept {
 	} break;
 	case window::visibility::Minimized: {
 		if (!IsIconic(windowData->hWnd)) ShowWindow(windowData->hWnd, SW_MINIMIZE);
+	} break;
+	case window::visibility::BorderlessMaximized: {
+		SetWindowPos(windowData->hWnd, HWND_TOPMOST, windowData->parentRect.A.x, windowData->parentRect.A.y, windowData->parentRect.B.x - windowData->parentRect.A.x, windowData->parentRect.B.y - windowData->parentRect.A.y, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	} break;
 	case window::visibility::Maximized: {
 		if (DisplayMode() == window::displaymode::BorderlessFullscreen) {

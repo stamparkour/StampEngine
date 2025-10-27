@@ -33,8 +33,6 @@ STAMP_MATH_NAMESPACE_BEGIN
 template<Field T>
 using alignment_t = Vector2<T>;
 
-using alignmentf = alignment_t<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>;
-
 namespace alignment {
 	template<Field T>
 	inline const auto TopLeft = alignment_t<T>{ -1, 1 };
@@ -57,13 +55,14 @@ namespace alignment {
 };
 
 template<Field T>
-Matrix3<T> AlignmentMatrix(const alignment_t<T>& align, const alignment_t<T>& alignOffset, const Vector2<T>& offset, const Vector2<T>& scale, const Vector2<T>& scaleParent) {
+Matrix3<T> AlignmentMatrix(const alignment_t<T>& align, const alignment_t<T>& alignOffset, const Vector2<T>& offset, const Vector2<T>& scale, const Vector2<T>& scaleParent = {1, 1}) {
 	return Matrix3<T>{
 		scale.x / scaleParent.x, 0, align.x + (offset.x * 2 - alignOffset.x * scale.x) / scaleParent.x,
 		0, scale.y / scaleParent.y, align.y + (offset.y * 2 - alignOffset.y * scale.y) / scaleParent.y,
 		0, 0, 1
 	};
 }
+
 //pivot alignment
 //offset from alignment
 //left right up down sizes

@@ -82,7 +82,7 @@ namespace window {
 	};
 }
 
-class Window : public STAMP_NAMESPACE::enable_threadsafe_from_this<Window> {
+class Window : STAMP_NAMESPACE::enable_threadsafe_from_this<Window> {
 	friend struct Window_internal;
 	template<typename T, typename... Args> friend stamp::threadsafe_ptr<T> stamp::make_threadsafe(Args&&... args);
 private:
@@ -104,8 +104,8 @@ public:
 	void Title(const STAMP_NAMESPACE::sstring& title) noexcept;
 	STAMP_NAMESPACE::sstring Title() const noexcept;
 
-	STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept;
-	STAMP_MATH_NAMESPACE::Recti MonitorRect() const noexcept;
+	STAMP_MATH_NAMESPACE::Recti WorkArea() const noexcept;
+	STAMP_MATH_NAMESPACE::Recti ScreenArea() const noexcept;
 
 	void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
 	STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
@@ -131,7 +131,6 @@ public:
 
 	void* GetFramebuffer() const;
 };
-
 
 STAMP_GRAPHICS_NAMESPACE_END
 

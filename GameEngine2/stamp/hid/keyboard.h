@@ -169,7 +169,7 @@ namespace scancodeUS {
 	};
 }
 
-class Keyboard : public IHumanInterfaceDevice {
+class Keyboard final : public IHumanInterfaceDevice {
 	friend class KeyboardCharacterBuffer;
 	friend class Keyboard_internal;
 private:
