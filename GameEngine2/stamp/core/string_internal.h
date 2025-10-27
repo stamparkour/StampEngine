@@ -43,19 +43,62 @@ size_t to_utf16(char16_t* buffer, size_t length, char32_t str);
 char32_t to_utf32(const char8_t* buffer, size_t length);
 char32_t to_utf32(const char16_t* buffer, size_t length);
 
+std::u8string to_utf8(const std::string& str);
 std::u8string to_utf8(const std::u16string& str);
 std::u8string to_utf8(const std::u32string& str);
+std::u16string to_utf16(const std::string& str);
 std::u16string to_utf16(const std::u8string& str);
 std::u16string to_utf16(const std::u32string& str);
+std::u32string to_utf32(const std::string& str);
 std::u32string to_utf32(const std::u8string& str);
 std::u32string to_utf32(const std::u16string& str);
 
+std::string to_utf8_s(const std::u8string& str);
 std::string to_utf8_s(const std::u16string& str);
 std::string to_utf8_s(const std::u32string& str);
+
+template<typename T> std::u8string to_u8string(const T&);
+template<typename T> std::u16string to_u16string(const T&);
+template<typename T> std::u32string to_u32string(const T&);
+template<typename T> sstring to_sstring(const T&);
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 std::ostream& operator <<(std::ostream& stream, const sstring& v);
 #endif
+
+//definition
+
+template<typename T>
+inline std::u8string to_u8string(const T& v) {
+	std::string str = std::to_string(v);
+	return to_utf8(str);
+}
+template<typename T>
+inline std::u16string to_u16string(const T& v) {
+	std::string str = std::to_string(v);
+	return to_utf16(str);
+}
+template<typename T>
+inline std::u32string to_u32string(const T& v) {
+	std::string str = std::to_string(v);
+	return to_utf32(str);
+}
+template<typename T> 
+inline sstring to_sstring(const T& v) {
+	std::string str = std::to_string(v);
+	if constexpr (std::is_same_v<stamp_char, char8_t>) {
+		return to_utf8(str);
+	}
+	else if constexpr (std::is_same_v<stamp_char, char16_t>) {
+		return to_utf16(str);
+	}
+	else if constexpr (std::is_same_v<stamp_char, char32_t>) {
+		return to_utf32(str);
+	}
+	else {
+		static_assert(false, "Unsupported stamp_char type");
+	}
+}
 
 STAMP_NAMESPACE_END
 

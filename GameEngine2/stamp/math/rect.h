@@ -55,7 +55,7 @@ struct Rect {
 
 	Rect() : A(), B() {}
 	Rect(T v) : A(v), B(v) {}
-	Rect(Vector2<T> A) : A(A), B() {}
+	Rect(Vector2<T> A) : A(A), B(A) {}
 	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
 	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({right, bottom }) {}
 
@@ -73,6 +73,7 @@ template <typename T1, typename T2>	Rect<T1>& operator	-=	(Rect<T1>& a, const Re
 template <typename T1, typename T2>	Rect<T1>& operator	*=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 template <typename T1, typename T2>	Rect<T1>& operator	/=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
 
+STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, Vector2<T2>, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, T2, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 
 template<Field T>

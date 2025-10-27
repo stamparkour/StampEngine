@@ -419,11 +419,11 @@ Window::~Window() {
 }
 
 void Window::Title(const STAMP_NAMESPACE::sstring& title) noexcept {
+	if (windowData->title == title) return;
 	windowData->title = title;
-	//if (this->windowData && this->windowData->hWnd) {
-	//	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(title);
-	//	SetWindowTextW(this->windowData->hWnd, (LPCWSTR)wtitle.c_str());
-	//}
+
+	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(title);
+	SetWindowTextW(windowData->hWnd, (LPCWSTR)wtitle.c_str());
 }
 STAMP_NAMESPACE::sstring Window::Title() const noexcept {
 	return windowData->title;

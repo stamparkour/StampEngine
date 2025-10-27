@@ -133,6 +133,9 @@ char32_t STAMP_NAMESPACE::to_utf32(const char16_t* buffer, size_t length) {
 	return buffer[0];
 }
 
+std::u8string STAMP_NAMESPACE::to_utf8(const std::string& str) {
+	return std::u8string(str.begin(), str.end());
+}
 std::u8string STAMP_NAMESPACE::to_utf8(const std::u16string& str) {
 	char8_t buffer[4];
 	std::u8string result{};
@@ -154,6 +157,9 @@ std::u8string STAMP_NAMESPACE::to_utf8(const std::u32string& str) {
 		i += c;
 	}
 	return result;
+}
+std::u16string STAMP_NAMESPACE::to_utf16(const std::string& str) {
+	return to_utf16(to_utf8(str));
 }
 std::u16string STAMP_NAMESPACE::to_utf16(const std::u8string& str) {
 	char16_t buffer[2];
@@ -177,6 +183,10 @@ std::u16string STAMP_NAMESPACE::to_utf16(const std::u32string& str) {
 	}
 	return result;
 }
+
+std::u32string STAMP_NAMESPACE::to_utf32(const std::string& str) {
+	return to_utf32(to_utf8(str));
+}
 std::u32string STAMP_NAMESPACE::to_utf32(const std::u8string& str) {
 	std::u32string result{};
 	for (size_t i = 0; i < str.size();) {
@@ -194,6 +204,10 @@ std::u32string STAMP_NAMESPACE::to_utf32(const std::u16string& str) {
 	return result;
 }
 
+
+std::string STAMP_NAMESPACE::to_utf8_s(const std::u8string& str) {
+	return std::string(str.begin(), str.end());
+}
 std::string STAMP_NAMESPACE::to_utf8_s(const std::u16string& str) {
 	std::u8string u8 = to_utf8(str);
 	return std::string(u8.begin(), u8.end());
