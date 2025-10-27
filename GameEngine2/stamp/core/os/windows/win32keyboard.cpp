@@ -27,7 +27,7 @@
 STAMP_HID_NAMESPACE_BEGIN
 
 struct Keyboard_internal {
-	STAMP_HID_NAMESPACE::GenericHumanInterfaceDevice controller{ 512 };
+	STAMP_HID_NAMESPACE::GenericHumanInterfaceDevice controller{ 0x300 };
 	bool exists = false;
 	HANDLE handle = 0;
 
@@ -86,8 +86,8 @@ int WinKeyboardRawInput(RAWINPUT* rawInput) {
 	bool e0 = flags & RI_KEY_E0;
 	bool e1 = flags & RI_KEY_E1;
 
-	if (e0) scanCode |= 0xe000;
-	if (e1) scanCode |= 0xe100;
+	if (e0) scanCode |= 0x100;
+	if (e1) scanCode |= 0x200;
 
 	auto ki = keyboardMap.find(handle);
 	if (ki != keyboardMap.end()) {

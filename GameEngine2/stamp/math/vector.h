@@ -85,8 +85,8 @@ struct Vector final : public Vector_Base<Vector<T, D>, T, D> {
 	constexpr static size_t dimensions = D;
 
 	T V[D] = {};
-	constexpr Vector() noexcept {}
-	constexpr Vector(T x) noexcept {
+	Vector() noexcept {}
+	Vector(T x) noexcept {
 		for (int i = 0; i < dimensions; i++) V[i] = x;
 	}
 };
@@ -103,9 +103,9 @@ struct Vector<T, 2> final : public Vector_Base<Vector<T, 2>, T, 2> {
 		struct { T x, y; };
 	};
 
-	constexpr Vector() noexcept {}
-	constexpr Vector(T x) noexcept : x(x), y(x) {}
-	constexpr Vector(T x, T y)	noexcept : x(x), y(y) {}
+	Vector() noexcept {}
+	Vector(T x) noexcept : x(x), y(x) {}
+	Vector(T x, T y)	noexcept : x(x), y(y) {}
 
 	const static Vector2<T> UNIT;
 	const static Vector2<T> UP;
@@ -123,11 +123,11 @@ struct Vector<T, 3> final : public Vector_Base<Vector<T, 3>, T, 3> {
 		struct { T x, y, z; };
 	};
 
-	constexpr Vector() noexcept {}
-	constexpr Vector(T x) noexcept : x(x), y(x), z(x) {}
-	constexpr Vector(T x, T y, T z)				noexcept : x(x),	y(y),	z(z) {}
-	constexpr Vector(const Vector2<T>& a, T z)	noexcept : x(a.x),	y(a.y),	z(z) {}
-	constexpr Vector(T x, const Vector2<T>& a)	noexcept : x(x),	y(a.x),	z(a.y) {}
+	Vector() noexcept {}
+	Vector(T x) noexcept : x(x), y(x), z(x) {}
+	Vector(T x, T y, T z)				noexcept : x(x),	y(y),	z(z) {}
+	Vector(const Vector2<T>& a, T z)	noexcept : x(a.x),	y(a.y),	z(z) {}
+	Vector(T x, const Vector2<T>& a)	noexcept : x(x),	y(a.x),	z(a.y) {}
 
 	const static Vector3<T> UNIT;
 	const static Vector3<T> UP;
@@ -147,16 +147,16 @@ struct Vector<T, 4> final : public Vector_Base<Vector<T, 4>, T, 4> {
 		struct { T x, y, z, w; };
 	};
 
-	constexpr Vector() noexcept {}
-	constexpr Vector(T x) noexcept : x(x), y(x), z(x), w(x) {}
-	constexpr Vector(T x, T y)									noexcept :	x(x),	y(y),	z(x),	w(y) {}
-	constexpr Vector(T x, T y, T z, T w)						noexcept :	x(x),	y(y),	z(z),	w(w) {}
-	constexpr Vector(const Vector2<T>& a, T z, T w)				noexcept :	x(a.x),	y(a.y),	z(z),	w(w) {}
-	constexpr Vector(T x, const Vector2<T>& a, T w)				noexcept :	x(x),	y(a.x),	z(a.y), w(w) {}
-	constexpr Vector(T x, T y, const Vector2<T>& a)				noexcept :	x(x),	y(y),	z(a.x),	w(a.y) {}
-	constexpr Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept :	x(a.x),	y(a.y), z(b.x), w(b.y) {}
-	constexpr Vector(const Vector3<T>& a, T w)					noexcept :	x(a.x),	y(a.y),	z(a.z),	w(w) {}
-	constexpr Vector(T x, const Vector3<T>& a)					noexcept :	x(x),	y(a.x),	z(a.y),	w(a.z) {}
+	Vector() noexcept {}
+	Vector(T x) noexcept : x(x), y(x), z(x), w(x) {}
+	Vector(T x, T y)									noexcept :	x(x),	y(y),	z(x),	w(y) {}
+	Vector(T x, T y, T z, T w)						noexcept :	x(x),	y(y),	z(z),	w(w) {}
+	Vector(const Vector2<T>& a, T z, T w)				noexcept :	x(a.x),	y(a.y),	z(z),	w(w) {}
+	Vector(T x, const Vector2<T>& a, T w)				noexcept :	x(x),	y(a.x),	z(a.y), w(w) {}
+	Vector(T x, T y, const Vector2<T>& a)				noexcept :	x(x),	y(y),	z(a.x),	w(a.y) {}
+	Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept :	x(a.x),	y(a.y), z(b.x), w(b.y) {}
+	Vector(const Vector3<T>& a, T w)					noexcept :	x(a.x),	y(a.y),	z(a.z),	w(w) {}
+	Vector(T x, const Vector3<T>& a)					noexcept :	x(x),	y(a.x),	z(a.y),	w(a.z) {}
 
 	const static Vector4<T> UNIT;
 	const static Vector4<T> UP;

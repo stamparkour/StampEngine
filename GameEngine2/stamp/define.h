@@ -104,6 +104,8 @@
 
 #define COMMA ,
 
+#define STAMP_DESCRIPTION_STRING "Stamp Engine " STAMP_VERSION " [" STAMP_PLATFORM_STRING " - " STAMP_COMPILER_STRING "]"
+
 #endif
 
 //optional headers

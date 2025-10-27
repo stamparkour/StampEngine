@@ -37,30 +37,30 @@ using alignmentf = alignment_t<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>;
 
 namespace alignment {
 	template<Field T>
-	constexpr auto TopLeft = alignment_t<T>{ -1, 1 };
+	inline const auto TopLeft = alignment_t<T>{ -1, 1 };
 	template<Field T>
-	constexpr auto Top = alignment_t<T>{ 0, 1 };
+	inline const auto Top = alignment_t<T>{ 0, 1 };
 	template<Field T>
-	constexpr auto TopRight = alignment_t<T>{ 1, 1 };
+	inline const auto TopRight = alignment_t<T>{ 1, 1 };
 	template<Field T>
-	constexpr auto Left = alignment_t<T>{ -1, 0 };
+	inline const auto Left = alignment_t<T>{ -1, 0 };
 	template<Field T>
-	constexpr auto Center = alignment_t<T>{ 0, 0 };
+	inline const auto Center = alignment_t<T>{ 0, 0 };
 	template<Field T>
-	constexpr auto Right = alignment_t<T>{ 1, 0 };
+	inline const auto Right = alignment_t<T>{ 1, 0 };
 	template<Field T>
-	constexpr auto BottomLeft = alignment_t<T>{ -1, -1 };
+	inline const auto BottomLeft = alignment_t<T>{ -1, -1 };
 	template<Field T>
-	constexpr auto Bottom = alignment_t<T>{ 0, -1 };
+	inline const auto Bottom = alignment_t<T>{ 0, -1 };
 	template<Field T>
-	constexpr auto BottomRight = alignment_t<T>{ 1, -1 };
+	inline const auto BottomRight = alignment_t<T>{ 1, -1 };
 };
 
 template<Field T>
 Matrix3<T> AlignmentMatrix(const alignment_t<T>& align, const alignment_t<T>& alignOffset, const Vector2<T>& offset, const Vector2<T>& scale, const Vector2<T>& scaleParent) {
 	return Matrix3<T>{
-		scale.x / scaleParent.x, 0, align.x + (offset.x - alignOffset.x * scale.x) / scaleParent.x,
-		0, scale.y / scaleParent.y, align.y + (offset.y - alignOffset.y * scale.y) / scaleParent.y,
+		scale.x / scaleParent.x, 0, align.x + (offset.x * 2 - alignOffset.x * scale.x) / scaleParent.x,
+		0, scale.y / scaleParent.y, align.y + (offset.y * 2 - alignOffset.y * scale.y) / scaleParent.y,
 		0, 0, 1
 	};
 }

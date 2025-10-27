@@ -32,67 +32,42 @@ STAMP_GRAPHICS_NAMESPACE_BEGIN
 // todo: create templated threads for use with specialized windows - like main render loop, or dialog box
 
 namespace window {
-	using visibility_t = int;
+	using displaymode_t = size_t;
+	using visibility_t = size_t;
 	namespace visibility {
 		enum : visibility_t {
-			Hidden,
 			Visible,
+			Hidden,
 			Maximized,
-			Minimized,
-			Borderless,
-			BorderlessMaximized,
-			BorderlessMinimized,
-			//Fullscreen,
+			Minimized
 		};
 
 		constexpr const char* to_string(visibility_t v) {
 			switch (v) {
-			case Hidden: return "Hidden";
 			case Visible: return "Visible";
+			case Hidden: return "Hidden";
 			case Maximized: return "Maximized";
 			case Minimized: return "Minimized";
-			case Borderless: return "Borderless";
-			case BorderlessMaximized: return "BorderlessMaximized";
-			case BorderlessMinimized: return "BorderlessMinimized";
-			//case Fullscreen: return "Fullscreen";
 			default: return "Unknown";
 			}
 		}
+	}
+	namespace displaymode {
+		enum : displaymode_t {
+			Normal,
+			BorderlessFullscreen,
+			Borderless,
+			Popup,
+			Toolbox,
+			//Fullscreen,
+		};
 
-		constexpr const bool IsBorderlessVisibility(visibility_t v) {
+		constexpr const char* to_string(displaymode_t v) {
 			switch (v) {
-			case Borderless:
-			case BorderlessMaximized:
-			case BorderlessMinimized:
-				return true;
-			default: return false;
-			}
-		}
-
-		constexpr const bool IsNormalVisibility(visibility_t v) {
-			switch (v) {
-			case Borderless:
-			case Visible:
-				return true;
-			default: return false;
-			}
-		}
-
-		constexpr const bool IsMaximizedVisibility(visibility_t v) {
-			switch (v) {
-			case BorderlessMaximized:
-			case Maximized:
-				return true;
-			default: return false;
-			}
-		}
-
-		constexpr const bool IsMinimizedVisibility(visibility_t v) {
-			switch (v) {
-			case Minimized:
-			case BorderlessMinimized:
-				return true;
-			default: return false;
+			case Normal: return "Normal";
+			case Borderless: return "Borderless";
+			case Popup: return "Popup";
+			default: return "Unknown";
 			}
 		}
 	}
@@ -102,6 +77,7 @@ namespace window {
 		STAMP_MATH_NAMESPACE::Recti rect = {};
 		STAMP_MATH_NAMESPACE::Recti rectBound = {};
 		visibility_t visibility = visibility::Visible;
+		displaymode_t displaymode = displaymode::Normal;
 		bool terminateApplicationOnClose = false;
 	};
 }
@@ -137,8 +113,14 @@ public:
 	void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
 	STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
 
+	STAMP_MATH_NAMESPACE::Recti ClientRectOffset() const noexcept;
+
 	void Visibility(window::visibility_t visibility) noexcept;
 	window::visibility_t Visibility() const noexcept;
+
+	void DisplayMode(window::displaymode_t displaymode) noexcept;
+	window::displaymode_t DisplayMode() const noexcept;
+
 
 	void Focus(bool focus) noexcept;
 	bool Focus() const noexcept;
