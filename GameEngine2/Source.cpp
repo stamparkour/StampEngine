@@ -55,7 +55,7 @@ public:
 		window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
 			.title = title,
 			.visibility = stamp::graphics::window::visibility::Visible,
-			.displaymode = stamp::graphics::window::displaymode::Toolbox,
+			.displaymode = stamp::graphics::window::displaymode::Borderless,
 			}
 		);
 
@@ -141,25 +141,25 @@ int StampEngineInit(int argv, char* argc[]) {
 			ballVelocity.y = -ballVelocity.y;
 			ball.transform.offset.y += ballVelocity.y;
 		}
-		if (RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
+		if (player1.IsAlive() && RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
 			ballVelocity.y = -ballVelocity.y + p1Vel * 0.2;
 			ball.transform.offset.y += 2 * ballVelocity.y;
 		}
-		if (RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
+		if (player2.IsAlive() && RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
 			ballVelocity.y = -ballVelocity.y + p2Vel * 0.2;
 			ball.transform.offset.y += 2 * ballVelocity.y;
 		}
 
 		//x velocity stuff
 		ball.transform.offset.x += ballVelocity.x;
-		if (RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
+		if (player1.IsAlive() && RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
 			float relativeOffset = ball.transform.Center().y - player1.transform.Center().y;
 			ballVelocity.x = -ballVelocity.x;
 			ballVelocity.y = p1Vel * 2 + relativeOffset * 0.2;
 			ball.transform.offset.x += 2 * ballVelocity.x;
 			//ball.transform.offset.y += ballVelocity.y;
 		}
-		if (RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
+		if (player2.IsAlive() && RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
 			float relativeOffset = ball.transform.Center().y - player2.transform.Center().y;
 			ballVelocity.x = -ballVelocity.x;
 			ballVelocity.y = p2Vel * 2 + relativeOffset * 0.2;
@@ -170,13 +170,13 @@ int StampEngineInit(int argv, char* argc[]) {
 			ballVelocity.y = 0;
 			ball.transform.offset = Vector2i{ center.x - 50, center.y - 50 };
 			p2Score++;
-			//player2.SetTitle(U"P2 " + to_sstring(p1Score));
+			player2.SetTitle(U"P2 S:" + to_sstring(p2Score));
 		}
 		if (ball.transform.offset.x + ball.transform.size.x >= ball.ParentRect().right) {
 			ballVelocity.y = 0;
 			ball.transform.offset = Vector2i{ center.x - 50, center.y - 50 };
 			p1Score++;
-			//player1.SetTitle(U"P1 " + to_sstring(p1Score));
+			player1.SetTitle(U"P1 S:" + to_sstring(p1Score));
 		}
 
 		ballVelocity.y = std::clamp(ballVelocity.y, -15.0f, 15.0f);

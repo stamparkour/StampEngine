@@ -624,7 +624,7 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 
 	MAKE_THREADSAFE* mem = 0;
 	mem = (MAKE_THREADSAFE*)::operator new(sizeof(MAKE_THREADSAFE), std::align_val_t{ alignof(MAKE_THREADSAFE) });
-	new (&(mem->value)) T(std::forward<Args>(args)...);
+	new (&(mem->value)) T((std::forward<Args>(args))...);
 	new (&(mem->control)) stamp_ptr_internal_control<T>(strongDeleter, weakDeleter);
 
 	if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
@@ -649,7 +649,7 @@ threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 template<typename T>
 class enable_threadsafe_from_this {
 	template<typename U, typename... Args>
-	friend threadsafe_ptr<U> make_threadsafe<U, Args>(Args&&... args);
+	friend threadsafe_ptr<U> make_threadsafe<U, Args...>(Args&&... args);
 	friend class threadsafe_ptr<T>;
 
 	stamp_ptr_internal_control<T>* control = nullptr;
@@ -658,7 +658,7 @@ protected:
 public:
 
 	threadsafe_ptr<T> threadsafe_from_this() {
-		return threadsafe_ptr<T>(this);
+		return threadsafe_ptr<T>((T*)this, control);
 	}
 };
 

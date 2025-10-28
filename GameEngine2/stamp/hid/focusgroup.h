@@ -20,24 +20,31 @@
 
 #include <atomic>
 #include <stamp/hid/define.h>
+#include <vector>
 
-class InputGroup {
+STAMP_HID_NAMESPACE_BEGIN
+
+class IFocusable {
+	std::vector<class FocusGroup*> focusGroups{};
+protected:
+	void OnFocus(bool focus);
+
+	IFocusable() {}
+	~IFocusable() {
+
+	}
+public:
+};
+
+class FocusGroup {
+	std::vector<IFocusable*> focusables{};
 	std::atomic_int count; 
 public:
-	void Connect() {
-		count++;
-	}
-	void Disconnect() {
-		count--;
-	}
-
 	bool IsEnabled() {
-		return count;
+		return count > 0;
 	}
 };
 
-class InputGroupListener {
-
-};
+STAMP_HID_NAMESPACE_END
 
 #endif

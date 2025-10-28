@@ -121,7 +121,6 @@ public:
 	void DisplayMode(window::displaymode_t displaymode) noexcept;
 	window::displaymode_t DisplayMode() const noexcept;
 
-
 	void Focus(bool focus) noexcept;
 	bool Focus() const noexcept;
 

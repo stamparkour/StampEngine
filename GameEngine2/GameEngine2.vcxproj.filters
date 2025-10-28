@@ -1684,7 +1684,7 @@
     <ClInclude Include="gl\eglew.h">
       <Filter>libraries\gl</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\hid\inputgroup.h">
+    <ClInclude Include="stamp\hid\focusgroup.h">
       <Filter>libraries\stamp\hid</Filter>
     </ClInclude>
     <ClInclude Include="stamp\math\alignment.h">

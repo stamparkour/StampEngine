@@ -362,7 +362,7 @@ void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 		WS_EX_APPWINDOW,					// Optional window styles.
 		(LPCWSTR)classAtom,					// Window class
 		(LPCWSTR)wtitle.c_str(),			// Window text
-		WS_OVERLAPPEDWINDOW | WS_VISIBLE,	// Window style
+		WS_OVERLAPPEDWINDOW,				// Window style
 
 		// Size and position
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,

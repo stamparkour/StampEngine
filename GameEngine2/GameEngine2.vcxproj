@@ -98,19 +98,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir);$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <Microsoft-GoogleTest-Disable-gtest_main>
     </Microsoft-GoogleTest-Disable-gtest_main>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
-    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir);$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <Microsoft-GoogleTest-Disable-gtest_main />
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir);$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -735,7 +735,7 @@
     <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\event.h" />
-    <ClInclude Include="stamp\hid\inputgroup.h" />
+    <ClInclude Include="stamp\hid\focusgroup.h" />
     <ClInclude Include="stamp\math\alignment.h" />
     <ClInclude Include="stamp\state.h" />
     <ClInclude Include="stamp\getset.h" />

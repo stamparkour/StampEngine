@@ -17,8 +17,8 @@
 
 using namespace STAMP_NAMESPACE;
 
-size_t STAMP_NAMESPACE::to_utf8(char8_t* buffer, size_t length1, const char16_t* str, size_t length2) {
-	char32_t codepoint = to_utf32(str, length2);
+size_t STAMP_NAMESPACE::to_utf8(char8_t* buffer, size_t length1, const char16_t* str, size_t length2, size_t* readCount) {
+	char32_t codepoint = to_utf32(str, length2, readCount);
 	return to_utf8(buffer, length1, codepoint);
 }
 size_t STAMP_NAMESPACE::to_utf8(char8_t* buffer, size_t length, char32_t str) {
@@ -69,8 +69,8 @@ size_t STAMP_NAMESPACE::to_utf8(char8_t* buffer, size_t length, char32_t str) {
 	buffer[2] = 0xBD;
 	return 3;
 }
-size_t STAMP_NAMESPACE::to_utf16(char16_t* buffer, size_t length1, const char8_t* str, size_t length2) {
-	char32_t codepoint = to_utf32(str, length2);
+size_t STAMP_NAMESPACE::to_utf16(char16_t* buffer, size_t length1, const char8_t* str, size_t length2, size_t* readCount) {
+	char32_t codepoint = to_utf32(str, length2, readCount);
 	return to_utf16(buffer, length1, codepoint);
 }
 size_t STAMP_NAMESPACE::to_utf16(char16_t* buffer, size_t length, char32_t str) {
@@ -99,37 +99,54 @@ size_t STAMP_NAMESPACE::to_utf16(char16_t* buffer, size_t length, char32_t str) 
 	buffer[0] = 0xFFFD; // Invalid code point
 	return 1;
 }
-char32_t STAMP_NAMESPACE::to_utf32(const char8_t* buffer, size_t length) {
+char32_t STAMP_NAMESPACE::to_utf32(const char8_t* buffer, size_t length, size_t* readCount) {
 	if (length < 1) return 0xFFFD; // Invalid input
 	if ((buffer[0] & 0x80) == 0) {
+		if (readCount) *readCount = 1;
 		return buffer[0];
 	}
-	if (length < 2) return 0xFFFD; // Invalid input
+	if (length < 2) {
+		if (readCount) *readCount = 1;
+		return 0xFFFD; // Invalid input
+	}
 	if ((buffer[0] & 0xE0) == 0xC0) {
+		if (readCount) *readCount = 2;
 		if ((buffer[1] & 0xC0) != 0x80) return 0xFFFD; // Invalid continuation byte
 		return buffer[0] << 6 | (buffer[1] & 0x3F);
 	}
-	if (length < 3) return 0xFFFD; // Invalid input
+	if (length < 3) {
+		if (readCount) *readCount = 2;
+		return 0xFFFD; // Invalid input
+	}
 	if ((buffer[0] & 0xF0) == 0xE0) {
+		if (readCount) *readCount = 3;
 		if ((buffer[1] & 0xC0) != 0x80 || (buffer[2] & 0xC0) != 0x80) return 0xFFFD; // Invalid continuation bytes
 		return buffer[0] << 12 | (buffer[1] & 0x3F) << 6 | (buffer[2] & 0x3F);
 	}
-	if (length < 4) return 0xFFFD; // Invalid input
+	if (length < 4) {
+		if (readCount) *readCount = 3;
+		return 0xFFFD; // Invalid input
+	}
 	if ((buffer[0] & 0xF8) == 0xF0) {
+		if (readCount) *readCount = 4;
 		if ((buffer[1] & 0xC0) != 0x80 || (buffer[2] & 0xC0) != 0x80 || (buffer[3] & 0xC0) != 0x80) return 0xFFFD; // Invalid continuation bytes
 		return buffer[0] << 18 | (buffer[1] & 0x3F) << 12 | (buffer[2] & 0x3F) << 6 | (buffer[3] & 0x3F);
 	}
-
+	if (readCount) *readCount = 4;
 	return 0xFFFD;
 }
-char32_t STAMP_NAMESPACE::to_utf32(const char16_t* buffer, size_t length) {
+char32_t STAMP_NAMESPACE::to_utf32(const char16_t* buffer, size_t length, size_t* readCount) {
 	if (length < 1) return 0xFFFD; // Invalid input
 	if ((buffer[0] & 0xFC00) == 0xD800) {
-		if (length < 2) return 0xFFFD; // Invalid input
+		if (length < 2) {
+			if (readCount) *readCount = 1;
+			return 0xFFFD; // Invalid input
+		}
+		if (readCount) *readCount = 2;
 		if ((buffer[1] & 0xFC00) != 0xDC00) return 0xFFFD; // Invalid surrogate pair
 		return buffer[0] << 10 | buffer[1] & 0x3FF | 0x10000;
 	}
-
+	if (readCount) *readCount = 1;
 	return buffer[0];
 }
 
@@ -141,9 +158,9 @@ std::u8string STAMP_NAMESPACE::to_utf8(const std::u16string& str) {
 	std::u8string result{};
 	for (size_t i = 0; i < str.size();) {
 		size_t r = str.size() - i;
-		size_t c = to_utf8(buffer, 4, str.c_str() + i, r);
+		size_t c = to_utf8(buffer, 4, str.c_str() + i, r, &r);
 		result += std::u8string(buffer, buffer + c);
-		i += c;
+		i += r;
 	}
 	return result;
 }
@@ -154,7 +171,7 @@ std::u8string STAMP_NAMESPACE::to_utf8(const std::u32string& str) {
 		size_t r = str.size() - i;
 		size_t c = to_utf8(buffer, 4, str[i]);
 		result += std::u8string(buffer, buffer + c);
-		i += c;
+		i++;
 	}
 	return result;
 }
@@ -166,9 +183,9 @@ std::u16string STAMP_NAMESPACE::to_utf16(const std::u8string& str) {
 	std::u16string result{};
 	for (size_t i = 0; i < str.size();) {
 		size_t r = str.size() - i;
-		size_t c = to_utf16(buffer, 2, str.c_str() + i, r);
+		size_t c = to_utf16(buffer, 2, str.c_str() + i, r, &r);
 		result += std::u16string(buffer, buffer + c);
-		i += c;
+		i += r;
 	}
 	return result;
 }
@@ -179,7 +196,7 @@ std::u16string STAMP_NAMESPACE::to_utf16(const std::u32string& str) {
 		size_t r = str.size() - i;
 		size_t c = to_utf16(buffer, 2, str[i]);
 		result += std::u16string(buffer, buffer + c);
-		i += c;
+		i++;
 	}
 	return result;
 }
@@ -191,7 +208,8 @@ std::u32string STAMP_NAMESPACE::to_utf32(const std::u8string& str) {
 	std::u32string result{};
 	for (size_t i = 0; i < str.size();) {
 		size_t r = str.size() - i;
-		result += to_utf32(str.c_str() + i, r);
+		result += to_utf32(str.c_str() + i, r, &r);
+		i += r;
 	}
 	return result;
 }
@@ -199,7 +217,8 @@ std::u32string STAMP_NAMESPACE::to_utf32(const std::u16string& str) {
 	std::u32string result{};
 	for (size_t i = 0; i < str.size();) {
 		size_t r = str.size() - i;
-		result += to_utf32(str.c_str() + i, r);
+		result += to_utf32(str.c_str() + i, r, &r);
+		i += r;
 	}
 	return result;
 }

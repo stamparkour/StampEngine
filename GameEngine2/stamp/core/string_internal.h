@@ -34,14 +34,14 @@ using sstring = std::basic_string<stamp_char>;
 /// <param name="length1">- size of buffer, recommended to be 4.</param>
 /// <param name="str">- input character to convert</param>
 /// <param name="length2">- size of input str, recommended to be 2.</param>
+/// <param name="readCount">- if non-null then is the output for number of characters read</param>
 /// <returns>if both buffer and length1 are 0, then it returns the required size of the buffer. Else it returns the number of characters written.</returns>
-
-size_t to_utf8(char8_t* buffer, size_t length1, const char16_t* str, size_t length2);
+size_t to_utf8(char8_t* buffer, size_t length1, const char16_t* str, size_t length2, size_t* readCount);
 size_t to_utf8(char8_t* buffer, size_t length, char32_t str);
-size_t to_utf16(char16_t* buffer, size_t length1, const char8_t* str, size_t length2);
+size_t to_utf16(char16_t* buffer, size_t length1, const char8_t* str, size_t length2, size_t* readCount);
 size_t to_utf16(char16_t* buffer, size_t length, char32_t str);
-char32_t to_utf32(const char8_t* buffer, size_t length);
-char32_t to_utf32(const char16_t* buffer, size_t length);
+char32_t to_utf32(const char8_t* buffer, size_t length, size_t* readCount);
+char32_t to_utf32(const char16_t* buffer, size_t length, size_t* readCount);
 
 std::u8string to_utf8(const std::string& str);
 std::u8string to_utf8(const std::u16string& str);
