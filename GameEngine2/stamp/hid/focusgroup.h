@@ -19,27 +19,74 @@
 // limitations under the License.
 
 #include <atomic>
+#include <set>
+#include <mutex>
 #include <stamp/hid/define.h>
-#include <vector>
 
 STAMP_HID_NAMESPACE_BEGIN
 
 class IFocusable {
-	std::vector<class FocusGroup*> focusGroups{};
+	friend class FocusGroup;
+
+	std::mutex focusMutex{};
+	std::set<class FocusGroup*> focusGroups{};
+	bool focused = false;
 protected:
 	void OnFocus(bool focus);
 
 	IFocusable() {}
+public:
 	~IFocusable() {
 
 	}
-public:
 };
 
 class FocusGroup {
-	std::vector<IFocusable*> focusables{};
-	std::atomic_int count; 
+	friend class IFocusable;
+
+	std::mutex focusMutex{};
+	std::set<IFocusable*> focusables{};
+	std::atomic_int count;
+ 
+	void Add(IFocusable* focusable) {
+		std::lock_guard<std::mutex> lock(focusMutex);
+		auto k = focusables.insert(focusable);
+		// only proceed if it was actually inserted
+		if (!k.second) return;
+		focusable->focusGroups.insert(this);
+		if (focusable->focused) count++;
+	}
+	void Delete() {
+		std::lock_guard<std::mutex> lock(focusMutex);
+		for (IFocusable* focusable : focusables) {
+			std::lock_guard<std::mutex> lock2(focusable->focusMutex);
+			focusable->focusGroups.erase(this);
+		}
+		focusables.clear();
+	}
 public:
+	FocusGroup() {}
+	FocusGroup(const FocusGroup& other) {
+
+	}
+	FocusGroup(FocusGroup&& other) noexcept {
+		std::lock_guard<std::mutex> lock(focusMutex);
+		std::lock_guard<std::mutex> lock2(other.focusMutex);
+		focusables = std::move(other.focusables);
+		count = other.count.load();
+		for (IFocusable* focusable : focusables) {
+			std::lock_guard<std::mutex> lock3(focusable->focusMutex);
+			focusable->focusGroups.erase(&other);
+			focusable->focusGroups.insert(this);
+		}
+		other.focusables.clear();
+		other.count = 0;
+	}
+
+	~FocusGroup() {
+		Delete();
+	}
+
 	bool IsEnabled() {
 		return count > 0;
 	}
