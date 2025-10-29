@@ -1693,6 +1693,18 @@
     <ClInclude Include="stamp\core\time.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\mesh.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\rawmesh.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\shader.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\define.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\script\test.lua">
