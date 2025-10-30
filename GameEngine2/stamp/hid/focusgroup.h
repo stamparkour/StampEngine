@@ -28,11 +28,25 @@ STAMP_HID_NAMESPACE_BEGIN
 class IFocusable {
 	friend class FocusGroup;
 
-	std::mutex focusMutex{};
+	mutable std::mutex focusMutex{};
 	std::set<class FocusGroup*> focusGroups{};
 	bool focused = false;
 protected:
-	void OnFocus(bool focus);
+	void OnFocus(bool focus) {
+		if (focused == focus) return;
+		focused = focus;
+
+		if(focused) {
+			for (FocusGroup* group : focusGroups) {
+				group->count++;
+			}
+		}
+		else {
+			for (FocusGroup* group : focusGroups) {
+				group->count--;
+			}
+		}
+	}
 
 	IFocusable() {}
 public:
@@ -44,16 +58,20 @@ public:
 class FocusGroup {
 	friend class IFocusable;
 
-	std::mutex focusMutex{};
+	mutable std::mutex focusMutex{};
 	std::set<IFocusable*> focusables{};
 	std::atomic_int count;
  
 	void Add(IFocusable* focusable) {
 		std::lock_guard<std::mutex> lock(focusMutex);
+		std::lock_guard<std::mutex> lock2(focusable->focusMutex);
+		Add_unsafe(focusable);
+	}
+	void Add_unsafe(IFocusable* focusable) {
+		focusable->focusGroups.insert(this);
 		auto k = focusables.insert(focusable);
 		// only proceed if it was actually inserted
 		if (!k.second) return;
-		focusable->focusGroups.insert(this);
 		if (focusable->focused) count++;
 	}
 	void Delete() {
@@ -67,20 +85,53 @@ class FocusGroup {
 public:
 	FocusGroup() {}
 	FocusGroup(const FocusGroup& other) {
-
+		std::lock_guard<std::mutex> lock(focusMutex);
+		std::lock_guard<std::mutex> lock2(other.focusMutex);
+		focusables = other.focusables;
+		for (IFocusable* focusable : other.focusables) {
+			std::lock_guard<std::mutex> lock3(focusable->focusMutex);
+			Add_unsafe(focusable);
+		}
 	}
 	FocusGroup(FocusGroup&& other) noexcept {
 		std::lock_guard<std::mutex> lock(focusMutex);
 		std::lock_guard<std::mutex> lock2(other.focusMutex);
 		focusables = std::move(other.focusables);
-		count = other.count.load();
 		for (IFocusable* focusable : focusables) {
 			std::lock_guard<std::mutex> lock3(focusable->focusMutex);
 			focusable->focusGroups.erase(&other);
-			focusable->focusGroups.insert(this);
+			Add_unsafe(focusable);
 		}
 		other.focusables.clear();
 		other.count = 0;
+	}
+	FocusGroup& operator =(const FocusGroup& other) {
+		if (this == &other) return *this;
+		Delete();
+		std::lock_guard<std::mutex> lock(focusMutex);
+		std::lock_guard<std::mutex> lock2(other.focusMutex);
+		focusables = other.focusables;
+		count = other.count.load();
+		for (IFocusable* focusable : other.focusables) {
+			std::lock_guard<std::mutex> lock3(focusable->focusMutex);
+			Add_unsafe(focusable);
+		}
+		return *this;
+	}
+	FocusGroup& operator =(FocusGroup&& other) noexcept {
+		using std::swap;
+		if (this == &other) return *this;
+
+		std::lock_guard<std::mutex> lock(focusMutex);
+		std::lock_guard<std::mutex> lock2(other.focusMutex);
+
+		focusables = std::move(other.focusables);
+		count.exchange(other.count);
+		for (IFocusable* focusable : focusables) {
+			std::lock_guard<std::mutex> lock3(focusable->focusMutex);
+			focusable->focusGroups.erase(&other);
+			Add_unsafe(focusable);
+		}
 	}
 
 	~FocusGroup() {
