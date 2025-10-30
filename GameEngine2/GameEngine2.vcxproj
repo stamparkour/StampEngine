@@ -735,6 +735,10 @@
     <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\event.h" />
+    <ClInclude Include="stamp\graphics\gl\define.h" />
+    <ClInclude Include="stamp\graphics\gl\mesh.h" />
+    <ClInclude Include="stamp\graphics\gl\rawmesh.h" />
+    <ClInclude Include="stamp\graphics\gl\shader.h" />
     <ClInclude Include="stamp\hid\focusgroup.h" />
     <ClInclude Include="stamp\math\alignment.h" />
     <ClInclude Include="stamp\state.h" />

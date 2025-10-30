@@ -96,7 +96,6 @@ protected:
 
 	Window(const window::CreationSettings& settings);
 public:
-	//should be protected but is testing
 	static stamp::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return stamp::make_threadsafe<Window>(settings); }
 
 	virtual ~Window();
@@ -128,7 +127,7 @@ public:
 	bool IsAlive() const noexcept;
 	std::future<void> WindowClosePromise() const noexcept;
 
-	void* GetFramebuffer() const;
+	void* Framebuffer();
 };
 
 

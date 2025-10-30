@@ -55,7 +55,7 @@ public:
 		window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
 			.title = title,
 			.visibility = stamp::graphics::window::visibility::Visible,
-			.displaymode = stamp::graphics::window::displaymode::Borderless,
+			.displaymode = stamp::graphics::window::displaymode::Popup,
 			}
 		);
 
