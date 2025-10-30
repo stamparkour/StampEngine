@@ -18,6 +18,7 @@
 
 #ifndef STAMP_GRAPHICS_DEFINE_H
 #include <utility>
+#include <gl/glew.h>
 #endif
 
 #include <stamp/define.h>

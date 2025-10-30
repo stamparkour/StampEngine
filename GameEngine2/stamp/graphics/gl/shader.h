@@ -20,6 +20,7 @@
 
 
 #include <stamp/graphics/gl/define.h>
+#include <string>
 #include <stamp/memory.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/vector.h>
@@ -36,66 +37,42 @@ namespace shader_type {
 		FragmentShader = 16,
 		ComputeShader = 32,
 	};
+
+	std::string to_definestring(shader_type_t type) {
+		switch(type) {
+		case VertexShader: return "VERTEX_SHADER";
+		case TessControlShader: return "TESS_CONTROL_SHADER";
+		case TessEvaluationShader: return "TESS_EVALUATION_SHADER";
+		case GeometryShader: return "GEOMETRY_SHADER";
+		case FragmentShader: return "FRAGMENT_SHADER";
+		case ComputeShader: return "COMPUTE_SHADER";
+		}
+		return "";
+	}
+	GLenum to_glenum(shader_type_t type) {
+		switch (type) {
+		case VertexShader: return GL_VERTEX_SHADER;
+		case TessControlShader: return GL_TESS_CONTROL_SHADER;
+		case TessEvaluationShader: return GL_TESS_EVALUATION_SHADER;
+		case GeometryShader: return GL_GEOMETRY_SHADER;
+		case FragmentShader: return GL_FRAGMENT_SHADER;
+		case ComputeShader: return GL_COMPUTE_SHADER;
+		}
+		return 0;
+	}
 };
 
-
-
-class ShaderProgramBase : public std::enable_threadsafe_from_this<ShaderProgramBase> {
-public:
-	
-	inline static const GLenum shaderTypeEnum[]{
-		GL_VERTEX_SHADER,  GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER, GL_COMPUTE_SHADER
-	};
-	inline static const std::string shaderDefineScript[]{
-		"VERTEX_SHADER", "TESS_CONTROL_SHADER", "TESS_EVALUATION_SHADER", "GEOMETRY_SHADER", "FRAGMENT_SHADER","COMPUTE_SHADER"
-	};
+class ShaderProgramBase : public STAMP_NAMESPACE::enable_threadsafe_from_this<class ShaderProgramBase> {
 private:
 	GLuint program = 0;
 	static inline thread_local GLuint currentProgram = 0;
 
-	static std::string ToLineNumberString(std::string str) {
-		std::string result{};
-		int line = 1;
-		bool newLine = true;
-		for (int i = 0; i < str.size(); i++) {
-			if (str[i] == '\n') {
-				result += '\n';
-				newLine = true;
-			}
-			else {
-				if (newLine) {
-					std::string lineStr = std::to_string(line);
-					result += std::string(max(4 - lineStr.length(), 0), ' ') + lineStr + ": ";
-					newLine = false;
-					line++;
-				}
-				result += str[i];
-			}
-		}
-		return result;
-	}
-
-	std::string parseInclude(std::string str) {
-		std::string result{};
-		std::regex includeRegex(R"#((?:^|[\n\r]+)#include[^\S\r\n]+"([^"]+)")#");
-		auto words_begin = std::sregex_iterator(str.begin(), str.end(), includeRegex);
-		auto words_end = std::sregex_iterator();
-
-		for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-		{
-			std::smatch match = *i;
-			auto path = match[0].str();
-			result = match.prefix().str();
-		}
-		return result;
-	}
-
-	GLenum ToShaderComp(std::string& version, std::string& progTxt, int index) {
+	GLenum ToShaderComp(std::string& version, std::string& progTxt, shader_type_t type) {
 		static GLint compiled = 0;
 		static GLchar message[1024]{};
 		static GLsizei log_length = 0;
-		GLuint comp = glCreateShader(shaderTypeEnum[index]);
-		std::string p = version + std::string("#define ") + shaderDefineScript[index] + "\n" + progTxt;
+		GLuint comp = glCreateShader(shader_type::to_glenum(type));
+		std::string p = version + std::string("#define ") + shader_type::to_definestring(type) + "\n" + progTxt;
 
 		const char* c = p.c_str();
 		glShaderSource(comp, 1, &c, 0);

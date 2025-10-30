@@ -783,6 +783,7 @@
     <None Include="Jolt\Physics\Body\MotionProperties.inl" />
     <None Include="packages.config" />
     <None Include="resources\script\test.lua" />
+    <None Include="stamp\debug,h" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Jolt\Jolt.natvis" />

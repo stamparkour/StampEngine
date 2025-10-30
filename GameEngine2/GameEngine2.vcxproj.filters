@@ -1759,6 +1759,9 @@
       <Filter>libraries\Jolt</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="stamp\debug,h">
+      <Filter>libraries\stamp</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Jolt\Jolt.natvis">
