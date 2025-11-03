@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <iostream>
-#include <stamp/core/string_internal.h>
+#include <stamp/core/string_extension.h>
 
 using namespace STAMP_NAMESPACE;
 

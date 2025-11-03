@@ -190,38 +190,38 @@ STAMP_MATH_NAMESPACE_BEGIN
 // Matrix Base Logic
 template<typename M, typename T, size_t Rows, size_t Cols>
 Matrix_Base<M, T, Rows, Cols>::operator const T* () const noexcept {
-	auto self = static_cast<const T*>(this);
+	auto self = static_cast<const M*>(this);
 	return &(self->m[0][0]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 Matrix_Base<M, T, Rows, Cols>::operator T* () noexcept {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	return &(self->m[0][0]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 const Vector<T, Rows>& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i) const noexcept {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	return (const Vector<T, Rows>&)(self->m[i][0]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 Vector<T, Rows>& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i) noexcept {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	return (Vector<T, Rows>&)(self->m[i][0]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 const T& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i, size_t j) const noexcept {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	return (const T&)(self->m[i][j]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 T& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i, size_t j) noexcept {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	return (T&)(self->m[i][j]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
 template<typename T1, size_t R1, size_t C1> 
 Matrix_Base<M, T, Rows, Cols>::operator Matrix<T1, R1, C1>() {
-	auto self = static_cast<T*>(this);
+	auto self = static_cast<M*>(this);
 	Matrix<T1, R1, C1> o;
 	for (size_t i = 0; i < R1; ++i)
 		for (size_t j = 0; j < C1; ++j)

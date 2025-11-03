@@ -1,8 +1,8 @@
-//stamp/core/string_internal.h
+//stamp/core/string_extension.h
 
 #pragma once
-#ifndef STAMP_CORE_STRING_INTERNAL_H
-#define STAMP_CORE_STRING_INTERNAL_H
+#ifndef STAMP_CORE_STRING_EXTENSION_H
+#define STAMP_CORE_STRING_EXTENSION_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 

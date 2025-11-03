@@ -46,6 +46,8 @@
 #define STAMP_NAMESPACE_BEGIN			namespace STAMP_NAMESPACE {
 #define STAMP_NAMESPACE_END				}
 
+// Enable debug message to pause on error messages
+#define STAMP_DEBUG_PAUSE
 
 
 //OS platform
@@ -118,9 +120,13 @@
 #endif
 #if defined(_STRING_) && !defined(STAMP_STRING_HEADER_INCLUDED)
 #define STAMP_STRING_HEADER_INCLUDED
-#include <stamp/core/string_internal.h>
+#include <stamp/core/string_extension.h>
 #endif
 #if defined(_BIT_) && !defined(STAMP_BIT_HEADER_INCLUDED)
 #define STAMP_BIT_HEADER_INCLUDED
-#include <stamp/core/bit_internal.h>
+#include <stamp/core/bit_extension.h>
+#endif
+#if defined(_ITERATOR_) && !defined(STAMP_ITERATOR_HEADER_INCLUDED)
+#define STAMP_ITERATOR_HEADER_INCLUDED
+#include <stamp/core/iterator_extension.h>
 #endif

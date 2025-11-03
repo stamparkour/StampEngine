@@ -16,6 +16,7 @@
 #if defined(STAMP_PLATFORM_WINDOWS) && defined(STAMP_DEPLOY)
 
 #pragma comment(lib, "Dwmapi.lib")
+#pragma comment(lib, "Opengl32.lib")
 
 #include <iostream>
 #include <atomic>
@@ -26,6 +27,7 @@
 #include <stamp/graphics/window.h>
 #include <stamp/graphics/windowgl.h>
 #include <dwmapi.h>
+#include <gl/glm.h>
 
 #define WM_STAMP_FULLSCREEN (WM_USER+0)
 
@@ -115,7 +117,51 @@ static int nCmdShow;
 static ATOM parentClassAtom;
 static ATOM classAtom;
 
-HWND parentHwnd = NULL;
+HWND parentHwnd = nullptr;
+HGLRC openGlContext = nullptr;
+PIXELFORMATDESCRIPTOR pfdGlobal = {
+	sizeof(PIXELFORMATDESCRIPTOR),   // size of this pfd  
+	1,                     // version number  
+	PFD_DRAW_TO_WINDOW |   // support window  
+	PFD_SUPPORT_OPENGL |   // support OpenGL  
+	PFD_DOUBLEBUFFER,      // double buffered  
+	PFD_TYPE_RGBA,         // RGBA type  
+	24,                    // 24-bit color depth  
+	0, 0, 0, 0, 0, 0,      // color bits ignored  
+	0,                     // no alpha buffer  
+	0,                     // shift bit ignored  
+	0,                     // no accumulation buffer  
+	0, 0, 0, 0,            // accum bits ignored  
+	32,                    // 32-bit z-buffer  
+	0,                     // no stencil buffer  
+	0,                     // no auxiliary buffer  
+	PFD_MAIN_PLANE,        // main layer  
+	0,                     // reserved  
+	0, 0, 0                // layer masks ignored  
+};
+
+void PixelFormat(Window_internal* window) {
+	HDC hdc = GetDC(window != nullptr ? window->hWnd : parentHwnd);
+	int pixelFormat = ChoosePixelFormat(hdc, &pfdGlobal);
+	SetPixelFormat(hdc, pixelFormat, &pfdGlobal);
+}
+
+void InitializedOpenGLContext() {
+	HDC hdc = GetDC(parentHwnd);
+
+	PixelFormat(nullptr);
+	openGlContext = wglCreateContext(hdc);
+	GLMInit();
+}
+
+void DestroyOpenGLContext() {
+	if (openGlContext) {
+		wglMakeCurrent(NULL, NULL);
+		wglDeleteContext(openGlContext);
+		ReleaseDC(parentHwnd, GetDC(parentHwnd));
+		openGlContext = nullptr;
+	}
+}
 
 BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
 	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
@@ -347,6 +393,7 @@ void ParentWindowLoop(std::promise<void>* promise) {
 		return;
 	}
 
+	InitializedOpenGLContext();
 
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0)) {
@@ -389,6 +436,8 @@ void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 	}
 	window->Visibility(windowData->settings.visibility);
 	window->DisplayMode(windowData->settings.displaymode);
+
+	PixelFormat(windowData);
 
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0)) {
@@ -589,6 +638,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	//need to enter stuff in here
 	int returnValue = StampEngineInit(0, 0);
 
+	DestroyOpenGLContext();
 	DestroyWindow(parentHwnd);
 	return returnValue;
 }

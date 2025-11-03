@@ -1,8 +1,8 @@
-//stamp/core/bit_internal.h
+//stamp/core/bit_extension.h
 
 #pragma once
-#ifndef STAMP_CORE_BIT_INTERNAL_H
-#define STAMP_CORE_BIT_INTERNAL_H
+#ifndef STAMP_CORE_BIT_EXTENSION_H
+#define STAMP_CORE_BIT_EXTENSION_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 

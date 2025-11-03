@@ -80,7 +80,7 @@ struct Vector_Base {
 };
 
 template<typename T, size_t D>
-struct Vector final : public Vector_Base<Vector<T, D>, T, D> {
+struct Vector : public Vector_Base<Vector<T, D>, T, D> {
 	using member_type = T;
 	constexpr static size_t dimensions = D;
 
@@ -94,7 +94,7 @@ struct Vector final : public Vector_Base<Vector<T, D>, T, D> {
 
 
 template <typename T>
-struct Vector<T, 2> final : public Vector_Base<Vector<T, 2>, T, 2> {
+struct Vector<T, 2> : public Vector_Base<Vector<T, 2>, T, 2> {
 	using member_type = T;
 	constexpr static size_t dimensions = 2;
 
@@ -115,7 +115,7 @@ struct Vector<T, 2> final : public Vector_Base<Vector<T, 2>, T, 2> {
 };
 
 template <typename T>
-struct Vector<T, 3> final : public Vector_Base<Vector<T, 3>, T, 3> {
+struct Vector<T, 3> : public Vector_Base<Vector<T, 3>, T, 3> {
 	using member_type = T;
 	constexpr static size_t dimensions = 3;
 	union {
@@ -139,7 +139,7 @@ struct Vector<T, 3> final : public Vector_Base<Vector<T, 3>, T, 3> {
 };
 
 template <typename T>
-struct Vector<T, 4> final : public Vector_Base<Vector<T, 4>, T, 4> {
+struct Vector<T, 4> : public Vector_Base<Vector<T, 4>, T, 4> {
 	using member_type = T;
 	constexpr static size_t dimensions = 4;
 	union {
@@ -247,12 +247,12 @@ inline Vector_Base<V, T, D>::operator Vector<T1, D>() const noexcept {
 template<typename V, typename T, size_t D>
 inline Vector_Base<V, T, D>::operator const T* () const noexcept {
 	auto self = static_cast<const V*>(this);
-	return &self->V;
+	return self->V;
 }
 template<typename V, typename T, size_t D>
 inline Vector_Base<V, T, D>::operator T* () noexcept {
 	auto self = static_cast<V*>(this);
-	return &self->V;
+	return self->V;
 }
 template<typename V, typename T, size_t D>
 inline Vector_Base<V, T, D>::operator bool() const noexcept {

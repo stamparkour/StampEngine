@@ -215,6 +215,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="gl\GLM.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32hid.cpp" />
     <ClCompile Include="Jolt\AABBTree\AABBTreeBuilder.cpp" />
     <ClCompile Include="Jolt\Core\Color.cpp" />
@@ -382,12 +383,14 @@
     <ClCompile Include="lua\lvm.c" />
     <ClCompile Include="lua\lzio.c" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="stamp\core\bit_internal.cpp" />
+    <ClCompile Include="stamp\core\bit_extension.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32keyboard.cpp" />
     <ClCompile Include="stamp\core\os\windows\win32mouse.cpp" />
-    <ClCompile Include="stamp\core\string_internal.cpp" />
+    <ClCompile Include="stamp\core\string_extension.cpp" />
     <ClCompile Include="stamp\core\time.cpp" />
+    <ClCompile Include="stamp\graphics\gl\glmanager.cpp" />
+    <ClCompile Include="stamp\graphics\gl\shader.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
     <ClCompile Include="stamp\hid\lualib.cpp" />
@@ -400,10 +403,7 @@
     <ClCompile Include="stamp\test\vectorTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="gl\eglew.h" />
-    <ClInclude Include="gl\glew.h" />
-    <ClInclude Include="gl\glxew.h" />
-    <ClInclude Include="gl\wglew.h" />
+    <ClInclude Include="gl\glm.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeBuilder.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeToBuffer.h" />
     <ClInclude Include="Jolt\AABBTree\NodeCodec\NodeCodecQuadTreeHalfFloat.h" />
@@ -727,14 +727,16 @@
     <ClInclude Include="sol\config.hpp" />
     <ClInclude Include="sol\forward.hpp" />
     <ClInclude Include="sol\sol.hpp" />
-    <ClInclude Include="stamp\core\bit_internal.h" />
+    <ClInclude Include="stamp\core\bit_extension.h" />
     <ClInclude Include="stamp\core\define.h" />
+    <ClInclude Include="stamp\core\iterator_extension.h" />
     <ClInclude Include="stamp\core\os\windows\define.h" />
     <ClInclude Include="stamp\core\os\windows\win32hid.h" />
-    <ClInclude Include="stamp\core\string_internal.h" />
+    <ClInclude Include="stamp\core\string_extension.h" />
     <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\event.h" />
+    <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
     <ClInclude Include="stamp\graphics\gl\mesh.h" />
     <ClInclude Include="stamp\graphics\gl\rawmesh.h" />
@@ -783,7 +785,9 @@
     <None Include="Jolt\Physics\Body\MotionProperties.inl" />
     <None Include="packages.config" />
     <None Include="resources\script\test.lua" />
-    <None Include="stamp\debug,h" />
+    <None Include="stamp\debug.h">
+      <FileType>CppHeader</FileType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Jolt\Jolt.natvis" />

@@ -18,7 +18,7 @@
 
 #ifndef STAMP_GRAPHICS_DEFINE_H
 #include <utility>
-#include <gl/glew.h>
+#include <gl/glm.h>
 #endif
 
 #include <stamp/define.h>
@@ -30,5 +30,17 @@
 #define STAMP_GRAPHICS_GL_NAMESPACE_BEGIN			namespace STAMP_GRAPHICS_GL_NAMESPACE {
 #define STAMP_GRAPHICS_GL_NAMESPACE_END				}
 
+#define STAMPGL_VERTEX_POSITION 1
+#define STAMPGL_VERTEX_COLOR 2
+#define STAMPGL_VERTEX_UV 3
+#define STAMPGL_VERTEX_NORMAL 4
+#define STAMPGL_VERTEX_TANGENT 5
+#define STAMPGL_VERTEX_BITANGENT 6
+
+STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
+
+bool checkOpenGLErrors();
+
+STAMP_GRAPHICS_GL_NAMESPACE_END
 
 #endif

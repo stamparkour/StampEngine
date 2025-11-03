@@ -188,10 +188,10 @@
     <ClCompile Include="stamp\graphics\window.cpp">
       <Filter>libraries\stamp\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="stamp\core\string_internal.cpp">
+    <ClCompile Include="stamp\core\string_extension.cpp">
       <Filter>libraries\stamp\core</Filter>
     </ClCompile>
-    <ClCompile Include="stamp\core\bit_internal.cpp">
+    <ClCompile Include="stamp\core\bit_extension.cpp">
       <Filter>libraries\stamp\core</Filter>
     </ClCompile>
     <ClCompile Include="stamp\math\lua.cpp">
@@ -614,6 +614,15 @@
     <ClCompile Include="stamp\core\time.cpp">
       <Filter>libraries\stamp\core</Filter>
     </ClCompile>
+    <ClCompile Include="gl\GLM.cpp">
+      <Filter>libraries\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\graphics\gl\glmanager.cpp">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\graphics\gl\shader.cpp">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
@@ -754,13 +763,13 @@
     <ClInclude Include="stamp\graphics\define.h">
       <Filter>libraries\stamp\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\core\string_internal.h">
+    <ClInclude Include="stamp\core\string_extension.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
     <ClInclude Include="stamp\graphics\windowgl.h">
       <Filter>libraries\stamp\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\core\bit_internal.h">
+    <ClInclude Include="stamp\core\bit_extension.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
     <ClInclude Include="sol\sol.hpp">
@@ -1672,18 +1681,6 @@
     <ClInclude Include="stamp\core\os\windows\define.h">
       <Filter>libraries\stamp\core\os\win32</Filter>
     </ClInclude>
-    <ClInclude Include="gl\glew.h">
-      <Filter>libraries\gl</Filter>
-    </ClInclude>
-    <ClInclude Include="gl\glxew.h">
-      <Filter>libraries\gl</Filter>
-    </ClInclude>
-    <ClInclude Include="gl\wglew.h">
-      <Filter>libraries\gl</Filter>
-    </ClInclude>
-    <ClInclude Include="gl\eglew.h">
-      <Filter>libraries\gl</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\hid\focusgroup.h">
       <Filter>libraries\stamp\hid</Filter>
     </ClInclude>
@@ -1704,6 +1701,15 @@
     </ClInclude>
     <ClInclude Include="stamp\graphics\gl\define.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\glm.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\iterator_extension.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\color.h">
+      <Filter>libraries\stamp\graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1759,7 +1765,7 @@
       <Filter>libraries\Jolt</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="stamp\debug,h">
+    <None Include="stamp\debug.h">
       <Filter>libraries\stamp</Filter>
     </None>
   </ItemGroup>

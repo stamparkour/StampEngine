@@ -19,7 +19,7 @@
 // limitations under the License.
 
 
-#include <stamp/core/string_internal.h>
+#include <string>
 #include <stamp/hid/define.h>
 #include <stamp/hid/hid.h>
 #include <stamp/noncopyable.h>

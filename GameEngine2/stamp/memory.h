@@ -32,7 +32,7 @@
 #define STAMP_MEMORY_DEBUG
 #endif
 
-#define STAMP_MEMORY_THREADSAFE_FRIEND(type) template<typename... Args> template<typename T, typename... Args> friend STAMP_NAMESPACE::threadsafe_ptr<T> STAMP_NAMESPACE::make_threadsafe(Args&&... args);
+#define STAMP_MEMORY_THREADSAFE_FRIEND template<typename T, typename... Args> friend stamp::threadsafe_ptr<T> stamp::make_threadsafe(Args&&... args)
 
 STAMP_NAMESPACE_BEGIN
 
@@ -57,6 +57,7 @@ struct stamp_ptr_internal_control {
 	std::atomic_int weakReferenceCount = 0;
 
 	stamp_ptr_internal_control(Stamp_Deleter<T> strongDel, Stamp_Deleter<T> weakDel) : strongDeleter(strongDel), weakDeleter(weakDel) { }
+
 };
 
 template <typename T>
@@ -365,6 +366,10 @@ public:
 	friend class enable_threadsafe_from_this;
 	template<typename T>
 	friend class weak_threadsafe_ptr;
+	template<typename T1, typename T2>
+	friend threadsafe_ptr<T1> static_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept;
+	template<typename T1, typename T2>
+	friend threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept;
 private:
 	threadsafe_ptr(T* ptr, stamp_ptr_internal_control<T>* control) {
 		if (ptr == nullptr || control == nullptr) return;
@@ -398,14 +403,14 @@ private:
 
 		this->ptr = ptr;
 
-		if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
-			if (this->ptr->enable_threadsafe_from_this<T>::control == nullptr) {
+		if constexpr (requires { this->ptr->value.stampThreadsafePtrControlPointer; }) {
+			if (this->ptr->stampThreadsafePtrControlPointer == nullptr) {
 				this->control = new stamp_ptr_internal_control<T>(stamp_ptr_internal<T>::StrongDeleter, stamp_ptr_internal<T>::WeakDeleter);
 
-				this->ptr->enable_threadsafe_from_this<T>::control = this->control;
+				this->ptr->stampThreadsafePtrControlPointer = this->control;
 			}
 			else {
-				this->control = this->ptr->enable_threadsafe_from_this<T>::control;
+				this->control = this->ptr->stampThreadsafePtrControlPointer;
 			}
 		}
 		else {
@@ -515,6 +520,10 @@ public:
 	friend threadsafe_ptr<T> make_threadsafe(Args&&... args);
 	template<typename T>
 	friend class enable_threadsafe_from_this;
+	template<typename T1, typename T2>
+	friend weak_threadsafe_ptr<T1> static_pointer_cast(const weak_threadsafe_ptr<T2>& sp)  noexcept;
+	template<typename T1, typename T2>
+	friend weak_threadsafe_ptr<T1> dynamic_pointer_cast(const weak_threadsafe_ptr<T2>& sp)  noexcept;
 private:
 	weak_threadsafe_ptr(T* ptr, stamp_ptr_internal_control<T>* control) {
 		if (ptr == nullptr || control == nullptr) return;
@@ -627,8 +636,8 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 	new (&(mem->value)) T((std::forward<Args>(args))...);
 	new (&(mem->control)) stamp_ptr_internal_control<T>(strongDeleter, weakDeleter);
 
-	if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
-		mem->value.enable_threadsafe_from_this<T>::control = &(mem->control);
+	if constexpr (requires { mem->value.stampThreadsafePtrControlPointer; }) {
+		mem->value.stampThreadsafePtrControlPointer = &(mem->control);
 	}
 
 	return threadsafe_ptr<T>(&(mem->value), &(mem->control));
@@ -637,12 +646,23 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 template<typename T1, typename T2>
 threadsafe_ptr<T1> static_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), static_cast<stamp_ptr_internal_control<T1>>(sp.control));
+	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
 }
 template<typename T1, typename T2>
 threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), static_cast<stamp_ptr_internal_control<T1>>(sp.control));
+	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+}
+
+template<typename T1, typename T2>
+weak_threadsafe_ptr<T1> static_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
+	if (!sp) return threadsafe_ptr<T1>(nullptr);
+	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+}
+template<typename T1, typename T2>
+weak_threadsafe_ptr<T1> dynamic_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
+	if (!sp) return threadsafe_ptr<T1>(nullptr);
+	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
 }
 
 
@@ -651,14 +671,15 @@ class enable_threadsafe_from_this {
 	template<typename U, typename... Args>
 	friend threadsafe_ptr<U> make_threadsafe<U, Args...>(Args&&... args);
 	friend class threadsafe_ptr<T>;
+	friend class weak_threadsafe_ptr<T>;
 
-	stamp_ptr_internal_control<T>* control = nullptr;
+	stamp_ptr_internal_control<T>* stampThreadsafePtrControlPointer = nullptr;
 protected:
 	enable_threadsafe_from_this() {}
 public:
 
 	threadsafe_ptr<T> threadsafe_from_this() {
-		return threadsafe_ptr<T>((T*)this, control);
+		return threadsafe_ptr<T>((T*)this, stampThreadsafePtrControlPointer);
 	}
 };
 

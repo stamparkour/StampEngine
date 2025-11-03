@@ -2,6 +2,7 @@
 #include <iostream>
 #include <utility>
 #include <cmath>
+#include <iterator>
 #include <stamp/math/alignment.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/quaternion.h>
@@ -92,6 +93,7 @@ int AIControl(float ballY, float currentY) {
 	}
 	return 0;
 }
+
 
 int StampEngineInit(int argv, char* argc[]) {
 	Recti monitor = { 0,0,1920,1080 };
