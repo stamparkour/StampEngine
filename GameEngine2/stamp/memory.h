@@ -558,8 +558,7 @@ public:
 	weak_threadsafe_ptr(const threadsafe_ptr<T>& v) noexcept {
 		this->ptr = v.ptr;
 		this->control = v.control;
-		if (this->control == nullptr) return;
-		this->control->weakReferenceCount++;
+		if (this->control != nullptr) this->control->weakReferenceCount++;
 	}
 
 	weak_threadsafe_ptr<T>& operator=(const weak_threadsafe_ptr<T>& v) noexcept {
@@ -571,9 +570,19 @@ public:
 		return *this;
 	}
 	weak_threadsafe_ptr<T>& operator=(weak_threadsafe_ptr<T>&& v) noexcept {
+		if (this == &v) return *this;
+		if (this->ptr == v.ptr) return *this;
+
 		using std::swap;
 		swap(this->ptr, v.ptr);
 		swap(this->control, v.control);
+		return *this;
+	}
+	weak_threadsafe_ptr<T>& operator=(const threadsafe_ptr<T>& v) noexcept {
+		decrementReference();
+		this->ptr = v.ptr;
+		this->control = v.control;
+		if (this->control != nullptr) this->control->weakReferenceCount++;
 		return *this;
 	}
 
@@ -590,7 +599,7 @@ public:
 		return !(*this == v);
 	}
 	explicit operator bool() const noexcept {
-		return this->ptr != nullptr;
+		return !expired();
 	}
 
 	int use_count() const {

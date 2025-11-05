@@ -390,6 +390,7 @@
     <ClCompile Include="stamp\core\string_extension.cpp" />
     <ClCompile Include="stamp\core\time.cpp" />
     <ClCompile Include="stamp\graphics\gl\glmanager.cpp" />
+    <ClCompile Include="stamp\graphics\gl\mesh.cpp" />
     <ClCompile Include="stamp\graphics\gl\shader.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
@@ -739,14 +740,15 @@
     <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
     <ClInclude Include="stamp\graphics\gl\mesh.h" />
+    <ClInclude Include="stamp\graphics\gl\pixel.h" />
     <ClInclude Include="stamp\graphics\gl\rawmesh.h" />
     <ClInclude Include="stamp\graphics\gl\shader.h" />
+    <ClInclude Include="stamp\graphics\gl\texture.h" />
     <ClInclude Include="stamp\hid\focusgroup.h" />
     <ClInclude Include="stamp\math\alignment.h" />
     <ClInclude Include="stamp\state.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />
-    <ClInclude Include="stamp\graphics\windowgl.h" />
     <ClInclude Include="stamp\graphics\window.h" />
     <ClInclude Include="stamp\hid\define.h" />
     <ClInclude Include="stamp\hid\hid.h" />

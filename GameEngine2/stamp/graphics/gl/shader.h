@@ -67,10 +67,10 @@ public:
 	bool isValid() const;
 	//void Uniform(GLint location, const SamplerBase* value) {
 	//	STAMPDMSG("render::ShaderProgramBase::Uniform - function not implemented");
-	//	//STAMPERROR(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
+	//	//STAMPASSERT(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
 	//	glProgramUniform1i(program, location, value->GetActiveTextureIndex());
 	//	std::cout << "render::ShaderProgramBase::uniformD - index: " << value->GetActiveTextureIndex() << " loc: " << location << " prog: " << program << std::endl;
-	//	GLSTAMPERROR;
+	//	GLSTAMPASSERT;
 	//}
 	void Uniform(GLint location, int value);
 	void Uniform(GLint location, unsigned int value);
@@ -154,7 +154,7 @@ public:
 	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Matrix4d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
 	//void ShaderStorageBuffer(GLint location, const ShaderStorageBufferObject& value) {
-	//	STAMPERROR(value.isActive(), "render::ShaderProgramBase::uniformBuffer - UBO is not active");
+	//	STAMPASSERT(value.isActive(), "render::ShaderProgramBase::uniformBuffer - UBO is not active");
 	//	glShaderStorageBlockBinding(program, location, value.blockIndex);
 	//}
 	void UniformBuffer(GLint location, int index);

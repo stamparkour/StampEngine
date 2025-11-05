@@ -1,4 +1,4 @@
-//stamp/graphics/window_base.h
+//stamp/graphics/color.h
 
 #pragma once
 #ifndef STAMP_GRAPHICS_COLOR_H
@@ -24,9 +24,9 @@
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
-
 template<typename T = uint8_t>
 struct ColorRGBA : STAMP_MATH_NAMESPACE::Vector4<T> {
+	using data_type = T;
 
 	ColorRGBA(T m) : STAMP_MATH_NAMESPACE::Vector4<T>(m, m, m, m) {}
 	ColorRGBA(T r, T g, T b) : STAMP_MATH_NAMESPACE::Vector4<T>(r, g, b, 1) {}

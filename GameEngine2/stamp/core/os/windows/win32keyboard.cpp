@@ -108,7 +108,7 @@ int WinKeyboardRawInputChange(HANDLE handle, RID_DEVICE_INFO* info, bool isAdded
 
 	//test with multiple keyboards
 
-	std::cout << (int)handle << std::endl;
+	std::cout << "KeyboardManagement: " << (int)handle << std::endl;
 
 	wchar_t buf[512]{};
 	UINT size = sizeof(buf);

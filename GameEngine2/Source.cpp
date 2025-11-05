@@ -22,6 +22,7 @@ using namespace stamp::math;
 using namespace stamp;
 using namespace std;
 
+
 struct RectTransform {
 	Vector2f alignment{ 0,0 };
 	Vector2f alignmentOffset{ 0,0 };
@@ -96,6 +97,7 @@ int AIControl(float ballY, float currentY) {
 
 
 int StampEngineInit(int argv, char* argc[]) {
+
 	Recti monitor = { 0,0,1920,1080 };
 	Vector2i center = (monitor.A + monitor.B) / 2;
 	Vector2i centerY = { 0, center.y };

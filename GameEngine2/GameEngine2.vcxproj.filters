@@ -623,6 +623,9 @@
     <ClCompile Include="stamp\graphics\gl\shader.cpp">
       <Filter>libraries\stamp\graphics\gl</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\graphics\gl\mesh.cpp">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
@@ -765,9 +768,6 @@
     </ClInclude>
     <ClInclude Include="stamp\core\string_extension.h">
       <Filter>libraries\stamp\core</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\graphics\windowgl.h">
-      <Filter>libraries\stamp\graphics</Filter>
     </ClInclude>
     <ClInclude Include="stamp\core\bit_extension.h">
       <Filter>libraries\stamp\core</Filter>
@@ -1708,8 +1708,14 @@
     <ClInclude Include="stamp\core\iterator_extension.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\texture.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
     <ClInclude Include="stamp\graphics\color.h">
       <Filter>libraries\stamp\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\pixel.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

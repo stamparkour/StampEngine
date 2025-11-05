@@ -20,12 +20,13 @@
 
 
 #include <stdint.h>
-#include <cstddef>
-#include <string>
+#include <utility>
 #include <vector>
 #include <iterator>
 #include <algorithm>
+
 #include <stamp/graphics/gl/define.h>
+
 #include <stamp/memory.h>
 #include <stamp/noncopyable.h>
 #include <stamp/math/vector.h>
@@ -35,12 +36,30 @@
 
 STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
 
+using vertex_type_bitmask_t = size_t;
+namespace vertex_type_bitmask {
+	enum : vertex_type_bitmask_t {
+		Position =	1 << STAMPGL_VERTEX_POSITION,
+		Color =		1 << STAMPGL_VERTEX_COLOR,
+		UV =		1 << STAMPGL_VERTEX_UV,
+		Normal =	1 << STAMPGL_VERTEX_NORMAL,
+		Tangent =	1 << STAMPGL_VERTEX_TANGENT, //x axis on uv
+		Bitangent =	1 << STAMPGL_VERTEX_BITANGENT, //y axis on uv
+	};
+}
+
 using storage_hint_t = GLenum;
 namespace storage_hint {
-	enum {
-		StaticDraw = GL_STATIC_DRAW,
-		StaticRead = GL_STATIC_READ,
-		StaticCopy = GL_STATIC_COPY,
+	enum : storage_hint_t {
+		StaticDraw =	GL_STATIC_DRAW,
+		StaticRead =	GL_STATIC_READ,
+		StaticCopy =	GL_STATIC_COPY,
+		DynamicDraw =	GL_DYNAMIC_DRAW,
+		DynamicRead =	GL_DYNAMIC_READ,
+		DynamicCopy =	GL_DYNAMIC_COPY,
+		StreamDraw =	GL_STREAM_DRAW,
+		StreamRead =	GL_STREAM_READ,
+		StreamCopy =	GL_STREAM_COPY,
 	};
 }
 
@@ -52,13 +71,13 @@ struct Vertex {
 	STAMP_MATH_NAMESPACE::Vector3f tangent;
 	STAMP_MATH_NAMESPACE::Vector3f bitangent;
 
-	inline static void InitializeVertexBuffer() {
-		glVertexAttribPointer(STAMPGL_VERTEX_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
-		glVertexAttribPointer(STAMPGL_VERTEX_COLOR, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-		glVertexAttribPointer(STAMPGL_VERTEX_UV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-		glVertexAttribPointer(STAMPGL_VERTEX_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-		glVertexAttribPointer(STAMPGL_VERTEX_TANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-		glVertexAttribPointer(STAMPGL_VERTEX_BITANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
+	inline static void InitializeVertexBuffer(vertex_type_bitmask_t type) {
+		if (type & vertex_type_bitmask::Position)	glVertexAttribPointer(STAMPGL_VERTEX_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+		if (type & vertex_type_bitmask::Color)		glVertexAttribPointer(STAMPGL_VERTEX_COLOR, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+		if (type & vertex_type_bitmask::UV)			glVertexAttribPointer(STAMPGL_VERTEX_UV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+		if (type & vertex_type_bitmask::Normal)		glVertexAttribPointer(STAMPGL_VERTEX_NORMAL, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+		if (type & vertex_type_bitmask::Tangent)	glVertexAttribPointer(STAMPGL_VERTEX_TANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+		if (type & vertex_type_bitmask::Bitangent)	glVertexAttribPointer(STAMPGL_VERTEX_BITANGENT, 3, GL_FLOAT, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
 	}
 
 	void ApplyTransform(const STAMP_MATH_NAMESPACE::Matrix4f& mat) {
@@ -69,27 +88,75 @@ struct Vertex {
 	}
 };
 
-class IMesh : public STAMP_NAMESPACE::enable_threadsafe_from_this<IMesh> {
+
+
+class Mesh : STAMP_NAMESPACE::INonCopyable, public STAMP_NAMESPACE::enable_threadsafe_from_this<Mesh> {
 private:
-	GLint vertexBuffer = 0;
-public:	
-	void Bind() {
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	GLuint vertexBuffer = 0;
+	void (*initVertexBuffer_func)(vertex_type_bitmask_t) = nullptr;
+
+	void InitBuffer() {
+		if (vertexBuffer != 0) return;
+		glCreateBuffers(1, &vertexBuffer);
 	}
 
-	template<typename V, STAMP_NAMESPACE::forward_iterator_derefrence_to<V> Iter>
+public:	
+	Mesh() {}
+	~Mesh() {
+		if (vertexBuffer == 0) return;
+		glDeleteBuffers(1, &vertexBuffer);
+		vertexBuffer = 0;
+	}
+
+	void Bind() {
+		if (vertexBuffer == 0) return;
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	}
+	GLuint VertexBuffer() const {
+		return vertexBuffer;
+	}
+
+	template<std::forward_iterator Iter>
 	void SetVertices(Iter begin, Iter end, storage_hint_t hint = storage_hint::StaticDraw) {
 		std::vector<std::iter_value_t<Iter>> vector{};
 		for (auto it = begin; it != end; it++) vector.push_back(*it);
 		SetVertices(std::begin(vector), std::end(vector), hint);
 	}
-	template<typename V, STAMP_NAMESPACE::contiguous_iterator_derefrence_to<V> Iter>
+	template<std::contiguous_iterator Iter>
 	void SetVertices(Iter begin, Iter end, storage_hint_t hint = storage_hint::StaticDraw) {
+		using vertex_type = std::iter_value_t<Iter>;
+
+		InitBuffer();
+
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, end - begin, begin, hint);
-
+		initVertexBuffer_func = &vertex_type::InitializeVertexBuffer;
 	}
 };
+
+namespace proto_mesh {
+	inline const Vertex quadVertices[] = {
+		//bottom left
+		Vertex{{-1,-1,0},{1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
+		//top left
+		Vertex{{-1,1,0},{1,1,1},{0,1},{0,0,-1},{0,0,1},{0,1,0}},
+		//top right
+		Vertex{{1,1,0},{1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
+		//bottom left
+		Vertex{{-1,-1,0},{1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
+		//top right
+		Vertex{{1,1,0},{1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
+		//bottom right
+		Vertex{{1,-1,0},{1,1,1},{1,0},{0,0,-1},{0,0,1},{0,1,0}},
+	};
+
+	inline STAMP_NAMESPACE::threadsafe_ptr<Mesh> Quad() {
+		static STAMP_NAMESPACE::weak_threadsafe_ptr<Mesh> mesh{};
+		if (!mesh.expired()) return mesh.lock();
+		STAMP_NAMESPACE::threadsafe_ptr<Mesh> m = STAMP_NAMESPACE::make_threadsafe<Mesh>();
+		m.get_unsafe()->SetVertices(std::begin(quadVertices), std::end(quadVertices));
+	}
+}
 
 STAMP_GRAPHICS_GL_NAMESPACE_END
 #endif

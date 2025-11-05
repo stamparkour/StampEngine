@@ -1,4 +1,4 @@
-//stamp/graphics/define.h
+//stamp/graphics/gl/define.h
 
 
 // Copyright 2025 Elijah Clark, Stamparkour
@@ -16,15 +16,15 @@
 // limitations under the License.
 
 
-#ifndef STAMP_GRAPHICS_DEFINE_H
+#ifndef STAMP_GRAPHICS_GL_DEFINE_H
 #include <utility>
 #include <gl/glm.h>
 #endif
 
 #include <stamp/define.h>
 
-#ifndef STAMP_GRAPHICS_DEFINE_H
-#define STAMP_GRAPHICS_DEFINE_H
+#ifndef STAMP_GRAPHICS_GL_DEFINE_H
+#define STAMP_GRAPHICS_GL_DEFINE_H
 
 #define STAMP_GRAPHICS_GL_NAMESPACE					STAMP_GRAPHICS_NAMESPACE::gl
 #define STAMP_GRAPHICS_GL_NAMESPACE_BEGIN			namespace STAMP_GRAPHICS_GL_NAMESPACE {

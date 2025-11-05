@@ -26,20 +26,20 @@
 #ifdef STAMP_DEBUG_PAUSE 
 #define STAMPSTACK() std::cout << std::to_string(std::stacktrace::current()) << std::endl << __FUNCTION__  << " " << __LINE__ << " " << __FILE__ << std::endl; ((void)0)
 #define STAMPDMSG(msg) std::cout << msg << std::endl; std::cin.get(); ((void)0)
-#define STAMPERROR(con,msg) if(con) {STAMPSTACK(); std::cout << msg << std::endl; std::cin.get(); }; ((void)0)
+#define STAMPASSERT(con,msg) if(!(con)) {STAMPSTACK(); std::cout << msg << std::endl; std::cin.get(); } ((void)0)
 #else
 #define STAMPSTACK() std::cout << std::to_string(std::stacktrace::current()) << std::endl; ((void)0)
 #define STAMPDMSG(msg) std::cout << msg << std::endl; ((void)0)
-#define STAMPERROR(con,msg) if(con) {STAMPSTACK(); std::cout << msg << std::endl; } ((void)0)
+#define STAMPASSERT(con,msg) if(!(con)) {STAMPSTACK(); std::cout << msg << std::endl; } ((void)0)
 #endif
 #else
 #define STAMPSTACK() ((void)0)
 #define STAMPDMSG(msg) ((void)0)
-#define STAMPERROR(con,msg) ((void)0)
+#define STAMPASSERT(con,msg) ((void)0)
 #endif
 
-#define GLSTAMPERROR STAMPERROR(STAMP_GRAPHICS_GL_NAMESPACE::checkOpenGLErrors(), "")
-#define GLSTAMPERRORM(message) STAMPERROR(STAMP_GRAPHICS_GL_NAMESPACE::checkOpenGLErrors(), message)
+#define GLSTAMPASSERT STAMPASSERT(STAMP_GRAPHICS_GL_NAMESPACE::checkOpenGLErrors(), "")
+#define GLSTAMPASSERTM(message) STAMPASSERT(STAMP_GRAPHICS_GL_NAMESPACE::checkOpenGLErrors(), message)
 
 //DebugBreak(void)
 

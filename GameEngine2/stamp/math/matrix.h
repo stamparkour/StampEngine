@@ -28,7 +28,7 @@
 //optional headers: <iostream> <string>
 #include <stamp/math/define.h>
 #include <initializer_list>
-#include <assert.h>
+#include <stamp/debug.h>
 #include <stamp/math/vector.h>
 
 STAMP_MATH_NAMESPACE_BEGIN
@@ -86,7 +86,7 @@ struct Matrix : Matrix_Base<Matrix<T, R, C>, T, R, C> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(const std::initializer_list<T> values) { 
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+		STAMPASSERT(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m); 
 	}
 
@@ -105,12 +105,12 @@ struct Matrix<T, R, 1> : Matrix_Base<Matrix<T, R, 1>, T, R, 1> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(const std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+		STAMPASSERT(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Rows>& m) noexcept;
 
-	const static Matrix<T, Rows, 1> IDENTITY;
+	const static Matrix<T, Rows, Cols> IDENTITY;
 };
 
 template<typename T, size_t C>
@@ -125,7 +125,7 @@ struct Matrix<T, 1, C> : Matrix_Base<Matrix<T, 1, C>, T, 1, C> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(const std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+		STAMPASSERT(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 	explicit Matrix(const Vector<T, Cols>& m) noexcept;
@@ -146,11 +146,11 @@ struct Matrix<T, 1, 1> : Matrix_Base<Matrix<T, 1, 1>, T, 1, 1> {
 	Matrix() = default;
 	Matrix(const T(&values)[Rows][Cols]) noexcept : m(values) {}
 	Matrix(const std::initializer_list<T> values) {
-		assert(values.size() == Cols * Rows && "Requires Cols * Rows elements.");
+		STAMPASSERT(values.size() == Cols * Rows, "Requires Cols * Rows elements.");
 		std::copy(values.begin(), values.end(), (T*)&m);
 	}
 
-	const static Matrix<T, 1, 1> IDENTITY;
+	const static Matrix<T, Rows, Cols> IDENTITY;
 };
 
 template<size_t Rows, size_t Cols, size_t C, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Matrix<TR, Rows, C>		operator *	(const Matrix<T1, Rows, Cols>& a, const Matrix<T2, Cols, C>& b)		noexcept;
@@ -209,7 +209,7 @@ Vector<T, Rows>& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i) noexcept 
 	return (Vector<T, Rows>&)(self->m[i][0]);
 }
 template<typename M, typename T, size_t Rows, size_t Cols>
-const T& Matrix_Base<M, T, Rows, Cols>::operator [] (size_t i, size_t j) const noexcept {
+const T& Matrix_Base<M, T, Rows, Cols>::operator[] (size_t i, size_t j) const noexcept {
 	auto self = static_cast<M*>(this);
 	return (const T&)(self->m[i][j]);
 }
@@ -312,7 +312,7 @@ inline Matrix<T1, Q>& operator*=(Matrix<T1, Q>& a, const Matrix<T2, Q>& b) noexc
 }
 
 template<typename T, size_t Rows, size_t Cols>
-inline const Matrix<T, Rows, Cols> Matrix<T, Rows, Cols>::IDENTITY = []() {
+inline const Matrix<T, Matrix<T, Rows, Cols>::Rows, Matrix<T, Rows, Cols>::Cols> Matrix<T, Rows, Cols>::IDENTITY = []() {
 	Matrix<T, Rows, Cols> o;
 	for (int i = 0; i < Rows; i++) {
 		for (int j = 0; j < Cols; j++) {

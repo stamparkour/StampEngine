@@ -25,7 +25,6 @@
 #include <stamp/core/os/windows/win32hid.h>
 #include <stamp/state.h>
 #include <stamp/graphics/window.h>
-#include <stamp/graphics/windowgl.h>
 #include <dwmapi.h>
 #include <gl/glm.h>
 
