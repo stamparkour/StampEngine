@@ -29,6 +29,7 @@
 #include <stamp/math/vector.h>
 #include <stamp/math/matrix.h>
 #include <stamp/debug.h>
+#include <algorithm>
 
 STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
 
@@ -39,7 +40,9 @@ namespace texture_type {
 	};
 
 	std::string to_string(texture_type_t textureType) {
-
+		switch (textureType) {
+		case _2D: return "Texture2D";
+		}
 	}
 };
 
@@ -53,68 +56,90 @@ namespace texture_format {
 	};
 };
 
-template<typename T>
+class RawTexture;
+
+class Texture {
+	friend class TextureBinding;
+public:
+	struct desc_t {
+		GLuint textureBuffer = 0;
+		GLint maxMipmapLevel = 0;
+		texture_type_t type = 0;
+		texture_format_t format = 0;
+		size_t width = 0;
+		size_t height = 0;
+		size_t depth = 0;
+		size_t bindingLocation = 0;
+	};
+private:
+	desc_t desc;
+
+	void InitBuffer() {
+		if (desc.textureBuffer != 0) return;
+		glGenTextures(1, &desc.textureBuffer);
+	}
+
+public:
+	Texture(texture_format_t format = texture_format::RGBA) {
+		desc.format = format;
+		InitBuffer();
+	}
+
+	~Texture() {
+		Clear();
+	}
+
+	int Width(size_t mipmapLevel = 0) const {
+		return std::max(desc.width >> mipmapLevel, 1ull);
+	}
+	int Height(size_t mipmapLevel = 0) const {
+		return std::max(desc.height >> mipmapLevel, 1ull);
+	}
+	int Depth(size_t mipmapLevel = 0) const {
+		return std::max(desc.depth >> mipmapLevel,1ull);
+	}
+	int MaxMipmapLevel() {
+		return desc.maxMipmapLevel;
+	}
+
+	GLuint TextureBuffer() const {
+		return desc.textureBuffer;
+	}
+	texture_type_t Type() const {
+		return desc.type;
+	}
+	size_t Bind(size_t bindingIndex) const {
+		return desc.bindingLocation;
+	}
+	size_t BindingLocation() const {
+		return desc.bindingLocation;
+	}
+	void GenMipmap() {
+		glGenerateTextureMipmap(desc.textureBuffer);
+	}
+	void Clear() {
+		if (desc.textureBuffer == 0) return;
+		glDeleteTextures(1, &desc.textureBuffer);
+		desc.textureBuffer = 0;
+		desc.type = 0;
+	}
+
+	void Set(RawTexture& tex, size_t mipmapLevel = 0);
+};
+
 class RawTexture {
 	friend class Texture;
 protected:
 	RawTexture() {}
 
-	virtual texture_type_t SetTexture(GLuint textureBuffer, GLint level, GLint internalFormat) = 0;
+	virtual void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) = 0;
 public:
 	virtual ~RawTexture() = 0;
 	virtual const void* data() = 0;
 };
 
-class Texture {
-private:
-	GLuint textureBuffer = 0;
-	texture_type_t textureType = 0;
-	texture_format_t textureFormat = 0;
-
-	void InitBuffer() {
-		if (textureBuffer != 0) return;
-		glGenTextures(1, &textureBuffer);
-	}
-
-public:
-	Texture(texture_format_t format = texture_format::RGBA) {
-		this->textureFormat = format;
-		InitBuffer();
-	}
-	~Texture() {
-		Clear();
-	}
-
-	GLuint TextureBuffer() {
-		return textureBuffer;
-	}
-	void GenMipmap() {
-		glGenerateTextureMipmap(textureBuffer);
-	}
-	void Bind() {
-		glBindTexture(textureType, textureBuffer);
-	}
-	void Clear() {
-		if (textureBuffer == 0) return;
-		glDeleteTextures(1, &textureBuffer);
-		textureBuffer = 0;
-		textureType = 0;
-	}
-
-	template<typename T>
-	void Set(const RawTexture<T>& tex, size_t mipmapLevel = 0) {
-		auto type = tex.SetTexture(0, mipmapLevel, format);
-		STAMPASSERT(textureType == 0 || textureType == type, "stamp::graphics::gl::Texture::Set - tex is not same type as current texture");
-		tex.SetTexture(textureBuffer, mipmapLevel, format);
-		textureType = type;
-	}
-};
-
-
-
 template<typename T>
-class RawTexture2d : RawTexture<T> {
-	friend class Texture;
+class RawTexture2d : RawTexture {
 public:
 	using pixel_type = T;
 private:
@@ -122,22 +147,41 @@ private:
 	size_t height = 0;
 	std::vector<T> buffer{};
 
-	SetTexture(GLuint textureBuffer, GLint level, GLint internalFormat) {
-		if(textureBuffer != 0) {
-			glBindTexture(texture_type::_2D, textureBuffer);
-			glTexImage2D(texture_type::_2D, level, internalFormat, width, height, pixel_type::format, pixel_type::type, data());
+	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
+		if (buf->type == 0) {
+			buf->width = width;
+			buf->height = height;
+			buf->depth = 1;
+			buf->type = texture_type::_2D;
+			int max = 0;
+			for (size_t w = width, h = height; w > 1 || h > 1; w >>= 1, h >>= 1) max++;
+			buf->maxMipmapLevel = max + mipmap;
 		}
-		return texture_type::_2D;
+		else {
+			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set - tex is not same type as current texture: " << texture_type::to_string(buf->type));
+			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
+			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
+		}
+
+		glBindTexture(buf->type, buf->textureBuffer);
+		glTexImage2D(buf->type, mipmap, buf->format, width, height, 0, pixel_type::format, pixel_type::type, buffer.data());
 	}
+
+	
 public:
-	RawTexture() {}
-	RawTexture(size_t width, size_t height) {
+	RawTexture2d() {}
+	RawTexture2d(size_t width, size_t height) {
 		buffer = std::vector<T>(width * height);
 		this->width = width;
 		this->height = height;
+
+		STAMPASSERT(width != 0, "stamp::graphics::gl::RawTexture2d - width cannot be 0.");
+		STAMPASSERT(height != 0, "stamp::graphics::gl::RawTexture2d - height cannot be 0.");
 	}
 
-	const T* data() {
+	~RawTexture2d() {}
+
+	const void* data() override {
 		return buffer.data();
 	}
 
@@ -145,17 +189,18 @@ public:
 	size_t Height() { return height; }
 
 	T& operator[] (size_t x, size_t y) {
-		STAMPASSERT(x < width, "stamp::graphics::gl::RawTexture::operator[] - x(" << x << ") is greater than or equal to width: " << width);
-		STAMPASSERT(y < height, "stamp::graphics::gl::RawTexture::operator[] - y(" << y << ") is greater than or equal to height: " << height);
+		STAMPASSERT(x < width, "stamp::graphics::gl::RawTexture::operator[] - x (" << x << ") is greater than or equal to width: " << width);
+		STAMPASSERT(y < height, "stamp::graphics::gl::RawTexture::operator[] - y (" << y << ") is greater than or equal to height: " << height);
 		return buffer[x + y * height];
 	}
 
 	const T& operator[] (size_t x, size_t y) const {
-		STAMPASSERT(x < width, "stamp::graphics::gl::RawTexture::operator[] - x(" << x << ") is greater than or equal to width: " << width);
-		STAMPASSERT(y < height, "stamp::graphics::gl::RawTexture::operator[] - y(" << y << ") is greater than or equal to height: " << height);
+		STAMPASSERT(x < width, "stamp::graphics::gl::RawTexture::operator[] - x (" << x << ") is greater than or equal to width: " << width);
+		STAMPASSERT(y < height, "stamp::graphics::gl::RawTexture::operator[] - y (" << y << ") is greater than or equal to height: " << height);
 		return buffer[x + y * height];
 	}
 };
+
 
 STAMP_GRAPHICS_GL_NAMESPACE_END
 #endif

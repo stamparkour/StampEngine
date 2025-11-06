@@ -144,6 +144,9 @@ bool IShaderProgram::isValid() const {
 	return program != 0;
 }
 
+void IShaderProgram::Uniform(GLint location, Texture* texture)
+{
+}
 void IShaderProgram::Uniform(GLint location, int value) {
 	glProgramUniform1i(program, location, value);
 }

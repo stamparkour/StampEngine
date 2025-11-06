@@ -21,7 +21,6 @@
 
 #include <cstdint>
 #include <stamp/graphics/gl/define.h>
-#include <gl/glm.h>
 
 STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
 

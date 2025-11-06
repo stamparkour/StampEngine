@@ -84,7 +84,7 @@ namespace window {
 
 class Window : public STAMP_NAMESPACE::enable_threadsafe_from_this<Window> {
 	friend struct Window_internal;
-	template<typename T, typename... Args> friend stamp::threadsafe_ptr<T> stamp::make_threadsafe(Args&&... args);
+	STAMP_MEMORY_THREADSAFE_FRIEND;
 private:
 	struct Window_internal* windowData;
 protected:
@@ -96,7 +96,7 @@ protected:
 
 	Window(const window::CreationSettings& settings);
 public:
-	static stamp::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return stamp::make_threadsafe<Window>(settings); }
+	static STAMP_NAMESPACE::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return STAMP_NAMESPACE::make_threadsafe<Window>(settings); }
 
 	virtual ~Window();
 
@@ -127,6 +127,7 @@ public:
 	bool IsAlive() const noexcept;
 	std::future<void> WindowClosePromise() const noexcept;
 
+	void RefreshFrame();
 	void* Framebuffer();
 };
 

@@ -11,7 +11,7 @@
 #include <stamp/core/define.h>
 #include <stamp/memory.h>
 #include <stamp/graphics/window.h>
-#include <stamp/state.h>
+#include <stamp/stamp.h>
 #include <stamp/hid/keyboard.h>
 #include <Windows.h>
 
@@ -96,7 +96,8 @@ int AIControl(float ballY, float currentY) {
 }
 
 
-int StampEngineInit(int argv, char* argc[]) {
+int main(int argv, char* argc[]) {
+	stamp::InitStampEngine(stamp::StampEngineSettings{.showConsole = true});
 
 	Recti monitor = { 0,0,1920,1080 };
 	Vector2i center = (monitor.A + monitor.B) / 2;
@@ -190,6 +191,7 @@ int StampEngineInit(int argv, char* argc[]) {
 		ball.Update();
 	}
 
+	stamp::CloseStampEngine();
 	return 0;
 }
 

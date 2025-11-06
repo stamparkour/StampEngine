@@ -21,12 +21,15 @@
 #include <iostream>
 #include <atomic>
 #include <map>
+#include <dwmapi.h>
+
+#include <stamp/graphics/gl/define.h>
+
 #include <stamp/math/alignment.h>
 #include <stamp/core/os/windows/win32hid.h>
-#include <stamp/state.h>
+#include <stamp/stamp.h>
 #include <stamp/graphics/window.h>
-#include <dwmapi.h>
-#include <gl/glm.h>
+#include <stamp/debug.h>
 
 #define WM_STAMP_FULLSCREEN (WM_USER+0)
 
@@ -110,8 +113,6 @@ struct MonitorDetail {
 static std::map<HMONITOR, MonitorDetail> monitorMap;
 
 static HINSTANCE hInst;
-static HINSTANCE hPrevInst;
-static PWSTR pCmdLine;
 static int nCmdShow;
 static ATOM parentClassAtom;
 static ATOM classAtom;
@@ -139,6 +140,8 @@ PIXELFORMATDESCRIPTOR pfdGlobal = {
 	0, 0, 0                // layer masks ignored  
 };
 
+//OPEN GL CODE
+
 void PixelFormat(Window_internal* window) {
 	HDC hdc = GetDC(window != nullptr ? window->hWnd : parentHwnd);
 	int pixelFormat = ChoosePixelFormat(hdc, &pfdGlobal);
@@ -150,7 +153,9 @@ void InitializedOpenGLContext() {
 
 	PixelFormat(nullptr);
 	openGlContext = wglCreateContext(hdc);
-	GLMInit();
+	wglMakeCurrent(hdc, openGlContext);
+	GLenum err = glewInit();
+	STAMPASSERT(GLEW_OK == err, "Initialization of GLEW failed.");
 }
 
 void DestroyOpenGLContext() {
@@ -161,6 +166,8 @@ void DestroyOpenGLContext() {
 		openGlContext = nullptr;
 	}
 }
+
+// MONITOR CODE
 
 BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
 	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
@@ -184,22 +191,7 @@ void ScanMonitors() {
 	swap(monitorMap, m);
 }
 
-static void Win32CreateConsole() {
-#if !defined(STAMP_UNITTEST)
-	static BOOL console = []()->BOOL {
-		BOOL k = AllocConsole();
-#pragma warning(suppress : 4996 6031)
-		freopen("CONOUT$", "w", stdout);
-#pragma warning(suppress : 4996 6031)
-		freopen("CONIN$", "r", stdin);
-#pragma warning(suppress : 4996 6031)
-		freopen("CONOUT$", "w", stderr);
-
-		SetConsoleOutputCP(CP_UTF8);
-		return k;
-		}();
-#endif
-}
+//WINDOWS MANEGMENT
 
 LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	//std::cout << "Parent Window Message: hex " << std::hex << uMsg << " " << (int)wParam << " " << (int)lParam << std::endl;
@@ -392,14 +384,14 @@ void ParentWindowLoop(std::promise<void>* promise) {
 		return;
 	}
 
-	InitializedOpenGLContext();
-
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
 }
+
+//CLIENT WINDOW
 
 void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 	Window* window = windowData->window;
@@ -600,13 +592,11 @@ std::future<void> Window::WindowClosePromise() const noexcept {
 	return windowData->windowClosePromise.get_future();
 }
 
-int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow) {
-	::hInst = hInstance;
-	::hPrevInst = hPrevInstance;
-	::pCmdLine = pCmdLine;
-	::nCmdShow = nCmdShow;
+void STAMP_NAMESPACE::InitStampEngine(const STAMP_NAMESPACE::StampEngineSettings& settings) {
+	::hInst = GetModuleHandle(NULL);
+	::nCmdShow = SW_NORMAL;
 
-	Win32CreateConsole();
+	if (!settings.showConsole) ShowWindow(GetConsoleWindow(), SW_HIDE);
 	ScanMonitors();
 
 	std::cout << STAMP_DESCRIPTION_STRING << std::endl;
@@ -615,7 +605,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	const wchar_t PCLASS_NAME[] = L"Stamp Parent Window Class";
 	WNDCLASSEXW  wc = { };
 	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.hInstance = hInstance;
+	wc.hInstance = ::hInst;
 	wc.lpfnWndProc = WndprocParent;
 	wc.lpszClassName = PCLASS_NAME;
 
@@ -634,12 +624,15 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	parentThread.detach();
 	parentWindowPromise.get_future().wait();
 
-	//need to enter stuff in here
-	int returnValue = StampEngineInit(0, 0);
+	InitializedOpenGLContext();
+}
 
+void STAMP_NAMESPACE::CloseStampEngine() {
 	DestroyOpenGLContext();
 	DestroyWindow(parentHwnd);
-	return returnValue;
+
+	UnregisterClass((LPCWSTR)classAtom, ::hInst);
+	UnregisterClass((LPCWSTR)parentClassAtom, ::hInst);
 }
 
 

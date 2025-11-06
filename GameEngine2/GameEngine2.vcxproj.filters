@@ -614,9 +614,6 @@
     <ClCompile Include="stamp\core\time.cpp">
       <Filter>libraries\stamp\core</Filter>
     </ClCompile>
-    <ClCompile Include="gl\GLM.cpp">
-      <Filter>libraries\gl</Filter>
-    </ClCompile>
     <ClCompile Include="stamp\graphics\gl\glmanager.cpp">
       <Filter>libraries\stamp\graphics\gl</Filter>
     </ClCompile>
@@ -625,6 +622,12 @@
     </ClCompile>
     <ClCompile Include="stamp\graphics\gl\mesh.cpp">
       <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\graphics\gl\texture.cpp">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="gl\glew.c">
+      <Filter>libraries\gl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1669,7 +1672,7 @@
     <ClInclude Include="stamp\network\define.h">
       <Filter>libraries\stamp\network</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\state.h">
+    <ClInclude Include="stamp\stamp.h">
       <Filter>libraries\stamp</Filter>
     </ClInclude>
     <ClInclude Include="stamp\event.h">
@@ -1699,12 +1702,6 @@
     <ClInclude Include="stamp\graphics\gl\shader.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\graphics\gl\define.h">
-      <Filter>libraries\stamp\graphics\gl</Filter>
-    </ClInclude>
-    <ClInclude Include="gl\glm.h">
-      <Filter>libraries\gl</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\core\iterator_extension.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
@@ -1716,6 +1713,21 @@
     </ClInclude>
     <ClInclude Include="stamp\graphics\gl\pixel.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\define.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\eglew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\glew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\glxew.h">
+      <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="gl\wglew.h">
+      <Filter>libraries\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

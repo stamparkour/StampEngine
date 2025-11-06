@@ -167,7 +167,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);opengl32.lib</AdditionalDependencies>
     </Link>
@@ -215,7 +215,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="gl\GLM.cpp" />
+    <ClCompile Include="gl\glew.c" />
     <ClCompile Include="stamp\core\os\windows\win32hid.cpp" />
     <ClCompile Include="Jolt\AABBTree\AABBTreeBuilder.cpp" />
     <ClCompile Include="Jolt\Core\Color.cpp" />
@@ -392,6 +392,7 @@
     <ClCompile Include="stamp\graphics\gl\glmanager.cpp" />
     <ClCompile Include="stamp\graphics\gl\mesh.cpp" />
     <ClCompile Include="stamp\graphics\gl\shader.cpp" />
+    <ClCompile Include="stamp\graphics\gl\texture.cpp" />
     <ClCompile Include="stamp\graphics\window.cpp" />
     <ClCompile Include="stamp\hid\hid.cpp" />
     <ClCompile Include="stamp\hid\lualib.cpp" />
@@ -404,7 +405,10 @@
     <ClCompile Include="stamp\test\vectorTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="gl\glm.h" />
+    <ClInclude Include="gl\eglew.h" />
+    <ClInclude Include="gl\glew.h" />
+    <ClInclude Include="gl\glxew.h" />
+    <ClInclude Include="gl\wglew.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeBuilder.h" />
     <ClInclude Include="Jolt\AABBTree\AABBTreeToBuffer.h" />
     <ClInclude Include="Jolt\AABBTree\NodeCodec\NodeCodecQuadTreeHalfFloat.h" />
@@ -746,7 +750,7 @@
     <ClInclude Include="stamp\graphics\gl\texture.h" />
     <ClInclude Include="stamp\hid\focusgroup.h" />
     <ClInclude Include="stamp\math\alignment.h" />
-    <ClInclude Include="stamp\state.h" />
+    <ClInclude Include="stamp\stamp.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />
     <ClInclude Include="stamp\graphics\window.h" />

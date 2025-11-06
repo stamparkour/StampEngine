@@ -17,11 +17,11 @@
 
 
 #ifndef STAMP_GRAPHICS_GL_DEFINE_H
-#include <utility>
-#include <gl/glm.h>
+#include <utility> 
+#include <gl/glew.h>
 #endif
 
-#include <stamp/define.h>
+#include <stamp/graphics/define.h>
 
 #ifndef STAMP_GRAPHICS_GL_DEFINE_H
 #define STAMP_GRAPHICS_GL_DEFINE_H
