@@ -743,9 +743,9 @@
     <ClInclude Include="stamp\event.h" />
     <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
+    <ClInclude Include="stamp\graphics\gl\framebuffer.h" />
     <ClInclude Include="stamp\graphics\gl\mesh.h" />
     <ClInclude Include="stamp\graphics\gl\pixel.h" />
-    <ClInclude Include="stamp\graphics\gl\rawmesh.h" />
     <ClInclude Include="stamp\graphics\gl\shader.h" />
     <ClInclude Include="stamp\graphics\gl\texture.h" />
     <ClInclude Include="stamp\hid\focusgroup.h" />

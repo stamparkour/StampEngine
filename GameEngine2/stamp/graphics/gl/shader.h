@@ -73,7 +73,7 @@ public:
 	//	std::cout << "render::ShaderProgramBase::uniformD - index: " << value->GetActiveTextureIndex() << " loc: " << location << " prog: " << program << std::endl;
 	//	GLSTAMPASSERT;
 	//}
-	void Uniform(GLint location, Texture* texture);
+	void Uniform(GLint location, const Texture& texture);
 	void Uniform(GLint location, int value);
 	void Uniform(GLint location, unsigned int value);
 	void Uniform(GLint location, float value);

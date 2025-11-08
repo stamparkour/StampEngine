@@ -41,16 +41,7 @@ namespace window {
 			Maximized,
 			Minimized
 		};
-
-		constexpr const char* to_string(visibility_t v) {
-			switch (v) {
-			case Visible: return "Visible";
-			case Hidden: return "Hidden";
-			case Maximized: return "Maximized";
-			case Minimized: return "Minimized";
-			default: return "Unknown";
-			}
-		}
+		constexpr const char* to_string(visibility_t v);
 	}
 	namespace displaymode {
 		enum : displaymode_t {
@@ -61,15 +52,7 @@ namespace window {
 			Toolbox,
 			//Fullscreen,
 		};
-
-		constexpr const char* to_string(displaymode_t v) {
-			switch (v) {
-			case Normal: return "Normal";
-			case Borderless: return "Borderless";
-			case Popup: return "Popup";
-			default: return "Unknown";
-			}
-		}
+		constexpr const char* to_string(displaymode_t v);
 	}
 
 	struct CreationSettings {

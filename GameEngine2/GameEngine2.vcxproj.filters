@@ -1696,9 +1696,6 @@
     <ClInclude Include="stamp\graphics\gl\mesh.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\graphics\gl\rawmesh.h">
-      <Filter>libraries\stamp\graphics\gl</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\graphics\gl\shader.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
     </ClInclude>
@@ -1728,6 +1725,9 @@
     </ClInclude>
     <ClInclude Include="gl\wglew.h">
       <Filter>libraries\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\framebuffer.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

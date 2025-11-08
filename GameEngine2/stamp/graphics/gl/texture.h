@@ -59,7 +59,6 @@ namespace texture_format {
 class RawTexture;
 
 class Texture {
-	friend class TextureBinding;
 public:
 	struct desc_t {
 		GLuint textureBuffer = 0;
@@ -69,60 +68,26 @@ public:
 		size_t width = 0;
 		size_t height = 0;
 		size_t depth = 0;
-		size_t bindingLocation = 0;
+		size_t bindingIndex = 0;
 	};
 private:
 	desc_t desc;
-
-	void InitBuffer() {
-		if (desc.textureBuffer != 0) return;
-		glGenTextures(1, &desc.textureBuffer);
-	}
-
+	void InitBuffer();
 public:
-	Texture(texture_format_t format = texture_format::RGBA) {
-		desc.format = format;
-		InitBuffer();
-	}
+	Texture(texture_format_t format = texture_format::RGBA);
+	~Texture();
 
-	~Texture() {
-		Clear();
-	}
+	int Width(size_t mipmapLevel = 0) const;
+	int Height(size_t mipmapLevel = 0) const;
+	int Depth(size_t mipmapLevel = 0) const;
+	int MaxMipmapLevel();
 
-	int Width(size_t mipmapLevel = 0) const {
-		return std::max(desc.width >> mipmapLevel, 1ull);
-	}
-	int Height(size_t mipmapLevel = 0) const {
-		return std::max(desc.height >> mipmapLevel, 1ull);
-	}
-	int Depth(size_t mipmapLevel = 0) const {
-		return std::max(desc.depth >> mipmapLevel,1ull);
-	}
-	int MaxMipmapLevel() {
-		return desc.maxMipmapLevel;
-	}
-
-	GLuint TextureBuffer() const {
-		return desc.textureBuffer;
-	}
-	texture_type_t Type() const {
-		return desc.type;
-	}
-	size_t Bind(size_t bindingIndex) const {
-		return desc.bindingLocation;
-	}
-	size_t BindingLocation() const {
-		return desc.bindingLocation;
-	}
-	void GenMipmap() {
-		glGenerateTextureMipmap(desc.textureBuffer);
-	}
-	void Clear() {
-		if (desc.textureBuffer == 0) return;
-		glDeleteTextures(1, &desc.textureBuffer);
-		desc.textureBuffer = 0;
-		desc.type = 0;
-	}
+	GLuint TextureBuffer() const;
+	texture_type_t Type() const;
+	void Bind(size_t bindingIndex);
+	size_t Binding() const;
+	void GenMipmap();
+	void Clear();
 
 	void Set(RawTexture& tex, size_t mipmapLevel = 0);
 };
@@ -131,7 +96,6 @@ class RawTexture {
 	friend class Texture;
 protected:
 	RawTexture() {}
-
 	virtual void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) = 0;
 public:
 	virtual ~RawTexture() = 0;
@@ -149,18 +113,19 @@ private:
 
 	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
 		if (buf->type == 0) {
+			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(RawTexture2d) - mipmap level (" << mipmap <<") must be 0 when first setting Texture content.")
 			buf->width = width;
 			buf->height = height;
 			buf->depth = 1;
 			buf->type = texture_type::_2D;
 			int max = 0;
 			for (size_t w = width, h = height; w > 1 || h > 1; w >>= 1, h >>= 1) max++;
-			buf->maxMipmapLevel = max + mipmap;
+			buf->maxMipmapLevel = max;
 		}
 		else {
-			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set - tex is not same type as current texture: " << texture_type::to_string(buf->type));
-			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
-			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
+			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set(RawTexture2d) - tex is not same type as current texture: " << texture_type::to_string(buf->type));
+			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
+			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
 		}
 
 		glBindTexture(buf->type, buf->textureBuffer);
@@ -200,6 +165,10 @@ public:
 		return buffer[x + y * height];
 	}
 };
+
+
+//Definitions
+
 
 
 STAMP_GRAPHICS_GL_NAMESPACE_END

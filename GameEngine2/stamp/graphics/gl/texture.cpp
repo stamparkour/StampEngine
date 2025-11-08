@@ -3,51 +3,53 @@
 using namespace STAMP_GRAPHICS_NAMESPACE;
 using namespace STAMP_GRAPHICS_GL_NAMESPACE;
 
-std::vector<Texture*> textureBindings{};
-
-
-void verifyTextureBindingArray() {
-	if (!textureBindings.empty()) return;
-
-	GLint p;
-	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &p);
-	textureBindings.resize(p);
-}
-int getEmptyTextureBindingIndex() {
-	static int index = 0;
-
-	verifyTextureBindingArray();
-	int i = index;
-	while (textureBindings[i] != 0) {
-		if (++i >= textureBindings.size()) i = 1;
-		if (index == i) return 0;
-	}
-
-	return index = i;
+void Texture::InitBuffer() {
+	if (desc.textureBuffer != 0) return;
+	glGenTextures(1, &desc.textureBuffer);
 }
 
-TextureBinding::TextureBinding(Texture* texture) {
-	this->texture = texture;
-	if (texture == nullptr) return;
-	if (texture->desc.bindingLocation != 0) return;
-
-	int i = getEmptyTextureBindingIndex();
-	STAMPASSERT(i != 0, "stamp::graphics::gl::TextureBinding - texture binding buffer is full.");
-
-	glBindTextureUnit(i, texture->TextureBuffer());
-	texture->desc.bindingLocation = i;
-	textureBindings[i] = texture;
-
+Texture::Texture(texture_format_t format = texture_format::RGBA) {
+	desc.format = format;
+	InitBuffer();
 }
-size_t TextureBinding::BindingLocation() const {
-	if (texture->desc.bindingLocation == 0) return 0;
-	return texture->desc.bindingLocation;
+Texture::~Texture() {
+	Clear();
 }
 
-TextureBinding::~TextureBinding() {
-	if (texture->desc.bindingLocation == 0) return;
-	textureBindings[texture->desc.bindingLocation] = nullptr;
-	texture->desc.bindingLocation = 0;
+int Texture::Width(size_t mipmapLevel = 0) const {
+	return std::max(desc.width >> mipmapLevel, 1ull);
+}
+int Texture::Height(size_t mipmapLevel = 0) const {
+	return std::max(desc.height >> mipmapLevel, 1ull);
+}
+int Texture::Depth(size_t mipmapLevel = 0) const {
+	return std::max(desc.depth >> mipmapLevel, 1ull);
+}
+int Texture::MaxMipmapLevel() {
+	return desc.maxMipmapLevel;
+}
+
+GLuint Texture::TextureBuffer() const {
+	return desc.textureBuffer;
+}
+texture_type_t Texture::Type() const {
+	return desc.type;
+}
+void Texture::Bind(size_t bindingIndex) {
+	desc.bindingIndex = bindingIndex;
+	glBindTextureUnit(bindingIndex, desc.textureBuffer);
+}
+size_t Texture::Binding() const {
+	return desc.bindingIndex;
+}
+void Texture::GenMipmap() {
+	glGenerateTextureMipmap(desc.textureBuffer);
+}
+void Clear() {
+	if (desc.textureBuffer == 0) return;
+	glDeleteTextures(1, &desc.textureBuffer);
+	desc.textureBuffer = 0;
+	desc.type = 0;
 }
 
 void Texture::Set(RawTexture& tex, size_t mipmapLevel) {

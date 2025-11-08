@@ -1,3 +1,9 @@
+//stamp/graphics/gl/framebuffer.h
+
+#pragma once
+#ifndef STAMP_GRAPHICS_GL_FRAMEBUFFER_H
+#define STAMP_GRAPHICS_GL_FRAMEBUFFER_H
+
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +18,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stamp/graphics/window.h>
 
-using namespace STAMP_GRAPHICS_NAMESPACE;
+#include <stdint.h>
+#include <utility>
+#include <vector>
+#include <iterator>
+#include <algorithm>
 
-constexpr const char* window::visibility::to_string(visibility_t v) {
-	switch (v) {
-	case Visible: return "Visible";
-	case Hidden: return "Hidden";
-	case Maximized: return "Maximized";
-	case Minimized: return "Minimized";
-	default: return "Unknown";
-	}
-}
-constexpr const char* window::displaymode::to_string(displaymode_t v) {
-	switch (v) {
-	case Normal: return "Normal";
-	case Borderless: return "Borderless";
-	case Popup: return "Popup";
-	default: return "Unknown";
-	}
-}
+#include <stamp/graphics/gl/define.h>
+
+STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
+
+
+STAMP_GRAPHICS_GL_NAMESPACE_END
+
+#endif
