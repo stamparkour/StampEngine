@@ -63,7 +63,7 @@ public:
 	IShaderProgram& operator =(IShaderProgram&& other) noexcept;
 	virtual ~IShaderProgram();
 
-	int ProgramID();
+	int InternalProgram();
 	void Bind();
 	bool isValid() const;
 	//void Uniform(GLint location, const SamplerBase* value) {

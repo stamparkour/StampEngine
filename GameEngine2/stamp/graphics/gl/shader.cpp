@@ -132,7 +132,7 @@ IShaderProgram::~IShaderProgram() {
 	program = 0;
 }
 
-int IShaderProgram::ProgramID() {
+int IShaderProgram::InternalProgram() {
 	return program;
 }
 void IShaderProgram::Bind() {

@@ -54,6 +54,8 @@ namespace texture_format {
 		RGB = GL_RGB,
 		RGBA = GL_RGBA,
 	};
+
+	bool IsFormatFloatingPoint(texture_format_t format);
 };
 
 class RawTexture;
@@ -82,8 +84,9 @@ public:
 	int Depth(size_t mipmapLevel = 0) const;
 	int MaxMipmapLevel();
 
-	GLuint TextureBuffer() const;
+	GLuint InternalTextureBuffer() const;
 	texture_type_t Type() const;
+	texture_format_t Format() const;
 	void Bind(size_t bindingIndex);
 	size_t Binding() const;
 	void GenMipmap();

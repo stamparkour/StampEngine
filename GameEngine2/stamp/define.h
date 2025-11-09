@@ -31,9 +31,9 @@
 #define STAMP_VERSION_PATCH 0
 
 // Defines the default value type for all library functions
-#define STAMP_DEFAULT_FLOATINGPOINT double
-#define STAMP_DEFAULT_ALIGN_FLOATINGPOINT float
-#define STAMP_DEFAULT_CHAR char32_t
+using STAMP_DEFAULT_FLOATINGPOINT = double;
+using STAMP_DEFAULT_ALIGN_FLOATINGPOINT = float;
+using STAMP_DEFAULT_CHAR = char32_t;
 #define STAMP_STRING(v) U##v
 
 // network endianness 1: big-endian, 0: little-endian

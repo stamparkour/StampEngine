@@ -3,6 +3,18 @@
 using namespace STAMP_GRAPHICS_NAMESPACE;
 using namespace STAMP_GRAPHICS_GL_NAMESPACE;
 
+bool texture_format::IsFormatFloatingPoint(texture_format_t format) {
+	switch (format) {
+	case texture_format::Red:
+	case texture_format::RG:
+	case texture_format::RGB:
+	case texture_format::RGBA:
+		return true;
+	default:
+		return false;
+	}
+}
+
 void Texture::InitBuffer() {
 	if (desc.textureBuffer != 0) return;
 	glGenTextures(1, &desc.textureBuffer);
@@ -29,11 +41,14 @@ int Texture::MaxMipmapLevel() {
 	return desc.maxMipmapLevel;
 }
 
-GLuint Texture::TextureBuffer() const {
+GLuint Texture::InternalTextureBuffer() const {
 	return desc.textureBuffer;
 }
 texture_type_t Texture::Type() const {
 	return desc.type;
+}
+texture_format_t Texture::Format() const {
+	return desc.format;
 }
 void Texture::Bind(size_t bindingIndex) {
 	desc.bindingIndex = bindingIndex;
@@ -45,7 +60,7 @@ size_t Texture::Binding() const {
 void Texture::GenMipmap() {
 	glGenerateTextureMipmap(desc.textureBuffer);
 }
-void Clear() {
+void Texture::Clear() {
 	if (desc.textureBuffer == 0) return;
 	glDeleteTextures(1, &desc.textureBuffer);
 	desc.textureBuffer = 0;

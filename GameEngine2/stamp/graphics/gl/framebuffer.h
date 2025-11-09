@@ -26,9 +26,90 @@
 #include <algorithm>
 
 #include <stamp/graphics/gl/define.h>
+#include <stamp/graphics/gl/texture.h>
+#include <stamp/graphics/color.h>
+#include <stamp/noncopyable.h>
 
 STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
 
+
+using clear_bitfield_t = uint32_t;
+namespace clear_bitfield {
+	enum : clear_bitfield_t {
+		Color = GL_COLOR_BUFFER_BIT,
+		Depth = GL_DEPTH_BUFFER_BIT,
+		Stencil = GL_STENCIL_BUFFER_BIT,
+	};
+}
+
+class IFrameBuffer : STAMP_NAMESPACE::INonCopyable {
+protected:
+	GLuint frameBuffer = 0;
+	std::vector<GLenum> attachments{};
+
+	void InitBuffer() {
+		if (frameBuffer != 0) return;
+		glCreateFramebuffers(1, &frameBuffer);
+	}
+	void DeleteBuffer() {
+		if (frameBuffer == 0) return;
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+	}
+
+	virtual void BindReadRaw() {
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);		
+	}
+	virtual void BindDrawRaw() {
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
+	}
+public:
+	virtual ~IFrameBuffer() = 0;
+
+	void BindRead(uint32_t colorAttachmentIndex = 0) {
+		BindReadRaw();
+		glReadBuffer(colorAttachmentIndex + GL_COLOR_ATTACHMENT0);
+	}
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<uint32_t> Iter>
+	void BindDraw(Iter begin, Iter end) {
+		std::vector<GLenum> binds{};
+		binds.reserve(std::distance(begin, end));
+		for (auto i = begin; i != end; i++) {
+			binds.push_back(*i + GL_COLOR_ATTACHMENT0);
+		}
+		BindDrawRaw();
+		glDrawBuffer(binds.size(), binds.data());
+	}
+	void BindDraw() {
+		BindDrawRaw();
+		glDrawBuffers(attachments.size(), attachments.data());
+	}
+	GLuint InternalFrameBuffer() const {
+		return frameBuffer;
+	}
+	void Clear(clear_bitfield_t clear = clear_bitfield::Color) {
+		BindDraw();
+		glClear(clear);
+	}
+	void ClearColor(uint32_t colorAttachmentIndex = 0, const STAMP_GRAPHICS_NAMESPACE::ColorRGBA<GLfloat>& color = {0.5f,0.5f,0.5f,1}) {
+		BindDrawRaw();
+		glDrawBuffers(frameBuffer, 1, &colorAttachmentIndex);
+		glClearBufferfv(GL_COLOR, 0, color.V);
+	}
+	void ClearDepth(GLfloat depth = 0) {
+		BindDrawRaw();
+		glClearBufferfv(GL_DEPTH, 0, &depth);
+	}
+	void ClearStencil(GLint stencil = 0) {
+		BindDrawRaw();
+		glClearBufferiv(GL_STENCIL, 0, &stencil);
+	}
+
+};
+
+class FrameBuffer {
+
+};
 
 STAMP_GRAPHICS_GL_NAMESPACE_END
 
