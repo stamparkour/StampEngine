@@ -42,11 +42,19 @@ namespace clear_bitfield {
 	};
 }
 
-class IFrameBuffer : STAMP_NAMESPACE::INonCopyable {
+namespace framebuffer {
+	struct AttachmentCreationSettings {
+		texture_format_t format = texture_format::RGBA;
+		size_t width = 256;
+		size_t height = 256;
+	};
+}
+
+class FrameBuffer : STAMP_NAMESPACE::INonCopyable {
 protected:
 	GLuint frameBuffer = 0;
 	std::vector<GLenum> attachments{};
-
+	std::vector<STAMP_NAMESPACE::threadsafe_ptr<Texture>> textures{};
 	void InitBuffer() {
 		if (frameBuffer != 0) return;
 		glCreateFramebuffers(1, &frameBuffer);
@@ -56,22 +64,21 @@ protected:
 		glDeleteFramebuffers(1, &frameBuffer);
 		frameBuffer = 0;
 	}
-
-	virtual void BindReadRaw() {
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);		
-	}
-	virtual void BindDrawRaw() {
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
-	}
 public:
-	virtual ~IFrameBuffer() = 0;
-
-	void BindRead(uint32_t colorAttachmentIndex = 0) {
-		BindReadRaw();
-		glReadBuffer(colorAttachmentIndex + GL_COLOR_ATTACHMENT0);
+	FrameBuffer() {
+		InitBuffer();
 	}
+
+	~FrameBuffer() {
+		DeleteBuffer();
+	}
+
+	/*void BindRead(uint32_t colorAttachmentIndex = 0) {
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);
+		glReadBuffer(colorAttachmentIndex + GL_COLOR_ATTACHMENT0);
+	}*/
 	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<uint32_t> Iter>
-	void BindDraw(Iter begin, Iter end) {
+	void Bind(Iter begin, Iter end) {
 		std::vector<GLenum> binds{};
 		binds.reserve(std::distance(begin, end));
 		for (auto i = begin; i != end; i++) {
@@ -80,8 +87,8 @@ public:
 		BindDrawRaw();
 		glDrawBuffer(binds.size(), binds.data());
 	}
-	void BindDraw() {
-		BindDrawRaw();
+	void Bind() {
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
 		glDrawBuffers(attachments.size(), attachments.data());
 	}
 	GLuint InternalFrameBuffer() const {
@@ -92,17 +99,16 @@ public:
 		glClear(clear);
 	}
 	void ClearColor(uint32_t colorAttachmentIndex = 0, const STAMP_GRAPHICS_NAMESPACE::ColorRGBA<GLfloat>& color = {0.5f,0.5f,0.5f,1}) {
-		BindDrawRaw();
-		glDrawBuffers(frameBuffer, 1, &colorAttachmentIndex);
-		glClearBufferfv(GL_COLOR, 0, color.V);
+		glClearNamedFramebufferfv(frameBuffer, GL_COLOR, colorAttachmentIndex, (GLfloat*)color.V);
+	}
+	void ClearColor(uint32_t colorAttachmentIndex = 0, const STAMP_GRAPHICS_NAMESPACE::ColorRGBA<GLint>& color = { 1,1,1,1 }) {
+		glClearNamedFramebufferiv(frameBuffer, GL_COLOR, 0, (GLint*)color.V);
 	}
 	void ClearDepth(GLfloat depth = 0) {
-		BindDrawRaw();
-		glClearBufferfv(GL_DEPTH, 0, &depth);
+		glClearNamedFramebufferfv(frameBuffer, GL_DEPTH, 0, &depth);
 	}
 	void ClearStencil(GLint stencil = 0) {
-		BindDrawRaw();
-		glClearBufferiv(GL_STENCIL, 0, &stencil);
+		glClearNamedFramebufferiv(frameBuffer, GL_STENCIL, 0, &stencil);
 	}
 
 };

@@ -24,14 +24,22 @@ Texture::Texture(texture_format_t format = texture_format::RGBA) {
 	desc.format = format;
 	InitBuffer();
 }
+Texture::Texture(texture_format_t format, size_t width, size_t height) {
+	desc.format = format;
+	desc.width = width;
+	desc.height = height;
+	InitBuffer();
+}
 Texture::~Texture() {
 	Clear();
 }
 
 int Texture::Width(size_t mipmapLevel = 0) const {
+	if (desc.width == 0) return 0;
 	return std::max(desc.width >> mipmapLevel, 1ull);
 }
 int Texture::Height(size_t mipmapLevel = 0) const {
+	if (desc.height == 0) return 0;
 	return std::max(desc.height >> mipmapLevel, 1ull);
 }
 int Texture::Depth(size_t mipmapLevel = 0) const {
@@ -68,5 +76,11 @@ void Texture::Clear() {
 }
 
 void Texture::Set(RawTexture& tex, size_t mipmapLevel) {
+	auto t = desc.type;
 	tex.SetTexture(this, &desc, mipmapLevel);
+	if (t == 0) {
+		int max = 0;
+		for (size_t w = desc.width, h = desc.height, d = desc.depth; w > 1 || h > 1 || d > 1; w >>= 1, h >>= 1, d >>= 1) max++;
+		desc.maxMipmapLevel = max;
+	}
 }

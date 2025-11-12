@@ -77,6 +77,7 @@ private:
 	void InitBuffer();
 public:
 	Texture(texture_format_t format = texture_format::RGBA);
+	Texture(texture_format_t format, size_t width, size_t height);
 	~Texture();
 
 	int Width(size_t mipmapLevel = 0) const;
@@ -106,6 +107,58 @@ public:
 };
 
 template<typename T>
+class ClearTexture2d : RawTexture {
+public:
+	using pixel_type = T;
+private:
+	pixel_type clearColor;
+	size_t width = 0;
+	size_t height = 0;
+
+	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
+		if (width == 0 || height == 0) {
+			STAMPASSERT(buf->width != 0 && buf->height != 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - texture size should be initialized. Either width or height is currently unitialized");
+			width = tex->Width(mipmap);
+			height = tex->Height(mipmap);
+		}
+		else if (buf->width != 0 || buf->height != 0) {
+			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
+			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
+		}
+		if (buf->type == 0) {
+			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - mipmap level (" << mipmap << ") must be 0 when first setting Texture content.")
+			buf->width = width << mipmap;
+			buf->height = height << mipmap;
+			buf->depth = 1;
+			buf->type = texture_type::_2D;
+
+			glBindTexture(buf->type, buf->textureBuffer);
+			glTexImage2D(buf->type, mipmap, buf->format, width, height, 0, pixel_type::format, pixel_type::type, nullptr);
+		}
+		else {
+			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - tex is not same type as current texture: " << texture_type::to_string(buf->type));
+		}
+
+		glClearTexImage(buf->textureBuffer, mipmap, pixel_type::format, pixel_type::type, &clearColor);
+	}
+public:
+	ClearTexture2d(pixel_type clearColor) {
+		this->clearColor = clearColor;
+	}
+	ClearTexture2d(pixel_type clearColor, size_t width, size_t height) {
+		this->clearColor = clearColor;
+		this->width = width;
+		this->height = height;
+	}
+	~ClearTexture2d() {}
+	const void* data() override {
+		return nullptr;
+	}
+	size_t Width() { return width; }
+	size_t Height() { return height; }
+};
+
+template<typename T>
 class RawTexture2d : RawTexture {
 public:
 	using pixel_type = T;
@@ -115,20 +168,19 @@ private:
 	std::vector<T> buffer{};
 
 	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
+		if(buf->width != 0 || buf->height != 0) {
+			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
+			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
+		}
 		if (buf->type == 0) {
 			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(RawTexture2d) - mipmap level (" << mipmap <<") must be 0 when first setting Texture content.")
-			buf->width = width;
-			buf->height = height;
+			buf->width = width << mipmap;
+			buf->height = height << mipmap;
 			buf->depth = 1;
 			buf->type = texture_type::_2D;
-			int max = 0;
-			for (size_t w = width, h = height; w > 1 || h > 1; w >>= 1, h >>= 1) max++;
-			buf->maxMipmapLevel = max;
 		}
 		else {
 			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set(RawTexture2d) - tex is not same type as current texture: " << texture_type::to_string(buf->type));
-			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
-			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
 		}
 
 		glBindTexture(buf->type, buf->textureBuffer);
@@ -137,7 +189,6 @@ private:
 
 	
 public:
-	RawTexture2d() {}
 	RawTexture2d(size_t width, size_t height) {
 		buffer = std::vector<T>(width * height);
 		this->width = width;
