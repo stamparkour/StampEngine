@@ -30,18 +30,33 @@ public:
 	static constexpr GLenum format = GL_RGBA;
 	static constexpr GLenum type = GL_UNSIGNED_BYTE;
 
-	pixel_rgba8() {}
-	pixel_rgba8(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 0) : r(r), g(g), b(b), a(a) {}
+	pixel_rgba8(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 1) : r(r), g(g), b(b), a(a) {}
 
-	uint8_t red() const { return r; }
-	uint8_t green() const { return g; }
-	uint8_t blue() const { return b; }
-	uint8_t alpha() const { return a; }
+	const uint8_t& red() const { return r; }
+	const uint8_t& green() const { return g; }
+	const uint8_t& blue() const { return b; }
+	const uint8_t& alpha() const { return a; }
+	const uint8_t& mono() const { return r; }
 
-	void red(uint8_t v) { r = v; }
-	void green(uint8_t v) { g = v; }
-	void blue(uint8_t v) { b = v; }
-	void alpha(uint8_t v) { a = v; }
+	uint8_t& red() { return r; }
+	uint8_t& green() { return g; }
+	uint8_t& blue() { return b; }
+	uint8_t& alpha() { return a; }
+	uint8_t& mono() { return r; }
+};
+class pixel_r32f {
+	float r = 0;
+public:
+	static constexpr GLenum format = GL_RGBA;
+	static constexpr GLenum type = GL_UNSIGNED_BYTE;
+
+	pixel_r32f(float r = 0) : r(r) {}
+
+	const float& red() const { return r; }
+	const float& mono() const { return r; }
+
+	float& red() { return r; }
+	float& mono() { return r; }
 };
 
 STAMP_GRAPHICS_GL_NAMESPACE_END

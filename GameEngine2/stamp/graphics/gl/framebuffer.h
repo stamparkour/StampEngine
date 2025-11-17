@@ -43,18 +43,19 @@ namespace clear_bitfield {
 }
 
 namespace framebuffer {
-	struct AttachmentCreationSettings {
-		texture_format_t format = texture_format::RGBA;
-		size_t width = 256;
-		size_t height = 256;
+
+
+	struct IFrameBufferCreationSettings {
+
 	};
 }
 
 class FrameBuffer : STAMP_NAMESPACE::INonCopyable {
 protected:
 	GLuint frameBuffer = 0;
-	std::vector<GLenum> attachments{};
 	std::vector<STAMP_NAMESPACE::threadsafe_ptr<Texture>> textures{};
+	STAMP_NAMESPACE::threadsafe_ptr<Texture> depthTexture = nullptr;
+
 	void InitBuffer() {
 		if (frameBuffer != 0) return;
 		glCreateFramebuffers(1, &frameBuffer);
@@ -68,9 +69,38 @@ public:
 	FrameBuffer() {
 		InitBuffer();
 	}
-
 	~FrameBuffer() {
 		DeleteBuffer();
+	}
+
+	STAMP_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::RGBA) {
+		Texture tex{ format, size.x, size.y };
+		tex.Set(ClearTexture2d(pixel_rgba8{ 0,0,0, 1 }), 0);
+		if (textures.size() <= attachment) textures.resize(attachment + 1);
+		// this is because i want to have a previous reference to the texture reference the new texture
+		if (textures[attachment] == nullptr) textures[attachment] = STAMP_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
+		else *textures[attachment].get_unsafe() = std::move(tex);
+
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
+		return textures[attachment];
+	}
+	STAMP_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth(const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::Depth32F) {
+		Texture tex = { format, size.x, size.y };
+		tex.Set(ClearTexture2d(pixel_r32f{ 0 }), 0);
+		if (depthTexture == nullptr) depthTexture = STAMP_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
+		else *depthTexture.get_unsafe() = std::move(tex);
+
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
+		return depthTexture;
+	}
+	STAMP_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment) {
+		if (textures.size() <= attachment || !textures[attachment]) {
+			return nullptr;
+		}
+		return textures[attachment];
+	}
+	STAMP_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() {
+		return depthTexture;
 	}
 
 	/*void BindRead(uint32_t colorAttachmentIndex = 0) {
@@ -84,18 +114,16 @@ public:
 		for (auto i = begin; i != end; i++) {
 			binds.push_back(*i + GL_COLOR_ATTACHMENT0);
 		}
-		BindDrawRaw();
-		glDrawBuffer(binds.size(), binds.data());
+		glNamedFramebufferDrawBuffers(frameBuffer, binds.size(), binds.data());
 	}
 	void Bind() {
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
-		glDrawBuffers(attachments.size(), attachments.data());
+		glNamedFramebufferDrawBuffers(frameBuffer, );
 	}
 	GLuint InternalFrameBuffer() const {
 		return frameBuffer;
 	}
 	void Clear(clear_bitfield_t clear = clear_bitfield::Color) {
-		BindDraw();
+		Bind();
 		glClear(clear);
 	}
 	void ClearColor(uint32_t colorAttachmentIndex = 0, const STAMP_GRAPHICS_NAMESPACE::ColorRGBA<GLfloat>& color = {0.5f,0.5f,0.5f,1}) {
@@ -110,10 +138,6 @@ public:
 	void ClearStencil(GLint stencil = 0) {
 		glClearNamedFramebufferiv(frameBuffer, GL_STENCIL, 0, &stencil);
 	}
-
-};
-
-class FrameBuffer {
 
 };
 

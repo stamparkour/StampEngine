@@ -53,6 +53,8 @@ namespace texture_format {
 		RG = GL_RG,
 		RGB = GL_RGB,
 		RGBA = GL_RGBA,
+
+		Depth32F = GL_DEPTH_COMPONENT32F,
 	};
 
 	bool IsFormatFloatingPoint(texture_format_t format);
@@ -93,21 +95,21 @@ public:
 	void GenMipmap();
 	void Clear();
 
-	void Set(RawTexture& tex, size_t mipmapLevel = 0);
+	void Set(const RawTexture& tex, size_t mipmapLevel = 0);
 };
 
 class RawTexture {
 	friend class Texture;
 protected:
 	RawTexture() {}
-	virtual void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) = 0;
+	virtual void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) const = 0;
 public:
 	virtual ~RawTexture() = 0;
 	virtual const void* data() = 0;
 };
 
 template<typename T>
-class ClearTexture2d : RawTexture {
+class ClearTexture2d : public RawTexture {
 public:
 	using pixel_type = T;
 private:
@@ -115,7 +117,7 @@ private:
 	size_t width = 0;
 	size_t height = 0;
 
-	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
+	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) const override {
 		if (width == 0 || height == 0) {
 			STAMPASSERT(buf->width != 0 && buf->height != 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - texture size should be initialized. Either width or height is currently unitialized");
 			width = tex->Width(mipmap);
@@ -132,13 +134,13 @@ private:
 			buf->depth = 1;
 			buf->type = texture_type::_2D;
 
-			glBindTexture(buf->type, buf->textureBuffer);
-			glTexImage2D(buf->type, mipmap, buf->format, width, height, 0, pixel_type::format, pixel_type::type, nullptr);
 		}
 		else {
 			STAMPASSERT(buf->type == buf->type, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - tex is not same type as current texture: " << texture_type::to_string(buf->type));
 		}
 
+		glBindTexture(buf->type, buf->textureBuffer);
+		glTexImage2D(buf->type, mipmap, buf->format, width, height, 0, pixel_type::format, pixel_type::type, nullptr);
 		glClearTexImage(buf->textureBuffer, mipmap, pixel_type::format, pixel_type::type, &clearColor);
 	}
 public:
@@ -159,7 +161,7 @@ public:
 };
 
 template<typename T>
-class RawTexture2d : RawTexture {
+class RawTexture2d : public RawTexture {
 public:
 	using pixel_type = T;
 private:
@@ -167,7 +169,7 @@ private:
 	size_t height = 0;
 	std::vector<T> buffer{};
 
-	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) override {
+	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) const override {
 		if(buf->width != 0 || buf->height != 0) {
 			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
 			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));

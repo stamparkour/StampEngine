@@ -75,7 +75,7 @@ void Texture::Clear() {
 	desc.type = 0;
 }
 
-void Texture::Set(RawTexture& tex, size_t mipmapLevel) {
+void Texture::Set(const RawTexture& tex, size_t mipmapLevel) {
 	auto t = desc.type;
 	tex.SetTexture(this, &desc, mipmapLevel);
 	if (t == 0) {

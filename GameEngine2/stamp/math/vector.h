@@ -18,7 +18,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 // provides short names for vector types and functions
 // #define STAMP_MATH_VECTOR_SHORT_NAMES
 
@@ -30,14 +29,25 @@
 
 STAMP_MATH_NAMESPACE_BEGIN
 
+/// <summary>Primary fixed-size vector template declaration.
+/// Represents a D-dimensional vector of elements of type T.
+/// Use specializations for common dimensions (2,3,4) which provide named members.</summary>
+/// <typeparam name="T">Element type stored in the vector. Defaults to STAMP_DEFAULT_FLOATINGPOINT.</typeparam>
+/// <typeparam name="D">Number of dimensions (compile-time constant). Defaults to 2.</typeparam>
 template<typename T = STAMP_DEFAULT_FLOATINGPOINT, size_t D = 2>
 struct Vector;
 STAMP_TEMPLATE_ALL_QUANTITY_TEMPLATED(Vector, template<size_t D = 2>, COMMA D);
 
+/// <summary>Alias for 2-dimensional vector type.</summary>
+/// <typeparam name="T">Element type; defaults to STAMP_DEFAULT_FLOATINGPOINT.</typeparam>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vector2 = Vector<T, 2>;
+/// <summary>Alias for 3-dimensional vector type.</summary>
+/// <typeparam name="T">Element type; defaults to STAMP_DEFAULT_FLOATINGPOINT.</typeparam>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vector3 = Vector<T, 3>;
+/// <summary>Alias for 4-dimensional vector type.</summary>
+/// <typeparam name="T">Element type; defaults to STAMP_DEFAULT_FLOATINGPOINT.</typeparam>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vector4 = Vector<T, 4>;
 
@@ -46,179 +56,299 @@ STAMP_TEMPLATE_ALL_QUANTITY(Vector3);
 STAMP_TEMPLATE_ALL_QUANTITY(Vector4);
 
 #ifdef STAMP_MATH_VECTOR_SHORT_NAMES
+/// <summary>Short alias for 2D vectors when STAMP_MATH_VECTOR_SHORT_NAMES is enabled.</summary>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vec2 = Vector2<T = STAMP_DEFAULT_FLOATINGPOINT>;
 STAMP_TEMPLATE_ALL_QUANTITY(Vec2);
 
+/// <summary>Short alias for 3D vectors when STAMP_MATH_VECTOR_SHORT_NAMES is enabled.</summary>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vec3 = Vector2<T = STAMP_DEFAULT_FLOATINGPOINT>;
 STAMP_TEMPLATE_ALL_QUANTITY(Vec3);
 
+/// <summary>Short alias for 4D vectors when STAMP_MATH_VECTOR_SHORT_NAMES is enabled.</summary>
 template <typename T = STAMP_DEFAULT_FLOATINGPOINT>
 using Vec4 = Vector2<T = STAMP_DEFAULT_FLOATINGPOINT>;
 STAMP_TEMPLATE_ALL_QUANTITY(Vec4);
 #endif
 
+/// <summary>CRTP base class providing common accessors and conversions for vectors.
+/// Concrete vector types derive from this to gain conversion operators, pointer conversions,
+/// boolean conversion and iterator/access helpers.</summary>
+/// <typeparam name="V">Concrete vector type inheriting this base (CRTP).</typeparam>
+/// <typeparam name="T">Element type stored in the concrete vector.</typeparam>
+/// <typeparam name="D">Number of dimensions of the concrete vector.</typeparam>
 template<typename V, typename T, size_t D>
 struct Vector_Base {
+	/// <summary>Implicit conversion to a Vector with same dimension but different element type.</summary>
 	template<typename T1> operator Vector<T1, D>() const noexcept;
+	/// <summary>Implicit conversion to a Vector with possibly different dimensions and element type.
+/// Extra components are zero-initialized in the target.</summary>
 	template<typename T1, size_t D1> operator Vector<T1, D1>() const noexcept;
+	/// <summary>Const pointer conversion to contiguous element storage.</summary>
 	explicit operator const T* () const noexcept;
+	/// <summary>Mutable pointer conversion to contiguous element storage.</summary>
 	explicit operator T* () noexcept;
+	/// <summary>Boolean conversion: returns true if all components are non-zero.</summary>
 	explicit operator bool() const noexcept;
 
+	/// <summary>Default constructor enabled when T satisfies Field concept.</summary>
 	constexpr Vector_Base() requires Field<T> {}
 
+	/// <summary>Compile-time indexed mutable accessor (returns reference to element Q).</summary>
+	/// <typeparam name="Q">Compile-time index into the vector (0-based).</typeparam>
 	template<size_t Q>
 	auto& get();
+	/// <summary>Compile-time indexed const accessor (returns const reference to element Q).</summary>
+	/// <typeparam name="Q">Compile-time index into the vector (0-based).</typeparam>
 	template<size_t Q>
 	const auto& get() const;
+	/// <summary>Begin iterator (mutable) over underlying storage.</summary>
 	auto begin();
+	/// <summary>Begin iterator (const) over underlying storage.</summary>
 	auto begin() const;
+	/// <summary>End iterator (mutable) over underlying storage.</summary>
 	auto end();
+	/// <summary>End iterator (const) over underlying storage.</summary>
 	auto end() const;
 };
 
+/// <summary>Generic D-dimensional vector storage and simple constructors.
+/// This specialization backs storage with a raw array 'V'.</summary>
+/// <typeparam name="T">Element type.</typeparam>
+/// <typeparam name="D">Number of dimensions.</typeparam>
 template<typename T, size_t D>
 struct Vector : public Vector_Base<Vector<T, D>, T, D> {
 	using member_type = T;
 	constexpr static size_t dimensions = D;
 
+	/// <summary>Contiguous storage for components.</summary>
 	T V[D] = {};
+	/// <summary>Default constructor: leaves elements value-initialized.</summary>
 	Vector() noexcept {}
+	/// <summary>Construct with all components set to the same scalar value.</summary>
 	Vector(T x) noexcept {
 		for (int i = 0; i < dimensions; i++) V[i] = x;
 	}
 };
 
-
-
+/// <summary>2D vector specialization with named members x, y and common directional constants.</summary>
+/// <typeparam name="T">Element type.</typeparam>
 template <typename T>
 struct Vector<T, 2> : public Vector_Base<Vector<T, 2>, T, 2> {
 	using member_type = T;
 	constexpr static size_t dimensions = 2;
 
 	union {
+		/// <summary>Contiguous storage for components [x, y].</summary>
 		T V[2] = {};
+		/// <summary>Named components for convenience.</summary>
 		struct { T x, y; };
 	};
 
+	/// <summary>Default constructor.</summary>
 	Vector() noexcept {}
+	/// <summary>Fill both components with the same value.</summary>
 	Vector(T x) noexcept : x(x), y(x) {}
+	/// <summary>Construct from explicit x and y values.</summary>
 	Vector(T x, T y)	noexcept : x(x), y(y) {}
 
+	/// <summary>Vector whose components are all 1.</summary>
 	const static Vector2<T> UNIT;
+	/// <summary>Unit vector in +X direction.</summary>
 	const static Vector2<T> UP;
+	/// <summary>Unit vector in -X direction.</summary>
 	const static Vector2<T> DOWN;
+	/// <summary>Unit vector in +Y direction.</summary>
 	const static Vector2<T> RIGHT;
+	/// <summary>Unit vector in -Y direction.</summary>
 	const static Vector2<T> LEFT;
 };
 
+/// <summary>3D vector specialization with named members x,y,z and convenience constructors/constants.</summary>
+/// <typeparam name="T">Element type.</typeparam>
 template <typename T>
 struct Vector<T, 3> : public Vector_Base<Vector<T, 3>, T, 3> {
 	using member_type = T;
 	constexpr static size_t dimensions = 3;
 	union {
+		/// <summary>Contiguous storage for components [x, y, z].</summary>
 		T V[3] = {};
+		/// <summary>Named components for convenience.</summary>
 		struct { T x, y, z; };
 	};
 
+	/// <summary>Default constructor.</summary>
 	Vector() noexcept {}
+	/// <summary>Fill all components with the same scalar value.</summary>
 	Vector(T x) noexcept : x(x), y(x), z(x) {}
-	Vector(T x, T y, T z)				noexcept : x(x),	y(y),	z(z) {}
-	Vector(const Vector2<T>& a, T z)	noexcept : x(a.x),	y(a.y),	z(z) {}
-	Vector(T x, const Vector2<T>& a)	noexcept : x(x),	y(a.x),	z(a.y) {}
+	/// <summary>Construct from three scalars (x,y,z).</summary>
+	Vector(T x, T y, T z)				noexcept : x(x), y(y), z(z) {}
+	/// <summary>Construct from 2D vector + z component.</summary>
+	Vector(const Vector2<T>& a, T z)	noexcept : x(a.x), y(a.y), z(z) {}
+	/// <summary>Construct from x scalar and a 2D vector for (y,z).</summary>
+	Vector(T x, const Vector2<T>& a)	noexcept : x(x), y(a.x), z(a.y) {}
 
+	/// <summary>Vector whose components are all 1.</summary>
 	const static Vector3<T> UNIT;
+	/// <summary>Unit vector in +X direction.</summary>
 	const static Vector3<T> UP;
+	/// <summary>Unit vector in -X direction.</summary>
 	const static Vector3<T> DOWN;
+	/// <summary>Unit vector in +Y direction.</summary>
 	const static Vector3<T> RIGHT;
+	/// <summary>Unit vector in -Y direction.</summary>
 	const static Vector3<T> LEFT;
+	/// <summary>Unit vector in +Z direction (forward).</summary>
 	const static Vector3<T> FORWARD;
+	/// <summary>Unit vector in -Z direction (back).</summary>
 	const static Vector3<T> BACK;
 };
 
+/// <summary>4D vector specialization with named members x,y,z,w and many convenience constructors/constants.</summary>
+/// <typeparam name="T">Element type.</typeparam>
 template <typename T>
 struct Vector<T, 4> : public Vector_Base<Vector<T, 4>, T, 4> {
 	using member_type = T;
 	constexpr static size_t dimensions = 4;
 	union {
+		/// <summary>Contiguous storage for components [x, y, z, w].</summary>
 		T V[4] = {};
+		/// <summary>Named components for convenience.</summary>
 		struct { T x, y, z, w; };
 	};
 
+	/// <summary>Default constructor.</summary>
 	Vector() noexcept {}
+	/// <summary>Fill all components with the same scalar value.</summary>
 	Vector(T x) noexcept : x(x), y(x), z(x), w(x) {}
-	Vector(T x, T y)									noexcept :	x(x),	y(y),	z(x),	w(y) {}
-	Vector(T x, T y, T z, T w)						noexcept :	x(x),	y(y),	z(z),	w(w) {}
-	Vector(const Vector2<T>& a, T z, T w)				noexcept :	x(a.x),	y(a.y),	z(z),	w(w) {}
-	Vector(T x, const Vector2<T>& a, T w)				noexcept :	x(x),	y(a.x),	z(a.y), w(w) {}
-	Vector(T x, T y, const Vector2<T>& a)				noexcept :	x(x),	y(y),	z(a.x),	w(a.y) {}
-	Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept :	x(a.x),	y(a.y), z(b.x), w(b.y) {}
-	Vector(const Vector3<T>& a, T w)					noexcept :	x(a.x),	y(a.y),	z(a.z),	w(w) {}
-	Vector(T x, const Vector3<T>& a)					noexcept :	x(x),	y(a.x),	z(a.y),	w(a.z) {}
+	/// <summary>Two-component constructor (maps x,y; z and w are set from provided values in this overload's initializer).</summary>
+	Vector(T x, T y)									noexcept : x(x), y(y), z(x), w(y) {}
+	/// <summary>Construct from four scalars (x,y,z,w).</summary>
+	Vector(T x, T y, T z, T w)						noexcept : x(x), y(y), z(z), w(w) {}
+	/// <summary>Construct from 2D vector + z + w.</summary>
+	Vector(const Vector2<T>& a, T z, T w)				noexcept : x(a.x), y(a.y), z(z), w(w) {}
+	/// <summary>Construct from x + 2D vector + w.</summary>
+	Vector(T x, const Vector2<T>& a, T w)				noexcept : x(x), y(a.x), z(a.y), w(w) {}
+	/// <summary>Construct from x, y + 2D vector.</summary>
+	Vector(T x, T y, const Vector2<T>& a)				noexcept : x(x), y(y), z(a.x), w(a.y) {}
+	/// <summary>Construct from two 2D vectors (first maps to x,y; second maps to z,w).</summary>
+	Vector(const Vector2<T>& a, const Vector2<T>& b)	noexcept : x(a.x), y(a.y), z(b.x), w(b.y) {}
+	/// <summary>Construct from 3D vector + w.</summary>
+	Vector(const Vector3<T>& a, T w)					noexcept : x(a.x), y(a.y), z(a.z), w(w) {}
+	/// <summary>Construct from x + 3D vector (remaining components mapped accordingly).</summary>
+	Vector(T x, const Vector3<T>& a)					noexcept : x(x), y(a.x), z(a.y), w(a.z) {}
 
+	/// <summary>Vector whose components are all 1.</summary>
 	const static Vector4<T> UNIT;
+	/// <summary>Unit vector in +X direction.</summary>
 	const static Vector4<T> UP;
+	/// <summary>Unit vector in -X direction.</summary>
 	const static Vector4<T> DOWN;
+	/// <summary>Unit vector in +Y direction.</summary>
 	const static Vector4<T> RIGHT;
+	/// <summary>Unit vector in -Y direction.</summary>
 	const static Vector4<T> LEFT;
+	/// <summary>Unit vector in +Z direction (forward).</summary>
 	const static Vector4<T> FORWARD;
+	/// <summary>Unit vector in -Z direction (back).</summary>
 	const static Vector4<T> BACK;
+	/// <summary>Unit vector in +W direction (ana).</summary>
 	const static Vector4<T> ANA;
+	/// <summary>Unit vector in -W direction (kana).</summary>
 	const static Vector4<T> KANA;
 };
 
 
-template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	+	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	-	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	*	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1,T2>>	Vector<TR, D>	operator	/	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	+=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	-=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	*=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
-template <size_t D, typename T1, typename T2>	Vector<T1, D>&	operator	/=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+//////////////////////////////////////////////////////////////////////////////
+// Operators and algorithms - declarations
+//////////////////////////////////////////////////////////////////////////////
+
+/// <summary>Component-wise addition of two vectors producing a vector of common_type elements.</summary>
+template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Vector<TR, D>	operator	+	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise subtraction of two vectors producing a vector of common_type elements.</summary>
+template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Vector<TR, D>	operator	-	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise multiplication of two vectors producing a vector of common_type elements.</summary>
+template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Vector<TR, D>	operator	*	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise division of two vectors producing a vector of common_type elements.</summary>
+template <size_t D, typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Vector<TR, D>	operator	/	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise addition assignment.</summary>
+template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	+=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+/// <summary>Component-wise subtraction assignment.</summary>
+template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	-=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+/// <summary>Component-wise multiplication assignment.</summary>
+template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	*=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+/// <summary>Component-wise division assignment.</summary>
+template <size_t D, typename T1, typename T2>	Vector<T1, D>& operator	/=	(Vector<T1, D>& a, const Vector<T2, D>& b)			noexcept;
+/// <summary>Component-wise equality comparison producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	==	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Logical negation of equality (uses operator==).</summary>
 template <size_t D, typename T1, typename T2>	bool			operator	!=	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise greater-than comparison producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	>	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise less-than comparison producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	<	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise greater-or-equal comparison producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	>=	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise less-or-equal comparison producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	<=	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise logical AND producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	&&	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Component-wise logical OR producing a boolean vector.</summary>
 template <size_t D, typename T1, typename T2>	Vector<bool, D>	operator	||	(const Vector<T1, D>& a, const Vector<T2, D>& b)	noexcept;
+/// <summary>Unary negation: negates each component.</summary>
 template <size_t D, typename T>	Vector<T, D>	operator	-	(const Vector<T, D>& v)												noexcept;
+/// <summary>Component-wise logical-not producing a boolean vector.</summary>
 template <size_t D, typename T>	Vector<bool, D>	operator	~	(const Vector<T, D>& v)												noexcept;
+/// <summary>Logical-not of the whole vector: true when all components are false/zero.</summary>
 template <size_t D, typename T>	bool			operator	!	(const Vector<T, D>& v)												noexcept;
 
 
 STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Vector<T1 COMMA D>, T2, Vector<T2 COMMA D>, Vector<TR COMMA D>, template <size_t D COMMA typename T1 COMMA typename T2>, template <size_t D COMMA typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 STAMP_COMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Vector<T1 COMMA D>, T2, Vector<T2 COMMA D>, Vector<bool COMMA D>, template <size_t D COMMA typename T1 COMMA typename T2>);
 
-template <typename T> T 						cross		(const Vector2<T>& a, const Vector2<T>& b)		noexcept;
-template <typename T> Vector3<T>				cross		(const Vector3<T>& a, const Vector3<T>& b)		noexcept;
-template <typename T, size_t D> bool			_and		(const Vector<T, D>& v) 						noexcept;
-template <typename T, size_t D> bool			_or			(const Vector<T, D>& v) 						noexcept;
-template <typename T, size_t D> T				summation	(const Vector<T, D>& v) 						noexcept;
-template <typename T, size_t D> T 				magnitude	(const Vector<T, D>& v)							noexcept;
-template <typename T, size_t D> T 				magnitude2	(const Vector<T, D>& v) 						noexcept;
-template <typename T, size_t D> Vector<T, D>	normal		(const Vector<T, D>& v) 						noexcept;
-template <typename T, size_t D> T				dot			(const Vector<T, D>& a, const Vector<T, D>& b)	noexcept;
+/// <summary>2D cross product producing scalar equal to the z-component of the 3D cross product.</summary>
+template <typename T> T 						cross(const Vector2<T>& a, const Vector2<T>& b)		noexcept;
+/// <summary>3D cross product producing a Vector3 perpendicular to both inputs.</summary>
+template <typename T> Vector3<T>				cross(const Vector3<T>& a, const Vector3<T>& b)		noexcept;
+/// <summary>Logical-and over components (returns true if every component is non-zero).</summary>
+template <typename T, size_t D> bool			_and(const Vector<T, D>& v) 						noexcept;
+/// <summary>Logical-or over components (returns true if any component is non-zero).</summary>
+template <typename T, size_t D> bool			_or(const Vector<T, D>& v) 							noexcept;
+/// <summary>Sum of all components.</summary>
+template <typename T, size_t D> T				summation(const Vector<T, D>& v) 					noexcept;
+/// <summary>Vector magnitude (length).</summary>
+template <typename T, size_t D> T 				magnitude(const Vector<T, D>& v)					noexcept;
+/// <summary>Squared magnitude (length^2) of a vector.</summary>
+template <typename T, size_t D> T 				magnitude2(const Vector<T, D>& v) 					noexcept;
+/// <summary>Normalized vector (unit length). Returns zero vector when input has zero length.</summary>
+template <typename T, size_t D> Vector<T, D>	normal(const Vector<T, D>& v) 						noexcept;
+/// <summary>Dot product of two vectors.</summary>
+template <typename T, size_t D> T				dot(const Vector<T, D>& a, const Vector<T, D>& b)	noexcept;
 #ifdef STAMP_MATH_VECTOR_SHORT_NAMES
+/// <summary>Short alias for summation().</summary>
 template <typename T, size_t D> T				sum(const Vector<T, D>& v)	noexcept;
+/// <summary>Short alias for magnitude().</summary>
 template <typename T, size_t D> T 				mag(const Vector<T, D>& v)	noexcept;
+/// <summary>Short alias for magnitude2().</summary>
 template <typename T, size_t D> T 				mag2(const Vector<T, D>& v)	noexcept;
+/// <summary>Short alias for normal().</summary>
 template <typename T, size_t D> Vector<T, D>	norm(const Vector<T, D>& v)	noexcept;
 #endif
 
+/// <summary>Component-wise approximate equality using scalar equal_aprox for each component.</summary>
 template <size_t D, typename T1, typename T2> Vector<bool, D>	equal_aprox(const Vector<T1, D>& a, const Vector<T2, D>& b);
 
 #if defined(STAMP_MATH_ALGORITHM_SHORT_NAMES) || defined(STAMP_MATH_VECTOR_SHORT_NAMES)
+/// <summary>Short alias for equal_aprox when short names are enabled.</summary>
 template <size_t D, typename T1, typename T2> Vector<bool, D> eq_e(const Vector<T1, D>& a, const Vector<T2, D>& b);
 #endif
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
+/// <summary>Stream insertion operator for vectors; prints components in parentheses separated by commas.</summary>
 template <typename T, size_t D> std::ostream& operator <<(std::ostream& stream, const Vector<T, D>& v);
 #endif
 #ifdef STAMP_STRING_HEADER_INCLUDED
+/// <summary>Serialize vector to std::string in human readable form (components in parentheses).</summary>
 template <typename T, size_t D> std::string to_string(const Vector<T, D>& v);
 #endif
 
@@ -292,6 +422,8 @@ inline auto Vector_Base<V, T, D>::end() const {
 	return std::end(self->V);
 }
 // ------------ Generic Logic ------------
+
+
 template <size_t D, typename T1, typename T2, typename TR>
 inline Vector<TR, D> operator+(const Vector<T1, D>& a, const Vector<T2, D>& b) noexcept {
 	Vector<TR, D> o;
