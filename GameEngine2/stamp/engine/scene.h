@@ -23,11 +23,24 @@ STAMP_ENGINE_NAMESPACE_BEGIN
 
 //scene manager
 //base scene class
+//render to screenbased scene
 //object-based scene
 //game object
 //components
 //
 //basic scene attached to all windows that allow rendering to screen and transforming render rect
+
+class IScene {
+protected:
+	IScene() {}
+	
+	virtual void Open(float deltaTime) = 0;
+	virtual void Update(float deltaTime) = 0;
+	virtual void Render(float deltaTime) = 0;
+	virtual void Close(float deltaTime) = 0;
+public:
+	virtual ~IScene() = 0;
+};
 
 STAMP_ENGINE_NAMESPACE_END
 

@@ -42,14 +42,6 @@ namespace clear_bitfield {
 	};
 }
 
-namespace framebuffer {
-
-
-	struct IFrameBufferCreationSettings {
-
-	};
-}
-
 class FrameBuffer : STAMP_NAMESPACE::INonCopyable {
 protected:
 	GLuint frameBuffer = 0;
