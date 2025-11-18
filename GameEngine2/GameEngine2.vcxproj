@@ -389,6 +389,7 @@
     <ClCompile Include="stamp\core\os\windows\win32mouse.cpp" />
     <ClCompile Include="stamp\core\string_extension.cpp" />
     <ClCompile Include="stamp\core\time.cpp" />
+    <ClCompile Include="stamp\engine\scene.cpp" />
     <ClCompile Include="stamp\graphics\gl\glmanager.cpp" />
     <ClCompile Include="stamp\graphics\gl\mesh.cpp" />
     <ClCompile Include="stamp\graphics\gl\shader.cpp" />
@@ -740,6 +741,8 @@
     <ClInclude Include="stamp\core\string_extension.h" />
     <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
+    <ClInclude Include="stamp\engine\define.h" />
+    <ClInclude Include="stamp\engine\scene.h" />
     <ClInclude Include="stamp\event.h" />
     <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
@@ -750,6 +753,7 @@
     <ClInclude Include="stamp\graphics\gl\texture.h" />
     <ClInclude Include="stamp\hid\focusgroup.h" />
     <ClInclude Include="stamp\math\alignment.h" />
+    <ClInclude Include="stamp\network\network_mutex.h" />
     <ClInclude Include="stamp\stamp.h" />
     <ClInclude Include="stamp\getset.h" />
     <ClInclude Include="stamp\graphics\define.h" />

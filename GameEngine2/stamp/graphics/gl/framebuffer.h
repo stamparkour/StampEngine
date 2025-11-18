@@ -74,6 +74,13 @@ public:
 	}
 
 	STAMP_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::RGBA) {
+		if (format == 0) {
+			if (textures.size() > attachment) {
+				textures[attachment] = nullptr;
+			}
+			return nullptr;
+		}
+		
 		Texture tex{ format, size.x, size.y };
 		tex.Set(ClearTexture2d(pixel_rgba8{ 0,0,0, 1 }), 0);
 		if (textures.size() <= attachment) textures.resize(attachment + 1);
@@ -101,6 +108,10 @@ public:
 	}
 	STAMP_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() {
 		return depthTexture;
+	}
+
+	void RemoveAttachment(int attachment) {
+		Attachment(attachment, {}, 0);
 	}
 
 	/*void BindRead(uint32_t colorAttachmentIndex = 0) {

@@ -63,6 +63,9 @@
     <Filter Include="libraries\gl">
       <UniqueIdentifier>{1de49a1e-59f8-430d-9f57-2e2274aa7a36}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libraries\stamp\engine">
+      <UniqueIdentifier>{cd172aa5-2787-4d64-b9a8-c9509a64345d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -628,6 +631,9 @@
     </ClCompile>
     <ClCompile Include="gl\glew.c">
       <Filter>libraries\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\engine\scene.cpp">
+      <Filter>libraries\stamp\engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1728,6 +1734,15 @@
     </ClInclude>
     <ClInclude Include="stamp\graphics\gl\framebuffer.h">
       <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\network\network_mutex.h">
+      <Filter>libraries\stamp\network</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\engine\scene.h">
+      <Filter>libraries\stamp\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\engine\define.h">
+      <Filter>libraries\stamp\engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
