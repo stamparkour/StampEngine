@@ -692,6 +692,51 @@ public:
 	}
 };
 
+template<typename T>
+class lockable : public T {
+private:
+	mutable std::mutex _mutex;
+public:
+
+	template <typename... Args>
+	lockable(Args&&... args) : T(std::forward<Args>(args)...) {}
+
+	void lock() const {
+		_mutex.lock();
+	}
+	void unlock() const {
+		_mutex.unlock();
+	}
+	std::mutex& get_mutex() const {
+		return _mutex;
+	}
+	std::unique_lock<std::mutex> unique_lock() const {
+		return std::unique_lock<std::mutex>{ _mutex };
+	}
+};
+
+//template<typename T>
+//class shared_lockable : public T {
+//private:
+//	mutable std::shared_mutex _mutex;
+//public:
+//	void lock() const {
+//		_mutex.lock();
+//	}
+//	void unlock() const {
+//		_mutex.unlock();
+//	}
+//	void lock_shared() const {
+//		_mutex.lock_shared();
+//	}
+//	void unlock_shared() const {
+//		_mutex.unlock_shared();
+//	}
+//	std::mutex& get_mutex() const {
+//		return _mutex;
+//	}
+//};
+
 STAMP_NAMESPACE_END
 
 #endif
