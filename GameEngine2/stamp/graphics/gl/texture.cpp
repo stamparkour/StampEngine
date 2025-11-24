@@ -20,7 +20,7 @@ void Texture::InitBuffer() {
 	glGenTextures(1, &desc.textureBuffer);
 }
 
-Texture::Texture(texture_format_t format = texture_format::RGBA) {
+Texture::Texture(texture_format_t format) {
 	desc.format = format;
 	InitBuffer();
 }
@@ -34,15 +34,15 @@ Texture::~Texture() {
 	Clear();
 }
 
-int Texture::Width(size_t mipmapLevel = 0) const {
+int Texture::Width(size_t mipmapLevel) const {
 	if (desc.width == 0) return 0;
 	return std::max(desc.width >> mipmapLevel, 1ull);
 }
-int Texture::Height(size_t mipmapLevel = 0) const {
+int Texture::Height(size_t mipmapLevel) const {
 	if (desc.height == 0) return 0;
 	return std::max(desc.height >> mipmapLevel, 1ull);
 }
-int Texture::Depth(size_t mipmapLevel = 0) const {
+int Texture::Depth(size_t mipmapLevel) const {
 	return std::max(desc.depth >> mipmapLevel, 1ull);
 }
 int Texture::MaxMipmapLevel() {

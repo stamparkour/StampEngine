@@ -13,6 +13,8 @@
 #include <stamp/graphics/window.h>
 #include <stamp/stamp.h>
 #include <stamp/hid/keyboard.h>
+#include <stamp/engine/scene.h>
+#include <stamp/graphics/gl/shader.h>
 #include <Windows.h>
 
 #ifdef STAMP_DEPLOY

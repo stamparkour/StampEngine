@@ -455,9 +455,6 @@ STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> RenderShaderProgram::ParseS
 	r.get_unsafe()->Compile(prog, shader_type::VertexShader | shader_type::FragmentShader | type, defines);
 	return r;
 }
-STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> RenderShaderProgram::threadsafe_from_this() {
-	return STAMP_NAMESPACE::static_pointer_cast<RenderShaderProgram>(IShaderProgram::threadsafe_from_this());
-}
 
 STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines) {
 	STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> r = STAMP_NAMESPACE::make_threadsafe<ComputerShaderProgram>();
@@ -467,9 +464,6 @@ STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::Pa
 void ComputerShaderProgram::Dispatch(int groupsX, int groupsY, int groupsZ) {
 	Bind();
 	glDispatchCompute(groupsX, groupsY, groupsZ);
-}
-STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::threadsafe_from_this() {
-	return STAMP_NAMESPACE::static_pointer_cast<ComputerShaderProgram>(IShaderProgram::threadsafe_from_this());
 }
 int ComputerShaderProgram::MaxDispatchInvocations() {
 	static int n = []() {

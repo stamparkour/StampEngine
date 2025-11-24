@@ -28,6 +28,7 @@
 #include <stamp/engine/define.h>
 #include <stamp/noncopyable.h>
 #include <stamp/memory.h>
+#include <stamp/core/time.h>
 
 STAMP_ENGINE_NAMESPACE_BEGIN
 
@@ -65,24 +66,40 @@ namespace scene {
 }
 
 class SceneManager : public STAMP_NAMESPACE::enable_threadsafe_from_this<SceneManager>, STAMP_NAMESPACE::INonCopyable  {
+	friend class IScene;
+
+	struct taskItem_t {
+		queue_priority_t priority;
+		std::function<void()> second;
+		taskItem_t(queue_priority_t p, const std::function<void()>& f) : priority(p), second(f) {}
+
+		bool operator <(const taskItem_t& other) const {
+			return priority < other.priority;
+		}
+	};
+
+	static inline SceneManager* globalSceneManager = nullptr;
+
+
 	std::vector<STAMP_NAMESPACE::threadsafe_ptr<class IScene>> sceneList{};
 	std::vector<std::thread> workerThreads{};
-	STAMP_NAMESPACE::lockable<std::priority_queue<std::pair<queue_priority_t, std::function<void()>>>> taskQueue{};
-	std::condition_variable taskCondition{};
+	STAMP_NAMESPACE::lockable<std::priority_queue<taskItem_t>> taskQueue{ };
+	std::condition_variable_any taskCondition{};
 
-	void EnqueueTask(std::function<void()>& task, queue_priority_t priority = queue_priority::Normal) {
+	void EnqueueTask(const std::function<void()>& task, queue_priority_t priority = queue_priority::Normal) {
 		std::lock_guard lock(taskQueue);
 		taskQueue.emplace(priority, task);
+		taskCondition.notify_one();
 	}
 
 	void ThreadWorker() {
 		while (true) {
 			std::function<void()> task;
 			{
-				std::unique_lock lock = taskQueue.unique_lock();
-				if (taskQueue.empty()) {
-					taskCondition.wait(lock);
-				}
+				std::unique_lock lock{ taskQueue };
+				taskCondition.wait(lock, [&]() -> bool {
+					return !taskQueue.empty();
+				});
 				task = taskQueue.top().second;
 				taskQueue.pop();
 			}
@@ -93,9 +110,10 @@ class SceneManager : public STAMP_NAMESPACE::enable_threadsafe_from_this<SceneMa
 	}
 public:
 	SceneManager(int workerThreadsCount = 1) {
+		globalSceneManager = this;
 		workerThreads.reserve(workerThreadsCount);
 		for (int i = 0; i < workerThreadsCount; i++) {
-			
+			workerThreads.emplace_back(&SceneManager::ThreadWorker, this);
 		}
 	}
 
@@ -103,19 +121,48 @@ public:
 	STAMP_NAMESPACE::threadsafe_ptr<class IScene> RegisterScene(Args&... args) {
 		auto scene = STAMP_NAMESPACE::make_threadsafe<T>(args...);
 		sceneList.push_back(scene);
+		EnqueueTask([scene]() {
+			scene->Open_task();
+		});
 		return scene;
 	}
 
 
 };
 
-class IScene {
+class SceneFixedUpdate : STAMP_NAMESPACE::INonCopyable {
+
+};
+
+class IScene : public STAMP_NAMESPACE::enable_threadsafe_from_this<IScene> {
 	friend class SceneManager;
+
+	long long prevUpdateTime = 0;
+	long long prevRenderTime = 0;
 
 	scene_state_t state = scene_state::Uninitialized;
 
-	void OpenTask() {
+	void Open_task() {
+		Open();
+		state = scene_state::Opened;
+		
+	}
+	void Update_task() {
+		this->state = scene_state::Running;
+		long long now = STAMP_NAMESPACE::time::getTimeRaw();
 
+		Update((now - prevUpdateTime) * STAMP_NAMESPACE::time::TimeTickLength());
+
+		prevUpdateTime = now;
+
+		SceneManager::globalSceneManager->EnqueueTask([this]() {
+			this->Update_task();
+		});
+	}
+	void Render_action() {
+		long long now = STAMP_NAMESPACE::time::getTimeRaw();
+		Render((now - prevRenderTime) * STAMP_NAMESPACE::time::TimeTickLength());
+		prevRenderTime = now;
 	}
 protected:
 	IScene() {}
@@ -124,11 +171,23 @@ protected:
 	virtual void Update(float deltaTime) = 0;
 	virtual void Render(float deltaTime) = 0;
 	virtual void Close() = 0;
+
+
+	SceneFixedUpdate RegesterFixedUpdate(float interval, const std::function<bool(float)>& func) {
+		double prevTime = STAMP_NAMESPACE::time::getTimeRaw();
+		std::function<void()> f = [f, func, prevTime]() mutable {
+			double t = STAMP_NAMESPACE::time::getTimeRaw();
+			if (!func((t - prevTime) * STAMP_NAMESPACE::time::TimeTickLength())) return;
+			prevTime = t; // can be modified because lamda is mutable
+			SceneManager::globalSceneManager->EnqueueTask(f);
+		};
+
+		SceneManager::globalSceneManager->EnqueueTask(f);
+	}
 public:
 	virtual ~IScene() = 0;
 	virtual bool IsAlive() = 0;
 
-	void RegesterFixedUpdate(float interval, std::function<float>& func);
 };
 
 class DisplayScene : public IScene {

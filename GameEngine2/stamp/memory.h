@@ -93,12 +93,13 @@ class readonly_ptr final : stamp_ptr_internal<T>, INonCopyable, INonAddressable 
 public:
 	using element_type = T;
 private:
+	bool locked = false;
 
 	readonly_ptr(const stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptr = ptri->ptr;
 		this->control = ptri->control;
-		this->control->accessMutex.lock_shared();
+		lock();
 		this->control->readCount++;
 	}
 public:
@@ -112,7 +113,24 @@ public:
 		auto c = this->control;
 		this->control = nullptr;
 		this->ptr = nullptr;
+		
+		if (!this->locked) return;
+		if (!c) return;
+		this->locked = false;
 		c->accessMutex.unlock_shared();
+	}
+
+	void lock() {
+		if (this->locked) return;
+		if (!this->control) return;
+		this->control->accessMutex.lock_shared();
+		this->locked = true;
+	}
+	void unlock() {
+		if (!this->locked) return;
+		if (!this->control) return;
+		this->locked = false;
+		this->control->accessMutex.unlock_shared();
 	}
 
 	int readCount() const noexcept {
@@ -155,6 +173,10 @@ public:
 		auto c = this->control;
 		this->ptr = nullptr;
 		this->control = nullptr;
+		
+		if (!this->locked) return;
+		if (!c) return;
+		this->locked = false;
 		c->accessMutex.unlock_shared();
 	}
 };
@@ -181,7 +203,6 @@ public:
 	unsafe_readonly_ptr& operator=(nullptr_t) {
 		if (!this->control) return;
 		this->control->readCount--;
-
 		this->control = nullptr;
 		this->ptr = nullptr;
 	}
@@ -223,7 +244,6 @@ public:
 	~unsafe_readonly_ptr() {
 		if (!this->control) return;
 		this->control->readCount--;
-		auto c = this->control;
 		this->ptr = nullptr;
 		this->control = nullptr;
 	}
@@ -236,11 +256,13 @@ class writable_ptr final : stamp_ptr_internal<T>, INonCopyable, INonAddressable 
 public:
 	using element_type = T;
 private:
+	bool locked = false;
+
 	writable_ptr(const stamp_ptr_internal<T>* ptri) {
 		if (ptri == nullptr) return;
 		this->ptr = ptri->ptr;
 		this->control = ptri->control;
-		this->control->accessMutex.lock();
+		lock();
 	}
 public:
 	writable_ptr(nullptr_t) {
@@ -251,9 +273,27 @@ public:
 		if (!this->control) return;
 		auto c = this->control;
 		this->ptr = nullptr;
+
+		auto c = this->control;
 		this->control = nullptr;
+
+		if (!this->locked) return;
+		if (!c) return;
+		this->locked = false;
 		c->accessMutex.unlock();
-		
+	}
+
+	void lock() {
+		if (this->locked) return;
+		if (!this->control) return;
+		this->control->accessMutex.lock();
+		this->locked = true;
+	}
+	void unlock() {
+		if (!this->locked) return;
+		if (!this->control) return;
+		this->locked = false;
+		this->control->accessMutex.unlock();
 	}
 
 	bool operator==(nullptr_t) const noexcept {
@@ -290,6 +330,10 @@ public:
 		auto c = this->control;
 		this->ptr = nullptr;
 		this->control = nullptr;
+
+		if (!this->locked) return;
+		if (!c) return;
+		this->locked = false;
 		c->accessMutex.unlock();
 	}
 };
@@ -666,12 +710,12 @@ threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 template<typename T1, typename T2>
 weak_threadsafe_ptr<T1> static_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return weak_threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
 }
 template<typename T1, typename T2>
 weak_threadsafe_ptr<T1> dynamic_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return weak_threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
 }
 
 
@@ -689,6 +733,25 @@ public:
 
 	threadsafe_ptr<T> threadsafe_from_this() {
 		return threadsafe_ptr<T>((T*)this, stampThreadsafePtrControlPointer);
+	}
+
+	weak_threadsafe_ptr<T> weak_threadsafe_from_this() {
+		return weak_threadsafe_ptr<T>((T*)this, stampThreadsafePtrControlPointer);
+	}
+};
+
+template<typename T, typename Base>
+class enable_threadsafe_from_this_derived {
+protected:
+	enable_threadsafe_from_this_derived() {}
+public:
+
+	threadsafe_ptr<T> threadsafe_from_this() {
+		return static_pointer_cast<T>(Base::threadsafe_from_this());
+	}
+
+	weak_threadsafe_ptr<T> weak_threadsafe_from_this() {
+		return static_pointer_cast<T>(Base::weak_threadsafe_from_this());
 	}
 };
 
@@ -710,32 +773,7 @@ public:
 	std::mutex& get_mutex() const {
 		return _mutex;
 	}
-	std::unique_lock<std::mutex> unique_lock() const {
-		return std::unique_lock<std::mutex>{ _mutex };
-	}
 };
-
-//template<typename T>
-//class shared_lockable : public T {
-//private:
-//	mutable std::shared_mutex _mutex;
-//public:
-//	void lock() const {
-//		_mutex.lock();
-//	}
-//	void unlock() const {
-//		_mutex.unlock();
-//	}
-//	void lock_shared() const {
-//		_mutex.lock_shared();
-//	}
-//	void unlock_shared() const {
-//		_mutex.unlock_shared();
-//	}
-//	std::mutex& get_mutex() const {
-//		return _mutex;
-//	}
-//};
 
 STAMP_NAMESPACE_END
 

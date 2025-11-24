@@ -39,7 +39,7 @@ namespace texture_type {
 		_2D = GL_TEXTURE_2D
 	};
 
-	std::string to_string(texture_type_t textureType) {
+	inline std::string to_string(texture_type_t textureType) {
 		switch (textureType) {
 		case _2D: return "Texture2D";
 		}
@@ -128,7 +128,7 @@ private:
 			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
 		}
 		if (buf->type == 0) {
-			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - mipmap level (" << mipmap << ") must be 0 when first setting Texture content.")
+			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - mipmap level (" << mipmap << ") must be 0 when first setting Texture content.");
 			buf->width = width << mipmap;
 			buf->height = height << mipmap;
 			buf->depth = 1;
@@ -175,7 +175,7 @@ private:
 			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
 		}
 		if (buf->type == 0) {
-			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(RawTexture2d) - mipmap level (" << mipmap <<") must be 0 when first setting Texture content.")
+			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(RawTexture2d) - mipmap level (" << mipmap << ") must be 0 when first setting Texture content.");
 			buf->width = width << mipmap;
 			buf->height = height << mipmap;
 			buf->depth = 1;

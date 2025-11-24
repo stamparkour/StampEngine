@@ -168,22 +168,26 @@ public:
 	GLint GetShaderStorageBufferIndex(const char* name);
 };
 
-class RenderShaderProgram : public IShaderProgram {
+class RenderShaderProgram : public IShaderProgram, public STAMP_NAMESPACE::enable_threadsafe_from_this_derived<RenderShaderProgram, IShaderProgram> {
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 
-	RenderShaderProgram() {}
 public:
+	RenderShaderProgram() {}
+
 	static STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines = {});
 	STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> threadsafe_from_this();
+	STAMP_NAMESPACE::weak_threadsafe_ptr<RenderShaderProgram> weak_threadsafe_from_this();
 };
-class ComputerShaderProgram : public IShaderProgram {
+class ComputerShaderProgram : public IShaderProgram, public STAMP_NAMESPACE::enable_threadsafe_from_this_derived<ComputerShaderProgram, IShaderProgram> {
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 
-	ComputerShaderProgram() {}
 public:
+	ComputerShaderProgram() {}
+
 	static STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines = {});
 	void Dispatch(int groupsX, int groupsY, int groupsZ);
 	STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> threadsafe_from_this();
+	STAMP_NAMESPACE::weak_threadsafe_ptr<ComputerShaderProgram> weak_threadsafe_from_this();
 
 	static int MaxDispatchInvocations();
 	static int MaxDispatchPerGroup();
