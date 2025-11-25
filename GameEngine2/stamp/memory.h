@@ -25,6 +25,8 @@
 #include <cstddef>
 #include <utility>
 #include <memory>
+#include <atomic>
+
 #include <stamp/define.h>
 #include <stamp/noncopyable.h>
 
@@ -48,7 +50,7 @@ template<typename T>
 using Stamp_Deleter = void(*)(stamp_ptr_internal<T>*);
 
 template <typename T>
-struct stamp_ptr_internal_control {
+struct stamp_ptr_control_block {
 	std::shared_mutex accessMutex{};
 	Stamp_Deleter<T> strongDeleter;
 	Stamp_Deleter<T> weakDeleter;
@@ -56,14 +58,14 @@ struct stamp_ptr_internal_control {
 	std::atomic_int strongReferenceCount = 0;
 	std::atomic_int weakReferenceCount = 0;
 
-	stamp_ptr_internal_control(Stamp_Deleter<T> strongDel, Stamp_Deleter<T> weakDel) : strongDeleter(strongDel), weakDeleter(weakDel) { }
+	stamp_ptr_control_block(Stamp_Deleter<T> strongDel, Stamp_Deleter<T> weakDel) : strongDeleter(strongDel), weakDeleter(weakDel) { }
 
 };
 
 template <typename T>
 class stamp_ptr_internal {
 public:
-	stamp_ptr_internal_control<T>* control = nullptr;
+	stamp_ptr_control_block<T>* control = nullptr;
 	T* ptr = nullptr;
 
 	stamp_ptr_internal() {}
@@ -108,16 +110,18 @@ public:
 		this->control = nullptr;
 	}
 	readonly_ptr& operator=(nullptr_t) {
-		if (!this->control) return;
+		if (!this->control) return *this;
 		this->control->readCount--;
 		auto c = this->control;
 		this->control = nullptr;
 		this->ptr = nullptr;
 		
-		if (!this->locked) return;
-		if (!c) return;
+		if (!this->locked) return *this;
+		if (!c) return *this;
 		this->locked = false;
 		c->accessMutex.unlock_shared();
+
+		return *this;
 	}
 
 	void lock() {
@@ -201,10 +205,12 @@ public:
 		this->control = nullptr;
 	}
 	unsafe_readonly_ptr& operator=(nullptr_t) {
-		if (!this->control) return;
+		if (!this->control) return *this;;
 		this->control->readCount--;
 		this->control = nullptr;
 		this->ptr = nullptr;
+
+		return *this;
 	}
 
 	int readCount() const noexcept {
@@ -270,17 +276,17 @@ public:
 		this->control = nullptr;
 	}
 	writable_ptr& operator=(nullptr_t) {
-		if (!this->control) return;
+		if (!this->control) return *this;;
 		auto c = this->control;
 		this->ptr = nullptr;
-
-		auto c = this->control;
 		this->control = nullptr;
 
-		if (!this->locked) return;
-		if (!c) return;
+		if (!this->locked) return *this;;
+		if (!c) return *this;;
 		this->locked = false;
 		c->accessMutex.unlock();
+
+		return *this;
 	}
 
 	void lock() {
@@ -356,10 +362,12 @@ public:
 		this->control = nullptr;
 	}
 	unsafe_writable_ptr& operator=(nullptr_t) {
-		if (!this->control) return;
+		if (!this->control) return *this;;
 		auto c = this->control;
 		this->ptr = nullptr;
 		this->control = nullptr;
+
+		return *this;
 	}
 
 	bool operator==(nullptr_t) const noexcept {
@@ -415,7 +423,7 @@ public:
 	template<typename T1, typename T2>
 	friend threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept;
 private:
-	threadsafe_ptr(T* ptr, stamp_ptr_internal_control<T>* control) {
+	threadsafe_ptr(T* ptr, stamp_ptr_control_block<T>* control) {
 		if (ptr == nullptr || control == nullptr) return;
 		this->ptr = ptr;
 		this->control = control;
@@ -449,7 +457,7 @@ private:
 
 		if constexpr (requires { this->ptr->value.stampThreadsafePtrControlPointer; }) {
 			if (this->ptr->stampThreadsafePtrControlPointer == nullptr) {
-				this->control = new stamp_ptr_internal_control<T>(stamp_ptr_internal<T>::StrongDeleter, stamp_ptr_internal<T>::WeakDeleter);
+				this->control = new stamp_ptr_control_block<T>(stamp_ptr_internal<T>::StrongDeleter, stamp_ptr_internal<T>::WeakDeleter);
 
 				this->ptr->stampThreadsafePtrControlPointer = this->control;
 			}
@@ -458,7 +466,7 @@ private:
 			}
 		}
 		else {
-			this->control = new stamp_ptr_internal_control<T>(stamp_ptr_internal<T>::StrongDeleter, stamp_ptr_internal<T>::WeakDeleter);
+			this->control = new stamp_ptr_control_block<T>(stamp_ptr_internal<T>::StrongDeleter, stamp_ptr_internal<T>::WeakDeleter);
 		}
 		this->control->strongReferenceCount++;
 	}
@@ -471,6 +479,7 @@ public:
 	}
 
 	threadsafe_ptr(const threadsafe_ptr<T>& v) noexcept {
+		if(v.control != nullptr) v.strongReferenceCount++;
 		this->ptr = v.ptr;
 		this->control = v.control;
 	}
@@ -496,8 +505,12 @@ public:
 	threadsafe_ptr<T>& operator=(const threadsafe_ptr<T>& v) noexcept {
 		if (this == &v) return *this;
 		if (this->ptr == v.ptr) return *this;
+		v.control->strongReferenceCount++; // make sure to increment to avoid premature deletion
 		decrementReference();
-		setPtr(v.ptr, v.control);
+		
+		this->ptr = v.ptr;
+		this->control = v.control;
+
 		return *this;
 	}
 	threadsafe_ptr<T>& operator=(threadsafe_ptr<T>&& v) noexcept {
@@ -569,7 +582,7 @@ public:
 	template<typename T1, typename T2>
 	friend weak_threadsafe_ptr<T1> dynamic_pointer_cast(const weak_threadsafe_ptr<T2>& sp)  noexcept;
 private:
-	weak_threadsafe_ptr(T* ptr, stamp_ptr_internal_control<T>* control) {
+	weak_threadsafe_ptr(T* ptr, stamp_ptr_control_block<T>* control) {
 		if (ptr == nullptr || control == nullptr) return;
 		this->control = control;
 		this->ptr = ptr;
@@ -672,12 +685,13 @@ public:
 template<typename T, typename... Args>
 threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 	struct MAKE_THREADSAFE {
-		stamp_ptr_internal_control<T> control;
+		stamp_ptr_control_block<T> control;
 		T value;
 	};
 
 	Stamp_Deleter<T> strongDeleter = [](stamp_ptr_internal<T>* ptri) {
 		ptri->ptr->~T();
+		ptri->ptr = nullptr;
 	};
 	Stamp_Deleter<T> weakDeleter = [](stamp_ptr_internal<T>* ptri) {
 		ptri->control->~stamp_ptr_internal_control<T>();
@@ -687,7 +701,7 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 	MAKE_THREADSAFE* mem = 0;
 	mem = (MAKE_THREADSAFE*)::operator new(sizeof(MAKE_THREADSAFE), std::align_val_t{ alignof(MAKE_THREADSAFE) });
 	new (&(mem->value)) T((std::forward<Args>(args))...);
-	new (&(mem->control)) stamp_ptr_internal_control<T>(strongDeleter, weakDeleter);
+	new (&(mem->control)) stamp_ptr_control_block<T>(strongDeleter, weakDeleter);
 
 	if constexpr (requires { mem->value.stampThreadsafePtrControlPointer; }) {
 		mem->value.stampThreadsafePtrControlPointer = &(mem->control);
@@ -699,23 +713,23 @@ threadsafe_ptr<T> make_threadsafe(Args&&... args) {
 template<typename T1, typename T2>
 threadsafe_ptr<T1> static_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_control_block<T1>*)(void*)sp.control);
 }
 template<typename T1, typename T2>
 threadsafe_ptr<T1> dynamic_pointer_cast(const threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_control_block<T1>*)(void*)sp.control);
 }
 
 template<typename T1, typename T2>
 weak_threadsafe_ptr<T1> static_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return weak_threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return weak_threadsafe_ptr<T1>(static_cast<T1*>(sp.ptr), (stamp_ptr_control_block<T1>*)(void*)sp.control);
 }
 template<typename T1, typename T2>
 weak_threadsafe_ptr<T1> dynamic_pointer_cast(const weak_threadsafe_ptr<T2>& sp) noexcept {
 	if (!sp) return threadsafe_ptr<T1>(nullptr);
-	return weak_threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_internal_control<T1>*)(void*)sp.control);
+	return weak_threadsafe_ptr<T1>(dynamic_cast<T1*>(sp.ptr), (stamp_ptr_control_block<T1>*)(void*)sp.control);
 }
 
 
@@ -726,7 +740,7 @@ class enable_threadsafe_from_this {
 	friend class threadsafe_ptr<T>;
 	friend class weak_threadsafe_ptr<T>;
 
-	stamp_ptr_internal_control<T>* stampThreadsafePtrControlPointer = nullptr;
+	stamp_ptr_control_block<T>* stampThreadsafePtrControlPointer = nullptr;
 protected:
 	enable_threadsafe_from_this() {}
 public:
