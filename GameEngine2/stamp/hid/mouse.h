@@ -47,8 +47,8 @@ namespace mouseAxes {
 		NormalizedScreenY,
 		WheelX,
 		WheelY,
-		RawDeltaX,
-		RawDeltaY,
+		RawX,
+		RawY,
 		RawWheelX,
 		RawWheelY,
 	};
@@ -65,7 +65,7 @@ namespace mouse {
 class Mouse final : public IHumanInterfaceDevice {
 	friend class Mouse_internal;
 private:
-	class Keyboard_internal* data;
+	class Mouse_internal* data;
 
 	// axis for: X, Y, local X, local Y, normalized screenspace X, normalized screenspace Y, wheel X, wheel Y, raw delta X, raw delta Y, raw wheel X, raw wheel Y
 public:

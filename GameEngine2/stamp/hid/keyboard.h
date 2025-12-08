@@ -193,7 +193,7 @@ public:
 	class Keyboard_internal* InternalHandle() const noexcept;
 };
 
-class IKeyboardListener : public IHumanInterfaceDevice, STAMP_NAMESPACE::INonCopyable {
+class IKeyboardListener : public IHumanInterfaceDevice, public IHumanInterfaceDeviceListener, STAMP_NAMESPACE::INonCopyable {
 	friend class Keyboard_internal;
 private:
 	Keyboard keyboard;

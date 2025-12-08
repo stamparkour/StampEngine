@@ -29,8 +29,6 @@ STAMP_HID_NAMESPACE_BEGIN
 using buttonID_t = size_t;
 using axisID_t = size_t;
 
-using buttonConsumer = Consumer<buttonID_t>;
-using axisConsumer = Consumer<axisID_t>;
 
 
 class IHumanInterfaceDevice {
@@ -50,6 +48,7 @@ public:
 	virtual STAMP_DEFAULT_FLOATINGPOINT Axis(axisID_t index) const noexcept = 0;
 	virtual STAMP_DEFAULT_FLOATINGPOINT AxisDelta(axisID_t index) const noexcept = 0;
 };
+
 class IHumanInterfaceDeviceListener {
 protected:
 	IHumanInterfaceDeviceListener() = default;
