@@ -54,17 +54,17 @@
     <Filter Include="libraries\Jolt">
       <UniqueIdentifier>{5111e430-da19-4ea5-b737-ab0434e41e5b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="libraries\stamp\core\os">
-      <UniqueIdentifier>{659cdf4d-bf63-4148-b801-8a6c130b782d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="libraries\stamp\core\os\win32">
-      <UniqueIdentifier>{dc5402a7-7bdd-4288-b3a6-8c8c80df1038}</UniqueIdentifier>
-    </Filter>
     <Filter Include="libraries\gl">
       <UniqueIdentifier>{1de49a1e-59f8-430d-9f57-2e2274aa7a36}</UniqueIdentifier>
     </Filter>
     <Filter Include="libraries\stamp\engine">
       <UniqueIdentifier>{cd172aa5-2787-4d64-b9a8-c9509a64345d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\os">
+      <UniqueIdentifier>{659cdf4d-bf63-4148-b801-8a6c130b782d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\stamp\os\windows10">
+      <UniqueIdentifier>{0bad3e96-da52-4923-bedd-1d59c9793a3a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -602,18 +602,6 @@
     <ClCompile Include="Jolt\Geometry\OrientedBox.cpp">
       <Filter>libraries\Jolt</Filter>
     </ClCompile>
-    <ClCompile Include="stamp\core\os\windows\win32.cpp">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\core\os\windows\win32hid.cpp">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\core\os\windows\win32keyboard.cpp">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClCompile>
-    <ClCompile Include="stamp\core\os\windows\win32mouse.cpp">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClCompile>
     <ClCompile Include="stamp\core\time.cpp">
       <Filter>libraries\stamp\core</Filter>
     </ClCompile>
@@ -635,6 +623,18 @@
     <ClCompile Include="stamp\engine\scene.cpp">
       <Filter>libraries\stamp\engine</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\os\windows10\win32keyboard.cpp">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\os\windows10\win32mouse.cpp">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\os\windows10\win32.cpp">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClCompile>
+    <ClCompile Include="stamp\os\windows10\win32hid.cpp">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
@@ -648,12 +648,6 @@
     </ClInclude>
     <ClInclude Include="stamp\math\quaternion.h">
       <Filter>libraries\stamp\math</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\getset.h">
-      <Filter>libraries\stamp</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\noncopyable.h">
-      <Filter>libraries\stamp</Filter>
     </ClInclude>
     <ClInclude Include="stamp\math\matrix.h">
       <Filter>libraries\stamp\math</Filter>
@@ -675,9 +669,6 @@
     </ClInclude>
     <ClInclude Include="stamp\hid\hid.h">
       <Filter>libraries\stamp\hid</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\memory.h">
-      <Filter>libraries\stamp</Filter>
     </ClInclude>
     <ClInclude Include="lua\lcode.h">
       <Filter>libraries\lua</Filter>
@@ -1681,15 +1672,6 @@
     <ClInclude Include="stamp\stamp.h">
       <Filter>libraries\stamp</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\event.h">
-      <Filter>libraries\stamp</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\core\os\windows\win32hid.h">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="stamp\core\os\windows\define.h">
-      <Filter>libraries\stamp\core\os\win32</Filter>
-    </ClInclude>
     <ClInclude Include="stamp\hid\focusgroup.h">
       <Filter>libraries\stamp\hid</Filter>
     </ClInclude>
@@ -1743,6 +1725,18 @@
     </ClInclude>
     <ClInclude Include="stamp\engine\define.h">
       <Filter>libraries\stamp\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\os\windows10\win32hid.h">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\os\windows10\define.h">
+      <Filter>libraries\stamp\os\windows10</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\noncopyable.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\memory.h">
+      <Filter>libraries\stamp\core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

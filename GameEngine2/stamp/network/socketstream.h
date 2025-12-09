@@ -24,7 +24,7 @@
 #include <ostream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <stamp/memory.h>
+#include <stamp/core/memory.h>
 #include <stamp/network/define.h>
 
 #ifdef STAMP_COMPILER_MSVC

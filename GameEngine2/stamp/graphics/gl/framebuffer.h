@@ -28,7 +28,7 @@
 #include <stamp/graphics/gl/define.h>
 #include <stamp/graphics/gl/texture.h>
 #include <stamp/graphics/color.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/noncopyable.h>
 
 STAMP_GRAPHICS_GL_NAMESPACE_BEGIN
 
@@ -42,11 +42,11 @@ namespace clear_bitfield {
 	};
 }
 
-class FrameBuffer : STAMP_NAMESPACE::INonCopyable {
+class FrameBuffer : STAMP_CORE_NAMESPACE::INonCopyable {
 protected:
 	GLuint frameBuffer = 0;
-	std::vector<STAMP_NAMESPACE::threadsafe_ptr<Texture>> textures{};
-	STAMP_NAMESPACE::threadsafe_ptr<Texture> depthTexture = nullptr;
+	std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture>> textures{};
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> depthTexture = nullptr;
 
 	void InitBuffer() {
 		if (frameBuffer != 0) return;
@@ -65,7 +65,7 @@ public:
 		DeleteBuffer();
 	}
 
-	STAMP_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::RGBA) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::RGBA) {
 		if (format == 0) {
 			if (textures.size() > attachment) {
 				textures[attachment] = nullptr;
@@ -77,28 +77,28 @@ public:
 		tex.Set(ClearTexture2d(pixel_rgba8{ 0,0,0, 1 }), 0);
 		if (textures.size() <= attachment) textures.resize(attachment + 1);
 		// this is because i want to have a previous reference to the texture reference the new texture
-		if (textures[attachment] == nullptr) textures[attachment] = STAMP_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
+		if (textures[attachment] == nullptr) textures[attachment] = STAMP_CORE_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
 		else *textures[attachment].get_unsafe() = std::move(tex);
 
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
 		return textures[attachment];
 	}
-	STAMP_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth(const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::Depth32F) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth(const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::Depth32F) {
 		Texture tex = { format, size.x, size.y };
 		tex.Set(ClearTexture2d(pixel_r32f{ 0 }), 0);
-		if (depthTexture == nullptr) depthTexture = STAMP_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
+		if (depthTexture == nullptr) depthTexture = STAMP_CORE_NAMESPACE::make_threadsafe<Texture>(std::move(tex));
 		else *depthTexture.get_unsafe() = std::move(tex);
 
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
 		return depthTexture;
 	}
-	STAMP_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment) {
 		if (textures.size() <= attachment || !textures[attachment]) {
 			return nullptr;
 		}
 		return textures[attachment];
 	}
-	STAMP_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() {
 		return depthTexture;
 	}
 

@@ -23,8 +23,8 @@
 #include <iterator>
 #include <algorithm>
 #include <stamp/graphics/gl/define.h>
-#include <stamp/memory.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/memory.h>
+#include <stamp/core/noncopyable.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/matrix.h>
 #include <stamp/graphics/gl/texture.h>
@@ -47,7 +47,7 @@ namespace shader_type {
 	GLenum to_glenum(shader_type_t type);
 };
 
-class IShaderProgram : STAMP_NAMESPACE::INonCopyable, public STAMP_NAMESPACE::enable_threadsafe_from_this<class IShaderProgram> {
+class IShaderProgram : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<class IShaderProgram> {
 private:
 	GLuint program = 0;
 	static inline thread_local GLuint currentProgram = 0;
@@ -168,26 +168,26 @@ public:
 	GLint GetShaderStorageBufferIndex(const char* name);
 };
 
-class RenderShaderProgram : public IShaderProgram, public STAMP_NAMESPACE::enable_threadsafe_from_this_derived<RenderShaderProgram, IShaderProgram> {
+class RenderShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<RenderShaderProgram, IShaderProgram> {
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 
 public:
 	RenderShaderProgram() {}
 
-	static STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines = {});
-	STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> threadsafe_from_this();
-	STAMP_NAMESPACE::weak_threadsafe_ptr<RenderShaderProgram> weak_threadsafe_from_this();
+	static STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines = {});
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> threadsafe_from_this();
+	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<RenderShaderProgram> weak_threadsafe_from_this();
 };
-class ComputerShaderProgram : public IShaderProgram, public STAMP_NAMESPACE::enable_threadsafe_from_this_derived<ComputerShaderProgram, IShaderProgram> {
+class ComputerShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<ComputerShaderProgram, IShaderProgram> {
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 
 public:
 	ComputerShaderProgram() {}
 
-	static STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines = {});
+	static STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines = {});
 	void Dispatch(int groupsX, int groupsY, int groupsZ);
-	STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> threadsafe_from_this();
-	STAMP_NAMESPACE::weak_threadsafe_ptr<ComputerShaderProgram> weak_threadsafe_from_this();
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> threadsafe_from_this();
+	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<ComputerShaderProgram> weak_threadsafe_from_this();
 
 	static int MaxDispatchInvocations();
 	static int MaxDispatchPerGroup();

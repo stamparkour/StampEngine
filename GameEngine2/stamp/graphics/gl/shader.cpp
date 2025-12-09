@@ -450,14 +450,14 @@ GLint IShaderProgram::GetShaderStorageBufferIndex(const char* name) {
 	return glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
 }
 
-STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> RenderShaderProgram::ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines) {
-	STAMP_NAMESPACE::threadsafe_ptr<RenderShaderProgram> r = STAMP_NAMESPACE::make_threadsafe<RenderShaderProgram>();
+STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> RenderShaderProgram::ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> r = STAMP_CORE_NAMESPACE::make_threadsafe<RenderShaderProgram>();
 	r.get_unsafe()->Compile(prog, shader_type::VertexShader | shader_type::FragmentShader | type, defines);
 	return r;
 }
 
-STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines) {
-	STAMP_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> r = STAMP_NAMESPACE::make_threadsafe<ComputerShaderProgram>();
+STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> r = STAMP_CORE_NAMESPACE::make_threadsafe<ComputerShaderProgram>();
 	r.get_unsafe()->Compile(prog, shader_type::ComputeShader, defines);
 	return r;
 }

@@ -22,9 +22,9 @@
 #include <future>
 #include <string>
 #include <stamp/graphics/define.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/noncopyable.h>
 #include <stamp/math/rect.h>
-#include <stamp/memory.h>
+#include <stamp/core/memory.h>
 #include <stamp/math/alignment.h>
 
 STAMP_GRAPHICS_NAMESPACE_BEGIN
@@ -65,7 +65,7 @@ namespace window {
 	};
 }
 
-class Window : public STAMP_NAMESPACE::enable_threadsafe_from_this<Window> {
+class Window : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<Window> {
 	friend struct Window_internal;
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 private:
@@ -79,7 +79,7 @@ protected:
 
 	Window(const window::CreationSettings& settings);
 public:
-	static STAMP_NAMESPACE::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return STAMP_NAMESPACE::make_threadsafe<Window>(settings); }
+	static STAMP_CORE_NAMESPACE::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return STAMP_CORE_NAMESPACE::make_threadsafe<Window>(settings); }
 
 	virtual ~Window();
 

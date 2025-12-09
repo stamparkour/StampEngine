@@ -19,10 +19,9 @@
 // limitations under the License.
 
 #include <stamp/hid/define.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/noncopyable.h>
 #include <vector>
 #include <functional>
-#include <stamp/event.h>
 
 STAMP_HID_NAMESPACE_BEGIN
 

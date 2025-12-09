@@ -20,14 +20,22 @@
 
 using namespace STAMP_NAMESPACE;
 
-static inline double tickTimeLength = []() -> double {
+//executes first
+static inline long long ticksPerSecond = []() -> long long {
 	LARGE_INTEGER largeInt{};
 	QueryPerformanceFrequency(&largeInt);
-	return 1.0 / largeInt.QuadPart;
+	return largeInt.QuadPart;
+}();
+//executes second
+static inline double tickTimeLength = []() -> double {
+	return 1.0 / static_cast<double>(ticksPerSecond);
 }();
 
 double STAMP_NAMESPACE::time::TimeTickLength() {
 	return tickTimeLength;
+}
+long long time::TicksPerSecond() {
+	return ticksPerSecond;
 }
 long long STAMP_NAMESPACE::time::getTimeRaw() {
 	LARGE_INTEGER largeInt{};

@@ -3,13 +3,15 @@
 #include <utility>
 #include <cmath>
 #include <iterator>
+#include <chrono>
+
 #include <stamp/math/alignment.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/quaternion.h>
 #include <stamp/math/matrix.h>
 #include <stamp/lua/lua.h>
 #include <stamp/core/define.h>
-#include <stamp/memory.h>
+#include <stamp/core/memory.h>
 #include <stamp/graphics/window.h>
 #include <stamp/stamp.h>
 #include <stamp/hid/keyboard.h>

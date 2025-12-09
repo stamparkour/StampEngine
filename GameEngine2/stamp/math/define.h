@@ -165,7 +165,7 @@ template<::std::integral T1, ::std::integral T2> inline bool equal_aprox(T1 a, T
 	return a == b;
 }
 template<::std::floating_point T1, ::std::floating_point T2> inline bool equal_aprox(T1 a, T2 b) {
-	return abs(a - b) < abs(std::nextafter(a, b));
+	return abs(a - b) <= abs(std::nextafter(a, b) - a);
 }
 #ifdef STAMP_MATH_ALGORITHM_SHORT_NAMES
 template<typename T1, typename T2> inline bool eq_e(T a, T b) {

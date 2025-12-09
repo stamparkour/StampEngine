@@ -21,8 +21,8 @@
 
 #include <stamp/hid/define.h>
 #include <stamp/hid/hid.h>
-#include <stamp/noncopyable.h>
-#include <stamp/memory.h>
+#include <stamp/core/noncopyable.h>
+#include <stamp/core/memory.h>
 
 STAMP_HID_NAMESPACE_BEGIN
 

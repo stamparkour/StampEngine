@@ -24,8 +24,8 @@
 #include <algorithm>
 #include <stamp/graphics/gl/define.h>
 #include <stamp/graphics/gl/pixel.h>
-#include <stamp/memory.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/memory.h>
+#include <stamp/core/noncopyable.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/matrix.h>
 #include <stamp/debug.h>

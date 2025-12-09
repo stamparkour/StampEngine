@@ -1,7 +1,7 @@
 #include <stamp/define.h>
 #ifdef STAMP_MICROSOFT_UNITTEST
 
-#include <stamp/memory.h>
+#include <stamp/core/memory.h>
 
 #include <CppUnitTest.h>
 #include <vector>
@@ -64,7 +64,7 @@ public:
                 // r locks shared access
                 ++activeReaders;
                 readersStarted = true;
-                std::this_thread::sleep_for(200ms);
+                std::this_thread::sleep_for(100ms);
                 --activeReaders;
             });
         }
@@ -88,8 +88,8 @@ public:
 
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
         // writer should have waited at least ~200ms for readers to finish (some slack)
-        Assert::IsFalse(writerAcquired, L"writer never acquired lock");
-        Assert::IsTrue(elapsed > 150, L"writer did not block long enough (readers not blocking writer)");
+        Assert::IsTrue(writerAcquired, L"writer never acquired lock");
+        Assert::IsTrue(elapsed > 80, L"writer did not block long enough (readers not blocking writer)");
 	}
 
     TEST_METHOD(MultipleWriters) {
@@ -105,7 +105,7 @@ public:
                 int cur = ++activeWriters;
                 maxConcurrent.store(std::max(maxConcurrent.load(), cur));
                 // critical region
-                std::this_thread::sleep_for(50ms);
+                std::this_thread::sleep_for(20ms);
                 --activeWriters;
                 });
         }
@@ -125,7 +125,7 @@ public:
             cv.wait_for(w, 500ms, [&] { return ready.load(); });
             // after wake, modify
             if (ready) *w = 55;
-            });
+        });
 
         std::this_thread::sleep_for(100ms);
         // signal
@@ -137,6 +137,97 @@ public:
         waiter.join();
 
         // no deadlock occurs
+    }
+
+    TEST_METHOD(DestructionOccursWhenNoOwners) {
+        static std::atomic<int> instances;
+
+        struct Counted {
+            Counted() { ++instances; }
+            ~Counted() { --instances; }
+        };
+
+        instances = 0;
+
+        {
+            auto sp = make_threadsafe<Counted>();
+            Assert::AreEqual(1, (int)instances.load());
+            sp.reset();
+            // after reset and no other owners, instance should be destroyed
+            Assert::IsTrue(instances.load() == 0);
+        }
+    }
+
+    TEST_METHOD(ResetWhileReaderHolds) {
+        auto sp = make_threadsafe<int>(42);
+        std::atomic<bool> readerStarted{ false };
+        std::atomic<bool> readerDone{ false };
+        std::thread reader([&]() {
+            auto r = sp.get_readonly();
+            readerStarted = true;
+            // hold the readonly_ptr for a bit
+            std::this_thread::sleep_for(50ms);
+            // still valid while held
+            Assert::AreEqual(42, *r.get());
+            readerDone = true;
+            });
+        while (!readerStarted) std::this_thread::sleep_for(1ms);
+        // reset the strong owner while reader holds a shared reference
+        sp.reset();
+        // underlying object should remain alive until reader releases
+        reader.join();
+        Assert::IsTrue(readerDone);
+    }
+
+    TEST_METHOD(WeakExpiredAfterReset) {
+        auto sp = make_threadsafe<int>(7);
+        weak_threadsafe_ptr<int> wp = sp;
+        Assert::IsFalse(wp.expired());
+        sp.reset();
+        Assert::IsTrue(wp.expired());
+        auto locked = wp.lock();
+        Assert::IsFalse((bool)locked);
+    }
+
+    TEST_METHOD(GetUnsafeDoesNotBlock) {
+        auto sp = make_threadsafe<int>(0);
+        std::atomic<bool> writerLocked{ false };
+        std::atomic<bool> unsafeSeen{ false };
+        std::thread writer([&]() {
+            auto w = sp.get(); // exclusive lock
+            writerLocked = true;
+            std::this_thread::sleep_for(100ms);
+            });
+        // tiny delay so writer acquires
+        while (!writerLocked) std::this_thread::sleep_for(1ms);
+        std::thread t([&]() {
+            // should not block even if writer holds exclusive lock
+            auto r = sp.get_readonly_unsafe();
+            unsafeSeen = true; // if this runs quickly, unsafe did not block
+            });
+        t.join();
+        writer.join();
+        Assert::IsTrue(unsafeSeen.load());
+    }
+
+    TEST_METHOD(ThreadsafeFromThisWithMakeThreadsafe) {
+        struct Self : public enable_threadsafe_from_this<Self> {
+            threadsafe_ptr<Self> grab() { return threadsafe_from_this(); }
+        };
+        auto sp = make_threadsafe<Self>();
+        auto fromIns = sp.get()->grab();
+        Assert::IsTrue((bool)fromIns);
+        // ensure it's the same object (pointer equality)
+        Assert::IsTrue(fromIns.get_readonly().get() == sp.get_readonly().get());
+    }
+
+    TEST_METHOD(LockableConstLockUnlock) {
+        struct S { int x = 0; };
+        lockable<S> ls;
+        // lock from const reference
+        const lockable<S>& cls = ls;
+        cls.lock();
+        cls.unlock();
     }
 };
 

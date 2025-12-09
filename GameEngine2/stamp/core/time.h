@@ -25,6 +25,7 @@ STAMP_NAMESPACE_BEGIN
 
 namespace time {
 	double TimeTickLength();
+	long long TicksPerSecond();
 	long long getTimeRaw();
 	double getTime();
 }

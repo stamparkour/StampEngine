@@ -22,8 +22,8 @@
 #include <string>
 #include <stamp/hid/define.h>
 #include <stamp/hid/hid.h>
-#include <stamp/noncopyable.h>
-#include <stamp/memory.h>
+#include <stamp/core/noncopyable.h>
+#include <stamp/core/memory.h>
 
 STAMP_HID_NAMESPACE_BEGIN
 
@@ -193,7 +193,7 @@ public:
 	class Keyboard_internal* InternalHandle() const noexcept;
 };
 
-class IKeyboardListener : public IHumanInterfaceDevice, public IHumanInterfaceDeviceListener, STAMP_NAMESPACE::INonCopyable {
+class IKeyboardListener : public IHumanInterfaceDevice, public IHumanInterfaceDeviceListener, STAMP_CORE_NAMESPACE::INonCopyable {
 	friend class Keyboard_internal;
 private:
 	Keyboard keyboard;
@@ -220,7 +220,7 @@ public:
 	class Keyboard_internal* InternalHandle() const noexcept { return keyboard.InternalHandle(); }
 };
 
-class KeyboardCharacterBuffer final : public STAMP_NAMESPACE::INonCopyable {
+class KeyboardCharacterBuffer final : public STAMP_CORE_NAMESPACE::INonCopyable {
 	friend class Keyboard;
 public:
 	using char_type = stamp::stamp_char;

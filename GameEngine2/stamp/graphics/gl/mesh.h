@@ -27,8 +27,8 @@
 
 #include <stamp/graphics/gl/define.h>
 
-#include <stamp/memory.h>
-#include <stamp/noncopyable.h>
+#include <stamp/core/memory.h>
+#include <stamp/core/noncopyable.h>
 #include <stamp/math/vector.h>
 #include <stamp/math/matrix.h>
 #include <stamp/graphics/color.h>
@@ -90,7 +90,7 @@ struct Vertex {
 
 
 
-class Mesh : STAMP_NAMESPACE::INonCopyable, public STAMP_NAMESPACE::enable_threadsafe_from_this<Mesh> {
+class Mesh : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<Mesh> {
 private:
 	GLuint vertexBuffer = 0;
 	void (*initVertexBuffer_func)(vertex_type_bitmask_t) = nullptr;
@@ -150,10 +150,10 @@ namespace proto_mesh {
 		Vertex{{1,-1,0},{1,1,1},{1,0},{0,0,-1},{0,0,1},{0,1,0}},
 	};
 
-	inline STAMP_NAMESPACE::threadsafe_ptr<Mesh> Quad() {
-		static STAMP_NAMESPACE::weak_threadsafe_ptr<Mesh> mesh{};
+	inline STAMP_CORE_NAMESPACE::threadsafe_ptr<Mesh> Quad() {
+		static STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<Mesh> mesh{};
 		if (!mesh.expired()) return mesh.lock();
-		STAMP_NAMESPACE::threadsafe_ptr<Mesh> m = STAMP_NAMESPACE::make_threadsafe<Mesh>();
+		STAMP_CORE_NAMESPACE::threadsafe_ptr<Mesh> m = STAMP_CORE_NAMESPACE::make_threadsafe<Mesh>();
 		m.get_unsafe()->SetVertices(std::begin(quadVertices), std::end(quadVertices));
 	}
 }
