@@ -26,6 +26,7 @@
 #include <utility>
 #include <memory>
 #include <atomic>
+#include <type_traits>
 
 #include <stamp/core/define.h>
 #include <stamp/core/noncopyable.h>
@@ -228,7 +229,6 @@ public:
 
 template<typename T>
 class threadsafe_ptr {
-	static constexpr bool is_shared_from_this = std::is_base_of_v<enable_threadsafe_from_this<T>, T>;
 	using ptr_type = threadsafe_control<T>;
 public:
 	using element_type = T;
@@ -243,6 +243,8 @@ public:
 	friend threadsafe_ptr<U> static_pointer_cast(const threadsafe_ptr<V>& other);
 	template<typename U, typename V>
 	friend threadsafe_ptr<U> dynamic_pointer_cast(const threadsafe_ptr<V>& other);
+	template<typename U>
+	friend class atomic_threadsafe_ptr;
 
 	using weak_type = weak_threadsafe_ptr<element_type>;
 	using read_type = readonly_ptr<element_type>;
@@ -262,7 +264,7 @@ public:
 		}
 		else {
 			ptr = std::make_shared<ptr_type>(v);
-			if constexpr (is_shared_from_this) {
+			if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
 				v->weak_this = weak_threadsafe_ptr<T>(ptr);
 			}
 		}
@@ -280,7 +282,7 @@ public:
 		}
 		else {
 			ptr = std::make_shared<ptr_type>(v);
-			if constexpr (is_shared_from_this) {
+			if constexpr (std::is_base_of_v<enable_threadsafe_from_this<T>, T>) {
 				v->weak_this = weak_threadsafe_ptr<T>(ptr);
 			}
 		}
@@ -334,10 +336,10 @@ public:
 	void reset() {
 		ptr.reset();
 	}
-	write_type get() {
+	write_type get() const {
 		return write_type(ptr, true);
 	}
-	write_type get_unsafe() {
+	write_type get_unsafe() const {
 		return write_type(ptr, false);
 	}
 	read_type get_readonly() const {
@@ -364,7 +366,7 @@ private:
 	}
 public:
 	weak_threadsafe_ptr() : ptr{} {}
-	explicit weak_threadsafe_ptr(nullptr_t) : ptr{} {}
+	weak_threadsafe_ptr(nullptr_t) : ptr{} {}
 	weak_threadsafe_ptr<T>& operator=(nullptr_t) {
 		ptr = {};
 		return *this;
@@ -416,6 +418,111 @@ public:
 	}
 };
 
+template<typename T>
+class atomic_threadsafe_ptr : STAMP_CORE_NAMESPACE::INonCopyable {
+	using ptr_type = threadsafe_control<T>;
+public:
+	using element_type = T;
+	using strong_type = threadsafe_ptr<T>;
+private:
+	std::atomic<std::shared_ptr<ptr_type>> ptr;
+public:
+	atomic_threadsafe_ptr() : ptr{ std::shared_ptr<ptr_type>(nullptr) } {}
+	atomic_threadsafe_ptr(nullptr_t) : ptr{ std::shared_ptr<ptr_type>(nullptr) } {}
+	atomic_threadsafe_ptr(const threadsafe_ptr<T>& other) {
+		ptr.store(other.ptr);
+	}
+	atomic_threadsafe_ptr<T>& operator=(nullptr_t) {
+		ptr.store(nullptr);
+		return *this;
+	}
+	atomic_threadsafe_ptr<T>& operator=(const threadsafe_ptr<T>& other) {
+		ptr.store(other.ptr);
+		return *this;
+	}
+	operator strong_type() const {
+		return strong_type(ptr.load());
+	}
+	bool is_lock_free() const noexcept {
+		return ptr.is_lock_free();
+	}
+	strong_type load() const {
+		return strong_type(ptr.load());
+	}
+	void store(const strong_type& desired) {
+		ptr.store(desired.ptr);
+	}
+	strong_type exchange(const strong_type& desired) {
+		return strong_type(ptr.exchange(desired.ptr));
+	}
+	bool compare_exchange_strong(strong_type& expected, const strong_type& desired) {
+		auto exp = expected.ptr;
+		bool result = ptr.compare_exchange_strong(exp, desired.ptr);
+		if (!result) {
+			expected = strong_type(exp);
+		}
+		return result;
+	}
+	void wait(const strong_type& old) const {
+		ptr.wait(old.ptr);
+	}
+	void notify_one() {
+		ptr.notify_one();
+	}
+	void notify_all() {
+		ptr.notify_all();
+	}
+};
+
+template<typename T>
+class atomic_weak_threadsafe_ptr : STAMP_CORE_NAMESPACE::INonCopyable {
+	using ptr_type = threadsafe_control<T>;
+public:
+	using element_type = T;
+	using weak_type = threadsafe_ptr<T>;
+private:
+	std::atomic<std::weak_ptr<ptr_type>> ptr;
+public:
+	atomic_weak_threadsafe_ptr() : ptr{ nullptr } {}
+	atomic_weak_threadsafe_ptr(nullptr_t) : ptr{ nullptr } {}
+	atomic_weak_threadsafe_ptr<T>& operator=(nullptr_t) {
+		ptr.store(nullptr);
+		return *this;
+	}
+	operator weak_type() const {
+		return weak_type(ptr.load());
+	}
+	bool is_lock_free() const noexcept {
+		return ptr.is_lock_free();
+	}
+	weak_type load() const {
+		return weak_type(ptr.load());
+	}
+	void store(const weak_type& desired) {
+		ptr.store(desired.ptr);
+	}
+	weak_type exchange(const weak_type& desired) {
+		return weak_type(ptr.exchange(desired.ptr));
+	}
+	bool compare_exchange_strong(weak_type& expected, const weak_type& desired) {
+		auto exp = expected.ptr;
+		bool result = ptr.compare_exchange_strong(exp, desired.ptr);
+		if (!result) {
+			expected = weak_type(exp);
+		}
+		return result;
+	}
+	void wait(const weak_type& old) const {
+		ptr.wait(old.ptr);
+	}
+	void notify_one() {
+		ptr.notify_one();
+	}
+	void notify_all() {
+		ptr.notify_all();
+	}
+};
+
 //template<typename T>
 //class std::atomic<stamp::threadsafe_ptr<T>> {
 //
@@ -460,7 +567,14 @@ protected:
 public:
 
 	threadsafe_ptr<T> threadsafe_from_this() {
-		return static_pointer_cast<T>(Base::threadsafe_from_this());
+		T* t = static_cast<T*>(this);
+		Base* base = static_cast<Base*>(t);
+		return static_pointer_cast<T>(base->threadsafe_from_this());
+	}
+	threadsafe_ptr<Base> threadsafe_from_base() {
+		T* t = static_cast<T*>(this);
+		Base* base = static_cast<Base*>(t);
+		return base->threadsafe_from_this();
 	}
 };
 
@@ -472,6 +586,16 @@ public:
 
 	template <typename... Args>
 	lockable(Args&&... args) : T(std::forward<Args>(args)...) {}
+	lockable(const lockable& other) : T(*static_cast<const T*>(&other)) {}
+	lockable(lockable&& other) : T(std::move(*static_cast<T*>(&other))) {}
+	lockable& operator =(const lockable& other) {
+		T::operator=(*static_cast<const T*>(&other));
+		return *this;
+	}
+	lockable& operator =(lockable&& other) {
+		T::operator=(std::move(*static_cast<T*>(&other)));
+		return *this;
+	}
 
 	void lock() const {
 		_mutex.lock();
@@ -496,6 +620,16 @@ public:
 
 	template <typename... Args>
 	shared_lockable(Args&&... args) : T(std::forward<Args>(args)...) {}
+	shared_lockable(const shared_lockable& other) : T(*static_cast<const T*>(&other)) {}
+	shared_lockable(shared_lockable&& other) : T(std::move(*static_cast<T*>(&other))) {}
+	shared_lockable& operator =(const shared_lockable& other) {
+		T::operator=(*static_cast<const T*>(&other));
+		return *this;
+	}
+	shared_lockable& operator =(shared_lockable&& other) {
+		T::operator=(std::move(*static_cast<T*>(&other)));
+		return *this;
+	}
 
 	void lock() const {
 		_mutex.lock();

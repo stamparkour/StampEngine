@@ -159,7 +159,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
@@ -178,7 +178,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
@@ -202,7 +202,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -399,6 +399,7 @@
     <ClCompile Include="stamp\os\windows10\win32hid.cpp" />
     <ClCompile Include="stamp\os\windows10\win32keyboard.cpp" />
     <ClCompile Include="stamp\os\windows10\win32mouse.cpp" />
+    <ClCompile Include="stamp\test\coroutineTest.cpp" />
     <ClCompile Include="stamp\test\luaTest.cpp" />
     <ClCompile Include="stamp\test\matrixText.cpp" />
     <ClCompile Include="stamp\test\memoryTest.cpp" />
@@ -734,18 +735,22 @@
     <ClInclude Include="sol\forward.hpp" />
     <ClInclude Include="sol\sol.hpp" />
     <ClInclude Include="stamp\core\bit_extension.h" />
+    <ClInclude Include="stamp\core\coroutine.h" />
     <ClInclude Include="stamp\core\define.h" />
     <ClInclude Include="stamp\core\iterator_extension.h" />
     <ClInclude Include="stamp\core\memory.h" />
     <ClInclude Include="stamp\core\noncopyable.h" />
     <ClInclude Include="stamp\core\string_extension.h" />
+    <ClInclude Include="stamp\core\taskqueue.h" />
     <ClInclude Include="stamp\core\time.h" />
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\engine\define.h" />
+    <ClInclude Include="stamp\engine\windowscene.h" />
     <ClInclude Include="stamp\engine\scene.h" />
     <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
     <ClInclude Include="stamp\graphics\gl\framebuffer.h" />
+    <ClInclude Include="stamp\graphics\gl\material.h" />
     <ClInclude Include="stamp\graphics\gl\mesh.h" />
     <ClInclude Include="stamp\graphics\gl\pixel.h" />
     <ClInclude Include="stamp\graphics\gl\shader.h" />

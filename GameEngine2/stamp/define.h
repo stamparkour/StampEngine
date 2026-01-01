@@ -35,6 +35,8 @@ using STAMP_DEFAULT_FLOATINGPOINT = double;
 using STAMP_DEFAULT_ALIGN_FLOATINGPOINT = float;
 using STAMP_DEFAULT_CHAR = char32_t;
 #define STAMP_STRING(v) U##v
+#define STRINGIFY(v) #v
+#define EXPAND_AND_STRINGIFY(v) STRINGIFY(v)
 
 // network endianness 1: big-endian, 0: little-endian
 #define STAMP_NETWORK_ENDIANNESS 0

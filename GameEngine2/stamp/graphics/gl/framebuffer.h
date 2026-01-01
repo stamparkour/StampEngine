@@ -65,7 +65,7 @@ public:
 		DeleteBuffer();
 	}
 
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::RGBA) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size, texture_format_t format = texture_format::RGBA) {
 		if (format == 0) {
 			if (textures.size() > attachment) {
 				textures[attachment] = nullptr;
@@ -92,13 +92,13 @@ public:
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
 		return depthTexture;
 	}
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment) const {
 		if (textures.size() <= attachment || !textures[attachment]) {
 			return nullptr;
 		}
 		return textures[attachment];
 	}
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth() const {
 		return depthTexture;
 	}
 
@@ -113,14 +113,20 @@ public:
 	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<uint32_t> Iter>
 	void Bind(Iter begin, Iter end) {
 		std::vector<GLenum> binds{};
-		binds.reserve(std::distance(begin, end));
 		for (auto i = begin; i != end; i++) {
 			binds.push_back(*i + GL_COLOR_ATTACHMENT0);
 		}
 		glNamedFramebufferDrawBuffers(frameBuffer, binds.size(), binds.data());
 	}
 	void Bind() {
-		glNamedFramebufferDrawBuffers(frameBuffer, );
+		std::vector<GLenum> binds{};
+		binds.reserve(textures.size());
+		int i = 0;
+		for (auto& k : textures) {
+			binds.push_back(i + GL_COLOR_ATTACHMENT0);
+			i++;
+		}
+		glNamedFramebufferDrawBuffers(frameBuffer, binds.size(), binds.data());
 	}
 	GLuint InternalFrameBuffer() const {
 		return frameBuffer;

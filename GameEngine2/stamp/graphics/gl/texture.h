@@ -118,19 +118,20 @@ private:
 	size_t height = 0;
 
 	void SetTexture(Texture* tex, Texture::desc_t* buf, size_t mipmap) const override {
-		if (width == 0 || height == 0) {
+		size_t w = width, h = height;
+		if (w == 0 || h == 0) {
 			STAMPASSERT(buf->width != 0 && buf->height != 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - texture size should be initialized. Either width or height is currently unitialized");
-			width = tex->Width(mipmap);
-			height = tex->Height(mipmap);
+			w = tex->Width(mipmap);
+			h = tex->Height(mipmap);
 		}
 		else if (buf->width != 0 || buf->height != 0) {
-			STAMPASSERT(tex->Width(mipmap) == width, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << width << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
-			STAMPASSERT(tex->Height(mipmap) == height, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << height << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
+			STAMPASSERT(tex->Width(mipmap) == w, "stamp::graphics::gl::Texture::Set(RawTexture2d) - width (" << w << ") must match mipmap (" << mipmap << ") width : " << tex->Width(mipmap));
+			STAMPASSERT(tex->Height(mipmap) == h, "stamp::graphics::gl::Texture::Set(RawTexture2d) - height (" << h << ") must match mipmap (" << mipmap << ") height: " << tex->Height(mipmap));
 		}
 		if (buf->type == 0) {
 			STAMPASSERT(mipmap == 0, "stamp::graphics::gl::Texture::Set(ClearTexture2d) - mipmap level (" << mipmap << ") must be 0 when first setting Texture content.");
-			buf->width = width << mipmap;
-			buf->height = height << mipmap;
+			buf->width = w << mipmap;
+			buf->height = h << mipmap;
 			buf->depth = 1;
 			buf->type = texture_type::_2D;
 
@@ -140,7 +141,7 @@ private:
 		}
 
 		glBindTexture(buf->type, buf->textureBuffer);
-		glTexImage2D(buf->type, mipmap, buf->format, width, height, 0, pixel_type::format, pixel_type::type, nullptr);
+		glTexImage2D(buf->type, mipmap, buf->format, w, h, 0, pixel_type::format, pixel_type::type, nullptr);
 		glClearTexImage(buf->textureBuffer, mipmap, pixel_type::format, pixel_type::type, &clearColor);
 	}
 public:

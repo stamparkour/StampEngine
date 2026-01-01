@@ -57,7 +57,8 @@ struct Rect {
 	Rect(T v) : A(v), B(v) {}
 	Rect(Vector2<T> A) : A(A), B(A) {}
 	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
-	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({right, bottom }) {}
+	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({ right, bottom }) {}
+	Rect(T x, T y) : A({ x, y }), B({ x, y }) {}
 
 	Vector2<T> Size() const noexcept { return B - A; }
 };

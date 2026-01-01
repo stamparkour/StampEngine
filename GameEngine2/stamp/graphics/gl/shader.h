@@ -63,9 +63,9 @@ public:
 	IShaderProgram& operator =(IShaderProgram&& other) noexcept;
 	virtual ~IShaderProgram();
 
-	int InternalProgram();
-	void Bind();
-	bool isValid() const;
+	int InternalProgram() const;
+	void Bind() const;
+	bool IsValid() const;
 	//void Uniform(GLint location, const SamplerBase* value) {
 	//	STAMPDMSG("render::ShaderProgramBase::Uniform - function not implemented");
 	//	//STAMPASSERT(!value->isActive(), "render::ShaderProgramBase::uniform - texture is not active");
@@ -159,13 +159,13 @@ public:
 	//	STAMPASSERT(value.isActive(), "render::ShaderProgramBase::uniformBuffer - UBO is not active");
 	//	glShaderStorageBlockBinding(program, location, value.blockIndex);
 	//}
-	void UniformBuffer(GLint location, int index);
-	void ShaderStorageBuffer(GLint location, int index);
-	GLint GetUniformLocation(const char* name);
-	GLint GetUniformBufferLocation(const char* name);
-	GLint GetUniformIndex(const char* name);
-	GLint GetUniformBufferIndex(const char* name);
-	GLint GetShaderStorageBufferIndex(const char* name);
+	void UniformBuffer(GLint location, int index) const;
+	void ShaderStorageBuffer(GLint location, int index) const;
+	GLint GetUniformLocation(const char* name) const;
+	GLint GetUniformBufferLocation(const char* name) const;
+	GLint GetUniformIndex(const char* name) const;
+	GLint GetUniformBufferIndex(const char* name) const;
+	GLint GetShaderStorageBufferIndex(const char* name) const;
 };
 
 class RenderShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<RenderShaderProgram, IShaderProgram> {
@@ -174,9 +174,7 @@ class RenderShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE::
 public:
 	RenderShaderProgram() {}
 
-	static STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines = {});
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> threadsafe_from_this();
-	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<RenderShaderProgram> weak_threadsafe_from_this();
+	static std::shared_ptr<RenderShaderProgram> ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines = {});
 };
 class ComputerShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<ComputerShaderProgram, IShaderProgram> {
 	STAMP_MEMORY_THREADSAFE_FRIEND;
@@ -184,10 +182,8 @@ class ComputerShaderProgram : public IShaderProgram, public STAMP_CORE_NAMESPACE
 public:
 	ComputerShaderProgram() {}
 
-	static STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines = {});
+	static std::shared_ptr<ComputerShaderProgram> ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines = {});
 	void Dispatch(int groupsX, int groupsY, int groupsZ);
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> threadsafe_from_this();
-	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<ComputerShaderProgram> weak_threadsafe_from_this();
 
 	static int MaxDispatchInvocations();
 	static int MaxDispatchPerGroup();

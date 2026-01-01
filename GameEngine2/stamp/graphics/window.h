@@ -41,7 +41,8 @@ namespace window {
 			Maximized,
 			Minimized
 		};
-		constexpr const char* to_string(visibility_t v);
+		constexpr const char* to_string(visibility_t);
+		constexpr bool is_shown(visibility_t);
 	}
 	namespace displaymode {
 		enum : displaymode_t {
@@ -65,18 +66,13 @@ namespace window {
 	};
 }
 
-class Window : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<Window> {
+class Window : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<Window> {
 	friend struct Window_internal;
+	friend class IWindowListener;
 	STAMP_MEMORY_THREADSAFE_FRIEND;
 private:
 	struct Window_internal* windowData;
 protected:
-	virtual void OnCreate() {}
-	virtual void OnResize(const STAMP_MATH_NAMESPACE::Recti& newRect) {}
-	virtual void OnMove(const STAMP_MATH_NAMESPACE::Vector2i& newPosition) {}
-	virtual void OnClose() {}
-	virtual void OnFocus(bool isFocused) {}
-
 	Window(const window::CreationSettings& settings);
 public:
 	static STAMP_CORE_NAMESPACE::threadsafe_ptr<Window> Create(const window::CreationSettings& settings) { return STAMP_CORE_NAMESPACE::make_threadsafe<Window>(settings); }
@@ -110,8 +106,24 @@ public:
 	bool IsAlive() const noexcept;
 	std::future<void> WindowClosePromise() const noexcept;
 
-	void RefreshFrame();
-	void* Framebuffer();
+	void BindDisplayContext();
+};
+
+class IWindowListener : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<IWindowListener> {
+	friend struct Window_internal;
+protected:
+	STAMP_NAMESPACE::weak_threadsafe_ptr<Window> window = nullptr;
+
+	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::Recti& newRect) = 0;
+	virtual void OnWindowVisibility(window::visibility_t visibility) = 0;
+	virtual void OnWindowDisplay(window::displaymode_t displaymode) = 0;
+	virtual void OnWindowFocus(bool isFocused) = 0;
+	virtual void OnWindowClose() = 0;
+
+	void AttachWindowListener(const STAMP_CORE_NAMESPACE::threadsafe_ptr<Window>& window);
+	IWindowListener();
+public:
+	~IWindowListener();
 };
 
 

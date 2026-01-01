@@ -1,8 +1,8 @@
-//stamp/graphics/gl/mesh.h
+//stamp/graphics/gl/pixel.h
 
 #pragma once
-#ifndef STAMP_GRAPHICS_GL_MESH_H
-#define STAMP_GRAPHICS_GL_MESH_H
+#ifndef STAMP_GRAPHICS_GL_PIXEL_H
+#define STAMP_GRAPHICS_GL_PIXEL_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 

@@ -30,6 +30,7 @@
 #include <stamp/stamp.h>
 #include <stamp/graphics/window.h>
 #include <stamp/debug.h>
+#include <set>
 
 #define WM_STAMP_FULLSCREEN (WM_USER+0)
 
@@ -55,6 +56,7 @@ struct Window_internal {
 	HWND hWnd = NULL;
 	HWND zDepthhWnd = NULL;
 	window::CreationSettings settings;
+	HDC hDC = NULL;
 
 	STAMP_NAMESPACE::sstring title{};
 
@@ -72,12 +74,35 @@ struct Window_internal {
 	window::displaymode_t displayMode = window::displaymode::Normal;
 	window::visibility_t visibility = window::visibility::Visible;
 
+	STAMP_CORE_NAMESPACE::shared_lockable<std::set<STAMP_GRAPHICS_NAMESPACE::IWindowListener*>> listeners{};
+
 	Window_internal() = default;
 
+	void OnResize(const Recti& newRect) {
+		auto l = listeners.get_shared_lock();
+		for (auto& w : listeners) w->OnResize(newRect);
+	}
+	void OnVisibility(window::visibility_t newVisibility) {
+		auto l = listeners.get_shared_lock();
+		for (auto& w : listeners) w->OnVisibility(newVisibility);
+	}
+	void OnDisplay(window::displaymode_t newDisplayMode) {
+		auto l = listeners.get_shared_lock();
+		for (auto& w : listeners) w->OnDisplay(newDisplayMode);
+	}
+	void OnFocus(bool isFocused) {
+		auto l = listeners.get_shared_lock();
+		for (auto& w : listeners) w->OnFocus(isFocused);
+	}
+	void OnClose() {
+		auto l = listeners.get_shared_lock();
+		for (auto& w : listeners) w->OnClose();
+	}
 	void CloseWindow() {
 		if (!isAlive) return;
 		isAlive = false;
 		windowClosePromise.set_value();
+		OnClose();
 	}
 
 	void SetBorderlessMaximized() {
@@ -119,6 +144,7 @@ static ATOM classAtom;
 
 HWND parentHwnd = nullptr;
 HGLRC openGlContext = nullptr;
+std::thread::id renderThreadId;
 PIXELFORMATDESCRIPTOR pfdGlobal = {
 	sizeof(PIXELFORMATDESCRIPTOR),   // size of this pfd  
 	1,                     // version number  
@@ -142,13 +168,14 @@ PIXELFORMATDESCRIPTOR pfdGlobal = {
 
 //OPEN GL CODE
 
-void PixelFormat(Window_internal* window) {
+static void PixelFormat(Window_internal* window) {
 	HDC hdc = GetDC(window != nullptr ? window->hWnd : parentHwnd);
 	int pixelFormat = ChoosePixelFormat(hdc, &pfdGlobal);
 	SetPixelFormat(hdc, pixelFormat, &pfdGlobal);
 }
 
-void InitializedOpenGLContext() {
+static void InitializedOpenGLContext() {
+	STAMPASSERT(!openGlContext, "OpenGL context already initialized.");
 	HDC hdc = GetDC(parentHwnd);
 
 	PixelFormat(nullptr);
@@ -156,20 +183,23 @@ void InitializedOpenGLContext() {
 	wglMakeCurrent(hdc, openGlContext);
 	GLenum err = glewInit();
 	STAMPASSERT(GLEW_OK == err, "Initialization of GLEW failed.");
+
+	renderThreadId = std::this_thread::get_id();
 }
 
-void DestroyOpenGLContext() {
+static void DestroyOpenGLContext() {
 	if (openGlContext) {
 		wglMakeCurrent(NULL, NULL);
 		wglDeleteContext(openGlContext);
 		ReleaseDC(parentHwnd, GetDC(parentHwnd));
 		openGlContext = nullptr;
+		renderThreadId = {};
 	}
 }
 
 // MONITOR CODE
 
-BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
+static BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
 	std::map<HMONITOR, MonitorDetail>& m = *(std::map<HMONITOR, MonitorDetail>*)data;
 
 	MONITORINFO info;
@@ -184,7 +214,7 @@ BOOL MonitorEnumProc(HMONITOR monitor, HDC hdc, LPRECT rectPtr, LPARAM data) {
 	return TRUE;
 }
 
-void ScanMonitors() {
+static void ScanMonitors() {
 	using std::swap;
 	std::map<HMONITOR, MonitorDetail> m{};
 	EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, (LPARAM)&m);
@@ -193,7 +223,7 @@ void ScanMonitors() {
 
 //WINDOWS MANEGMENT
 
-LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+static LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	//std::cout << "Parent Window Message: hex " << std::hex << uMsg << " " << (int)wParam << " " << (int)lParam << std::endl;
 
 	switch (uMsg) {
@@ -226,7 +256,7 @@ LRESULT WndprocParent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	}
 }
 
-LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+static LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	Window_internal* winData = (Window_internal*)GetWindowLongPtrW(hWnd, 0);
 	Window* window = winData ? winData->window : 0;
 
@@ -242,6 +272,8 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		winData = (Window_internal*)(c->lpCreateParams);
 		winData->hWnd = hWnd;
 		SetWindowLongPtrW(hWnd, 0, (LONG_PTR)winData);
+
+		winData->hDC = GetDC(winData->hWnd);
 	} return 0;
 	case WM_GETMINMAXINFO: {
 		MINMAXINFO* m = (MINMAXINFO*)lParam;
@@ -258,15 +290,19 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	// is top-level window
 	case WM_ACTIVATE: {
 		bool active = (LOWORD(wParam) != WA_INACTIVE);
+
 		winData->focus = active;
+		winData->OnFocus(active);
 
 		if (active && winData->visibility == window::visibility::Minimized && winData->displayMode == window::displaymode::BorderlessFullscreen) {
 			winData->visibility = window::visibility::Maximized;
 			winData->SetBorderlessMaximized();
+
 		}
 		else if (!active && winData->visibility == window::visibility::Maximized && winData->displayMode == window::displaymode::BorderlessFullscreen) {
 			winData->visibility = window::visibility::Minimized;
 			ShowWindow(hWnd, SW_MINIMIZE);
+
 		}
 	} return 0;
 	case WM_WINDOWPOSCHANGING: {
@@ -342,12 +378,16 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 		if (winData->visibility == window::visibility::Visible) {
 			winData->previousRect = winData->rect;
+			winData->OnResize(winData->rect);
 		}
+
+		winData->OnVisibility(winData->visibility);
 	} return 0;
 	case WM_STYLECHANGED: {
 
 	} return 0;
 	case WM_CLOSE: {
+		if(winData->hDC) ReleaseDC(hWnd, winData->hDC);
 		DestroyWindow(hWnd);
 	} return 0;
 	case WM_DESTROY: {
@@ -362,7 +402,7 @@ LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	}
 }
 
-void ParentWindowLoop(std::promise<void>* promise) {
+static void ParentWindowLoop(std::promise<void>* promise) {
 	parentHwnd = CreateWindowExW(
 		WS_EX_APPWINDOW,                // Optional window styles.
 		(LPCWSTR)parentClassAtom,       // Window class
@@ -393,7 +433,7 @@ void ParentWindowLoop(std::promise<void>* promise) {
 
 //CLIENT WINDOW
 
-void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
+static void WindowLoop(Window_internal* windowData, std::promise<void>* promise) {
 	Window* window = windowData->window;
 	std::u16string wtitle = STAMP_NAMESPACE::to_utf16(windowData->settings.title);
 	HWND hwnd = CreateWindowExW(
@@ -475,7 +515,15 @@ STAMP_MATH_NAMESPACE::Recti Window::MonitorRect() const noexcept {
 	return windowData->parentRect;
 }
 void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
-	auto size = rect.Size();
+	auto r = rect;
+	auto size = r.Size();
+	if (size == 0) {
+		if (r.A == 0) return;
+
+		size = r.A;
+		r.A = windowData->clientRect.A;
+		r.B = r.A + size;
+	}
 	if (size.x <= 0 || size.y <= 0) return;
 
 
@@ -487,7 +535,7 @@ void Window::Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept {
 
 	Recti borderOffset = windowData->rect - windowData->windowRect;
 	borderOffset.B -= borderOffset.A;
-	SetWindowPos(windowData->hWnd, nullptr, rect.left + borderOffset.left, rect.top + borderOffset.top, size.x + borderOffset.right, size.y + borderOffset.bottom, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+	SetWindowPos(windowData->hWnd, nullptr, r.left + borderOffset.left, r.top + borderOffset.top, size.x + borderOffset.right, size.y + borderOffset.bottom, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 }
 STAMP_MATH_NAMESPACE::Recti Window::Rect() const noexcept {
 	return windowData->rect;
@@ -559,6 +607,8 @@ void Window::DisplayMode(window::displaymode_t displaymode) noexcept {
 			SetWindowLongPtrW(windowData->hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOOLWINDOW);
 		} break;
 	}
+
+	windowData->OnDisplay(displaymode);
 }
 window::displaymode_t Window::DisplayMode() const noexcept {
 	return windowData->displayMode;
@@ -590,6 +640,38 @@ bool Window::IsAlive() const noexcept {
 }
 std::future<void> Window::WindowClosePromise() const noexcept {
 	return windowData->windowClosePromise.get_future();
+}
+void Window::BindDisplayContext() {
+	STAMPASSERT(!STAMP_NAMESPACE::IsRenderThread(), "stamp::graphics::window::bindDisplayContext - not in render thread");
+	//STAMPASSERT(!windowData->hDC, "stamp::graphics::window::bindDisplayContext - already bound");
+	if (windowData->hDC) wglMakeCurrent(windowData->hDC, openGlContext);
+}
+//void Window::UnbindDisplayContext() {
+//	STAMPASSERT(!STAMP_NAMESPACE::IsRenderThread(), "stamp::graphics::window::bindDisplayContext - not in render thread");
+//	//STAMPASSERT(windowData->hDC, "stamp::graphics::window::unbindDisplayContext - not bound");
+//	wglMakeCurrent(NULL, NULL);
+//}
+void IWindowListener::AttachWindowListener(const STAMP_CORE_NAMESPACE::threadsafe_ptr<Window>& window) {
+	if (!this->window.expired()) {
+		auto w = this->window.lock();
+		auto l = w.get()->windowData->listeners.get_unique_lock();
+		w.get()->windowData->listeners.erase(this);
+	}
+	this->window = window;
+	if (this->window.expired()) return;
+
+	auto w = window.get();
+	auto l = w->windowData->listeners.get_unique_lock();
+	w->windowData->listeners.insert(this);
+
+	this->OnResize(w->windowData->rect);
+	this->OnVisibility(w->windowData->visibility);
+	this->OnDisplay(w->windowData->displayMode);
+	this->OnFocus(w->windowData->focus);
+}
+IWindowListener::IWindowListener() {}
+IWindowListener::~IWindowListener() {
+	AttachWindowListener(nullptr);
 }
 
 void STAMP_NAMESPACE::InitStampEngine(const STAMP_NAMESPACE::StampEngineSettings& settings) {
@@ -633,6 +715,10 @@ void STAMP_NAMESPACE::CloseStampEngine() {
 
 	UnregisterClass((LPCWSTR)classAtom, ::hInst);
 	UnregisterClass((LPCWSTR)parentClassAtom, ::hInst);
+}
+bool STAMP_NAMESPACE::IsRenderThread() {
+	STAMPASSERT(renderThreadId == std::thread::id{}, "stamp::graphics::IsRenderThread - Render thread not initialized.");
+	return renderThreadId == std::this_thread::get_id();
 }
 
 

@@ -63,6 +63,13 @@ namespace storage_hint {
 	};
 }
 
+using render_mode_t = GLenum;
+namespace render_mode {
+	enum : render_mode_t {
+		Triangles = GL_TRIANGLES,
+	};
+}
+
 struct Vertex {
 	STAMP_MATH_NAMESPACE::Vector3f position;
 	STAMP_GRAPHICS_NAMESPACE::ColorRGBA<uint8_t> color;
@@ -92,28 +99,40 @@ struct Vertex {
 
 class Mesh : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<Mesh> {
 private:
+	GLuint vertexAttribBuffer = 0;
 	GLuint vertexBuffer = 0;
-	void (*initVertexBuffer_func)(vertex_type_bitmask_t) = nullptr;
+	int vertexCount = 0;
+	render_mode_t renderMode = render_mode::Triangles;
 
 	void InitBuffer() {
-		if (vertexBuffer != 0) return;
-		glCreateBuffers(1, &vertexBuffer);
+		if (vertexBuffer == 0) glCreateBuffers(1, &vertexBuffer);
+		if (vertexAttribBuffer == 0) glGenVertexArrays(1, &vertexAttribBuffer);
 	}
 
 public:	
 	Mesh() {}
 	~Mesh() {
-		if (vertexBuffer == 0) return;
-		glDeleteBuffers(1, &vertexBuffer);
+		if (vertexBuffer != 0) glDeleteBuffers(1, &vertexBuffer);
+		if (vertexAttribBuffer != 0) glDeleteVertexArrays(1, &vertexAttribBuffer);
 		vertexBuffer = 0;
+		vertexAttribBuffer = 0;
 	}
 
 	void Bind() {
-		if (vertexBuffer == 0) return;
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		if (vertexAttribBuffer == 0) return;
+		glBindVertexArray(vertexAttribBuffer);
 	}
 	GLuint VertexBuffer() const {
 		return vertexBuffer;
+	}
+	GLuint VertexArray() const {
+		return vertexAttribBuffer;
+	}
+	render_mode_t RenderMode() const {
+		return renderMode;
+	}
+	int VertexCount() const {
+		return vertexCount;
 	}
 
 	template<std::forward_iterator Iter>
@@ -130,31 +149,35 @@ public:
 
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, end - begin, begin, hint);
-		initVertexBuffer_func = &vertex_type::InitializeVertexBuffer;
+		glBindVertexArray(vertexAttribBuffer);
+		vertex_type::InitializeVertexBuffer(~0);
+		vertexCount = static_cast<int>(end - begin);
 	}
 };
 
 namespace proto_mesh {
 	inline const Vertex quadVertices[] = {
 		//bottom left
-		Vertex{{-1,-1,0},{1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{-1,-1,0},{1,1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
 		//top left
-		Vertex{{-1,1,0},{1,1,1},{0,1},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{-1,1,0},{1,1,1,1},{0,1},{0,0,-1},{0,0,1},{0,1,0}},
 		//top right
-		Vertex{{1,1,0},{1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{1,1,0},{1,1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
 		//bottom left
-		Vertex{{-1,-1,0},{1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{-1,-1,0},{1,1,1,1},{0,0},{0,0,-1},{0,0,1},{0,1,0}},
 		//top right
-		Vertex{{1,1,0},{1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{1,1,0},{1,1,1,1},{1,1},{0,0,-1},{0,0,1},{0,1,0}},
 		//bottom right
-		Vertex{{1,-1,0},{1,1,1},{1,0},{0,0,-1},{0,0,1},{0,1,0}},
+		Vertex{{1,-1,0},{1,1,1,1},{1,0},{0,0,-1},{0,0,1},{0,1,0}},
 	};
 
-	inline STAMP_CORE_NAMESPACE::threadsafe_ptr<Mesh> Quad() {
-		static STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<Mesh> mesh{};
+	inline std::shared_ptr<Mesh> Quad() {
+		static std::weak_ptr<Mesh> mesh{};
 		if (!mesh.expired()) return mesh.lock();
-		STAMP_CORE_NAMESPACE::threadsafe_ptr<Mesh> m = STAMP_CORE_NAMESPACE::make_threadsafe<Mesh>();
-		m.get_unsafe()->SetVertices(std::begin(quadVertices), std::end(quadVertices));
+		auto m = std::make_shared<Mesh>();
+		m->SetVertices(std::begin(quadVertices), std::end(quadVertices));
+		mesh = m;
+		return m;
 	}
 }
 

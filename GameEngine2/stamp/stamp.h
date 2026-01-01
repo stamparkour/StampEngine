@@ -11,4 +11,7 @@ struct StampEngineSettings {
 void InitStampEngine(const StampEngineSettings&);
 void CloseStampEngine();
 
+bool IsRenderThread();
+//bool RenderThreadId();
+
 STAMP_NAMESPACE_END

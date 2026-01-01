@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stamp/graphics/gl/define.h>
 
-bool STAMP_GRAPHICS_GL_NAMESPACE::checkOpenGLErrors() {
+bool STAMP_GRAPHICS_GL_NAMESPACE::CheckOpenGLErrors() {
 	GLenum error = glGetError();
 	bool k = false;
 	while (error != GL_NO_ERROR) {

@@ -25,6 +25,17 @@ constexpr const char* window::visibility::to_string(visibility_t v) {
 	default: return "Unknown";
 	}
 }
+constexpr bool window::visibility::is_shown(visibility_t v) {
+	switch (v) {
+	case Visible:
+	case Maximized:
+		return true;
+	case Hidden:
+	case Minimized:
+	default:
+		return false;
+	}
+}
 constexpr const char* window::displaymode::to_string(displaymode_t v) {
 	switch (v) {
 	case Normal: return "Normal";

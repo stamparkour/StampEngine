@@ -635,6 +635,9 @@
     <ClCompile Include="stamp\os\windows10\win32hid.cpp">
       <Filter>libraries\stamp\os\windows10</Filter>
     </ClCompile>
+    <ClCompile Include="stamp\test\coroutineTest.cpp">
+      <Filter>libraries\stamp\test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stamp\math\vector.h">
@@ -1736,6 +1739,18 @@
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
     <ClInclude Include="stamp\core\memory.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\taskqueue.h">
+      <Filter>libraries\stamp\core</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\engine\windowscene.h">
+      <Filter>libraries\stamp\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\graphics\gl\material.h">
+      <Filter>libraries\stamp\graphics\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="stamp\core\coroutine.h">
       <Filter>libraries\stamp\core</Filter>
     </ClInclude>
   </ItemGroup>

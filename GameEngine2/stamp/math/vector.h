@@ -108,11 +108,11 @@ struct Vector_Base {
 	/// <summary>Begin iterator (mutable) over underlying storage.</summary>
 	auto begin();
 	/// <summary>Begin iterator (const) over underlying storage.</summary>
-	auto begin() const;
+	auto cbegin() const;
 	/// <summary>End iterator (mutable) over underlying storage.</summary>
 	auto end();
 	/// <summary>End iterator (const) over underlying storage.</summary>
-	auto end() const;
+	auto cend() const;
 };
 
 /// <summary>Generic D-dimensional vector storage and simple constructors.
@@ -405,21 +405,21 @@ inline const auto& Vector_Base<V, T, D>::get() const {
 }
 template<typename V, typename T, size_t D>
 inline auto Vector_Base<V, T, D>::begin() {
-	auto self = static_cast<const V*>(this);
+	auto self = static_cast<V*>(this);
 	return std::begin(self->V);
 }
 template<typename V, typename T, size_t D>
-inline auto Vector_Base<V, T, D>::begin() const {
+inline auto Vector_Base<V, T, D>::cbegin() const {
 	auto self = static_cast<const V*>(this);
 	return std::begin(self->V);
 }
 template<typename V, typename T, size_t D>
 inline auto Vector_Base<V, T, D>::end() {
-	auto self = static_cast<const V*>(this);
+	auto self = static_cast<V*>(this);
 	return std::end(self->V);
 }
 template<typename V, typename T, size_t D>
-inline auto Vector_Base<V, T, D>::end() const {
+inline auto Vector_Base<V, T, D>::cend() const {
 	auto self = static_cast<const V*>(this);
 	return std::end(self->V);
 }

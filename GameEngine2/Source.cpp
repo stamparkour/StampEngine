@@ -17,6 +17,7 @@
 #include <stamp/hid/keyboard.h>
 #include <stamp/engine/scene.h>
 #include <stamp/graphics/gl/shader.h>
+#include <stamp/engine/windowscene.h>
 #include <Windows.h>
 
 #ifdef STAMP_DEPLOY
@@ -102,6 +103,29 @@ int AIControl(float ballY, float currentY) {
 
 int main(int argv, char* argc[]) {
 	stamp::InitStampEngine(stamp::StampEngineSettings{.showConsole = true});
+
+	{
+		stamp::TaskQueue renderQueue{};
+		stamp::engine::SceneManager sceneManager{ &renderQueue };
+
+		auto window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
+				.title = U"TEST",
+				.rect = { 800, 700 },
+				.visibility = stamp::graphics::window::visibility::Visible,
+				.displaymode = stamp::graphics::window::displaymode::Normal,
+				.terminateApplicationOnClose = false,
+			}
+		);
+
+		sceneManager.RegisterScene<stamp::engine::WindowScene>(window);
+
+		while (window.get_readonly()->IsAlive() && renderQueue.RunOnce());
+	}
+
+	stamp::CloseStampEngine();
+	return 0;
+
+
 
 	Recti monitor = { 0,0,1920,1080 };
 	Vector2i center = (monitor.A + monitor.B) / 2;

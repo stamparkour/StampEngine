@@ -1,4 +1,7 @@
 #include <stamp/graphics/gl/shader.h>
+#include <functional>
+#include <sstream>
+#include <stamp/debug.h>
 
 using namespace STAMP_GRAPHICS_GL_NAMESPACE;
 
@@ -26,12 +29,38 @@ GLenum shader_type::to_glenum(shader_type_t type) {
 	return 0;
 }
 
+bool ParseCStyle(std::istream& in, std::ostream& out, const std::function<std::unique_ptr<std::istream>(std::string_view)>& headers) {
+	std::string l;
+	int linen = 0;
+	while (in) {
+		std::getline(in, l);
+		linen++;
+
+		if (l.starts_with("#include")) {
+			auto s = l.find_first_of('<', sizeof("#include"));
+			auto e = l.find_last_of('>');
+			STAMPASSERT(s != std::string::npos && e != std::string::npos && e != s, "stamp::graphics::shader - failed to parse shader. invalid #include statement");
+
+			std::string name = l.substr(s + 1, e - (s + 1));
+			auto headerStream = headers(name);
+			STAMPASSERT((bool)headerStream, "stamp::graphics::shader - failed to parse shader. unable to find include file: " << name);
+
+			if (!ParseCStyle(*headerStream.get(), out, headers)) {
+				return false;
+			}
+			out << "#line " << linen << std::endl;
+		}
+		else {
+			out << l << std::endl;
+		}
+	}
+}
+
 GLenum IShaderProgram::CompileShader(std::string& version, std::string& progTxt, shader_type_t type) {
-	static GLint compiled = 0;
-	static GLchar message[1024]{};
-	static GLsizei log_length = 0;
+	GLint compiled = 0;
+	GLsizei log_length = 0;
 	GLuint comp = glCreateShader(shader_type::to_glenum(type));
-	std::string p = version + std::string("#define ") + shader_type::to_definestring(type) + "\n" + progTxt;
+	std::string p = version + std::string("#define ") + shader_type::to_definestring(type) + "\n#line 2" + progTxt;
 
 	const char* c = p.c_str();
 	glShaderSource(comp, 1, &c, 0);
@@ -39,7 +68,8 @@ GLenum IShaderProgram::CompileShader(std::string& version, std::string& progTxt,
 	glCompileShader(comp);
 	glGetShaderiv(comp, GL_COMPILE_STATUS, &compiled);
 	if (compiled != GL_TRUE) {
-		glGetShaderInfoLog(comp, sizeof(message), &log_length, message);
+		std::string message(4096, '\0');
+		glGetProgramInfoLog(program, message.size(), &log_length, message.data());
 		STAMPSTACK();
 		STAMPDMSG("stamp::graphics::gl::ShaderProgramBase::set - compilation error" << std::endl << message); //add line number string
 	}
@@ -51,26 +81,26 @@ void IShaderProgram::Compile(std::istream& prog, shader_type_t type, const std::
 	program = glCreateProgram();
 	//reseve size of strings?
 	std::string version{};
-	version.reserve(32);
-	std::string progTxt{};
-	progTxt.reserve(4096);
-	while ((bool)prog) {//get version
-		char c = prog.get();
-		if (c == '\r') continue;
-		version += c;
-		if (c == '\n') break;
-	}
-	while ((bool)prog) {//get text
-		char c = prog.get();
-		if (c == '\r' || c == -1) continue;
-		progTxt += c;
-	}
-	for (int i = 0; i < defines.size(); i++) {
-		progTxt = std::string("#define ") + defines[i] + "\n" + progTxt;
-	}
-	static GLint compiled = 0;
-	static GLchar message[1024]{};
-	static GLsizei log_length = 0;
+	std::stringstream str{};
+	
+	std::getline(prog, version);
+	ParseCStyle(prog, str, [&defines](std::string_view str) -> std::unique_ptr<std::istream> {
+		if (str == "stampdefaults") {
+			std::stringstream s{};
+			for (const auto& def : defines) {
+				s << "#define " << def << std::endl;
+			}
+			for (const auto& def : default_defines) {
+				s << "#define " << def << std::endl;
+			}
+			return std::make_unique<std::stringstream>(std::move(s));
+		}
+		return std::make_unique<std::stringstream>();
+	});
+	std::string progTxt = str.str();
+
+	GLint compiled = 0;
+	GLsizei log_length = 0;
 	std::vector<GLuint> shaderComp{};
 	if (type & shader_type::VertexShader) {
 		GLenum comp = CompileShader(version, progTxt, shader_type::VertexShader);
@@ -105,7 +135,8 @@ void IShaderProgram::Compile(std::istream& prog, shader_type_t type, const std::
 	glLinkProgram(program);
 	glGetProgramiv(program, GL_LINK_STATUS, &compiled);
 	if (compiled != GL_TRUE) {
-		glGetProgramInfoLog(program, 1024, &log_length, message);
+		std::string message(4096, '\0');
+		glGetProgramInfoLog(program, message.size(), &log_length, message.data());
 		STAMPSTACK();
 		STAMPDMSG("stamp::graphics::gl::ShaderProgramBase::setShader::set - compilation error");
 		STAMPDMSG(message);
@@ -132,15 +163,15 @@ IShaderProgram::~IShaderProgram() {
 	program = 0;
 }
 
-int IShaderProgram::InternalProgram() {
+int IShaderProgram::InternalProgram() const {
 	return program;
 }
-void IShaderProgram::Bind() {
+void IShaderProgram::Bind() const {
 	if (currentProgram == program) return;
 	glUseProgram(program);
 	currentProgram = program;
 }
-bool IShaderProgram::isValid() const {
+bool IShaderProgram::IsValid() const {
 	return program != 0;
 }
 
@@ -428,37 +459,37 @@ void IShaderProgram::Uniform(GLint location, Iter begin, Iter end) {
 	glProgramUniformMatrix4dv(program, location, end - begin, false, (const double*)begin);
 }
 
-void IShaderProgram::UniformBuffer(GLint location, int index) {
+void IShaderProgram::UniformBuffer(GLint location, int index) const {
 	glUniformBlockBinding(program, location, index);
 }
-void IShaderProgram::ShaderStorageBuffer(GLint location, int index) {
+void IShaderProgram::ShaderStorageBuffer(GLint location, int index) const {
 	glShaderStorageBlockBinding(program, location, index);
 }
-GLint IShaderProgram::GetUniformLocation(const char* name) {
+GLint IShaderProgram::GetUniformLocation(const char* name) const {
 	return glGetUniformLocation(program, name);
 }
-GLint IShaderProgram::GetUniformBufferLocation(const char* name) {
+GLint IShaderProgram::GetUniformBufferLocation(const char* name) const {
 	return glGetUniformBlockIndex(program, name);
 }
-GLint IShaderProgram::GetUniformIndex(const char* name) {
+GLint IShaderProgram::GetUniformIndex(const char* name) const {
 	return glGetProgramResourceIndex(program, GL_UNIFORM, name);
 }
-GLint IShaderProgram::GetUniformBufferIndex(const char* name) {
+GLint IShaderProgram::GetUniformBufferIndex(const char* name) const {
 	return glGetProgramResourceIndex(program, GL_UNIFORM_BLOCK, name);
 }
-GLint IShaderProgram::GetShaderStorageBufferIndex(const char* name) {
+GLint IShaderProgram::GetShaderStorageBufferIndex(const char* name) const {
 	return glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
 }
 
-STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> RenderShaderProgram::ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines) {
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<RenderShaderProgram> r = STAMP_CORE_NAMESPACE::make_threadsafe<RenderShaderProgram>();
-	r.get_unsafe()->Compile(prog, shader_type::VertexShader | shader_type::FragmentShader | type, defines);
+std::shared_ptr<RenderShaderProgram> RenderShaderProgram::ParseStream_glsl(std::istream& prog, shader_type_t type, const std::vector<std::string>& defines) {
+	auto r = std::make_shared<RenderShaderProgram>();
+	r->Compile(prog, shader_type::VertexShader | shader_type::FragmentShader | type, defines);
 	return r;
 }
 
-STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> ComputerShaderProgram::ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines) {
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<ComputerShaderProgram> r = STAMP_CORE_NAMESPACE::make_threadsafe<ComputerShaderProgram>();
-	r.get_unsafe()->Compile(prog, shader_type::ComputeShader, defines);
+std::shared_ptr<ComputerShaderProgram> ComputerShaderProgram::ParseStream_glsl(std::istream& prog, const std::vector<std::string>& defines) {
+	auto r = std::make_shared<ComputerShaderProgram>();
+	r->Compile(prog, shader_type::ComputeShader, defines);
 	return r;
 }
 void ComputerShaderProgram::Dispatch(int groupsX, int groupsY, int groupsZ) {
