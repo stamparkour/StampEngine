@@ -71,12 +71,12 @@ namespace render_mode {
 }
 
 struct Vertex {
-	STAMP_MATH_NAMESPACE::Vector3f position;
+	STAMP_MATH_NAMESPACE::vector3f position;
 	STAMP_GRAPHICS_NAMESPACE::ColorRGBA<uint8_t> color;
-	STAMP_MATH_NAMESPACE::Vector2f uv;
-	STAMP_MATH_NAMESPACE::Vector3f normal;
-	STAMP_MATH_NAMESPACE::Vector3f tangent;
-	STAMP_MATH_NAMESPACE::Vector3f bitangent;
+	STAMP_MATH_NAMESPACE::vector2f uv;
+	STAMP_MATH_NAMESPACE::vector3f normal;
+	STAMP_MATH_NAMESPACE::vector3f tangent;
+	STAMP_MATH_NAMESPACE::vector3f bitangent;
 
 	inline static void InitializeVertexBuffer(vertex_type_bitmask_t type) {
 		if (type & vertex_type_bitmask::Position)	glVertexAttribPointer(STAMPGL_VERTEX_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
@@ -88,10 +88,10 @@ struct Vertex {
 	}
 
 	void ApplyTransform(const STAMP_MATH_NAMESPACE::Matrix4f& mat) {
-		position = static_cast<STAMP_MATH_NAMESPACE::Vector3f>(mat * STAMP_MATH_NAMESPACE::Vector4f(position, 1));
-		normal = static_cast<STAMP_MATH_NAMESPACE::Vector3f>(mat * STAMP_MATH_NAMESPACE::Vector4f(normal, 0));
-		tangent = static_cast<STAMP_MATH_NAMESPACE::Vector3f>(mat * STAMP_MATH_NAMESPACE::Vector4f(tangent, 0));
-		bitangent = static_cast<STAMP_MATH_NAMESPACE::Vector3f>(mat * STAMP_MATH_NAMESPACE::Vector4f(bitangent, 0));
+		position = static_cast<STAMP_MATH_NAMESPACE::vector3f>(mat * STAMP_MATH_NAMESPACE::vector4f(position, 1));
+		normal = static_cast<STAMP_MATH_NAMESPACE::vector3f>(mat * STAMP_MATH_NAMESPACE::vector4f(normal, 0));
+		tangent = static_cast<STAMP_MATH_NAMESPACE::vector3f>(mat * STAMP_MATH_NAMESPACE::vector4f(tangent, 0));
+		bitangent = static_cast<STAMP_MATH_NAMESPACE::vector3f>(mat * STAMP_MATH_NAMESPACE::vector4f(bitangent, 0));
 	}
 };
 

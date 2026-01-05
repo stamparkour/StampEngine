@@ -58,8 +58,8 @@ namespace window {
 
 	struct CreationSettings {
 		STAMP_NAMESPACE::sstring title = U"Stamp Engine—Window Title";
-		STAMP_MATH_NAMESPACE::Recti rect = {};
-		STAMP_MATH_NAMESPACE::Recti rectBound = {};
+		STAMP_MATH_NAMESPACE::recti rect = {};
+		STAMP_MATH_NAMESPACE::recti rectBound = {};
 		visibility_t visibility = visibility::Visible;
 		displaymode_t displaymode = displaymode::Normal;
 		bool terminateApplicationOnClose = false;
@@ -82,16 +82,16 @@ public:
 	void Title(const STAMP_NAMESPACE::sstring& title) noexcept;
 	STAMP_NAMESPACE::sstring Title() const noexcept;
 
-	STAMP_MATH_NAMESPACE::Recti ParentRect() const noexcept;
-	STAMP_MATH_NAMESPACE::Recti MonitorRect() const noexcept;
+	STAMP_MATH_NAMESPACE::recti Parentrect() const noexcept;
+	STAMP_MATH_NAMESPACE::recti Monitorrect() const noexcept;
 
-	void Rect(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	STAMP_MATH_NAMESPACE::Recti Rect() const noexcept;
+	void rect(const STAMP_MATH_NAMESPACE::recti& rect) noexcept;
+	STAMP_MATH_NAMESPACE::recti rect() const noexcept;
 
-	void RectBound(const STAMP_MATH_NAMESPACE::Recti& rect) noexcept;
-	STAMP_MATH_NAMESPACE::Recti RectBound() const noexcept;
+	void rectBound(const STAMP_MATH_NAMESPACE::recti& rect) noexcept;
+	STAMP_MATH_NAMESPACE::recti rectBound() const noexcept;
 
-	STAMP_MATH_NAMESPACE::Recti ClientRectOffset() const noexcept;
+	STAMP_MATH_NAMESPACE::recti ClientrectOffset() const noexcept;
 
 	void Visibility(window::visibility_t visibility) noexcept;
 	window::visibility_t Visibility() const noexcept;
@@ -114,7 +114,7 @@ class IWindowListener : STAMP_CORE_NAMESPACE::INonCopyable, public STAMP_CORE_NA
 protected:
 	STAMP_NAMESPACE::weak_threadsafe_ptr<Window> window = nullptr;
 
-	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::Recti& newRect) = 0;
+	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::recti& newrect) = 0;
 	virtual void OnWindowVisibility(window::visibility_t visibility) = 0;
 	virtual void OnWindowDisplay(window::displaymode_t displaymode) = 0;
 	virtual void OnWindowFocus(bool isFocused) = 0;

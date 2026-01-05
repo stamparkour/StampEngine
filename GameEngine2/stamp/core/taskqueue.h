@@ -28,11 +28,13 @@
 #include <vector>
 #include <thread>
 #include <stdexcept>
+#include <limits>
+#include <chrono>
 
 STAMP_CORE_NAMESPACE_BEGIN
 
 template<typename T = std::function<void()>>
-class task_queue {
+class basic_task_queue {
 public:
 	using function_type = T;
 private:
@@ -68,7 +70,7 @@ public:
 	}
 
 	void run_all() {
-		if (isRunning) throw std::runtime_error("can only have one thread running a task_queue at a time");
+		STAMPASSERT(!isRunning, "can only have one thread running a task_queue at a time");
 		isRunning = true;
 		runningThread = std::this_thread::get_id();
 		while (true) {
@@ -96,9 +98,10 @@ public:
 		isRunning = false;
 	}
 
-	void run_all(std::condition_variable& cv) {
-		if (isRunning) throw std::runtime_error("can only have one thread running a task_queue at a time");
-		
+	void run_cv(std::condition_variable& cv) {
+		STAMPASSERT(!isRunning, "can only have one thread running a task_queue at a time");
+		isRunning = true;
+
 		function_type task = nullptr;
 		{
 			auto l = taskQueue.get_unique_lock();
@@ -131,42 +134,211 @@ public:
 };
 
 template<typename T = std::function<void()>>
-class thread_pool {
+class basic_timed_task_queue {
 public:
 	using function_type = T;
-	using queue_type = task_queue<T>;
+	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+private:
+	struct queue_item{
+		timepoint t;
+		function_type f;
+
+		std::strong_ordering operator <=>(const queue_item& other) const {
+			return t <=> other.t;
+		}
+	};
+
+	STAMP_CORE_NAMESPACE::lockable<std::priority_queue<queue_item>> taskQueue;
+	STAMP_CORE_NAMESPACE::lockable<std::priority_queue<queue_item>> nextQueue;
+	std::atomic_bool isRunning = false;
+	std::thread::id runningThread{};
+	std::atomic_int _size;
+	std::mutex mutex;
+public:
+	bool is_running() const {
+		return isRunning;
+	}
+	bool is_running_on_current_thread() const {
+		return isRunning && (runningThread == std::this_thread::get_id());
+	}
+	void push(const function_type& h, const time_point& t = {}) {
+		auto l = taskQueue.get_unique_lock();
+		taskQueue.push({ t, h });
+		_size++;
+	}
+	void push_next(const function_type& h, const time_point& t = {}) {
+		if (isRunning) {
+			auto l = nextQueue.get_unique_lock();
+			nextQueue.push({ t, h });
+			_size++;
+		}
+		else {
+			push(h, t);
+		}
+	}
+	size_t size() const {
+		return _size;
+	}
+
+	void run_cv(std::condition_variable& cv) {
+		STAMPASSERT(!isRunning,"can only have one thread running a task_queue at a time");
+		isRunning = true;
+
+		queue_item task{};
+		{
+			auto l = taskQueue.get_unique_lock();
+			cv.wait(l, [this]() -> bool {
+				return !taskQueue.empty();
+				});
+
+
+			isRunning = true;
+			runningThread = std::this_thread::get_id();
+
+			auto l2 = nextQueue.get_unique_lock();
+			std::swap(taskQueue, nextQueue);
+
+			_size--;
+			task = taskQueue.top();
+			taskQueue.pop();
+		}
+		if (task.f) {
+			std::unique_lock l{ mutex };
+			cv.wait_until(l, task.t);
+			if (std::chrono::steady_clock::now() < task.t) {
+				isRunning = false;
+				return;
+			}
+			try {
+				task.f();
+			}
+			catch (std::exception& e) {
+				STAMPDMSG("stamp::engine::coroutine_queue - Task Exception: " << e.what());
+			}
+		}
+
+		isRunning = false;
+	}
+};
+
+template<typename T = std::function<void()>>
+class basic_thread_pool {
+public:
+	using function_type = T;
+	using queue_type = basic_task_queue<T>;
 	static constexpr int core_count = 0;
 private:
 	struct pool_t {
 		std::thread thread;
-		queue_type queue;
+		queue_type queue{};
 		std::condition_variable cv{};
 	};
 	std::vector<pool_t> threadPool{};
 	std::atomic_bool running;
 
+
 	void threadTask(pool_t* p) {
 		while (running) {
-			p->queue.run_all(p->cv);
+			p->queue.run_cv(p->cv);
 		}
 	}
+	pool_t* min() {
+		pool_t* minp = nullptr;
+		size_t min = std::numeric_limits<size_t>::max();
+		for (auto& p : threadPool) {
+			size_t s = p.queue.size();
+			if (s < min) {
+				minp = &p;
+			}
+		}
+		return minp;
+	}
 public:
-	void push(const std::function<void()>& func) {
-		queue.get_unique_lock();
-		queue.push(func);
+	void push(const function_type& func) {
+		pool_t* minp = min();
+		if (minp == nullptr) return;
+		minp->queue.push(func);
+	}
+	void push_next(const function_type& func) {
+		pool_t* minp = min();
+		if (minp == nullptr) return;
+		minp->queue.push_next(func);
 	}
 
-	thread_pool(int threads = core_count) {
+	basic_thread_pool(int threads = core_count) {
 		if(threads == core_count) {
 			threads = threads = std::thread::hardware_concurrency();
 		}
 		threadPool.reserve(threads);
 
 		for (int i = 0; i < threads; i++) {
-			threadPool.emplace_back({ thread_pool::threadTask, this, &threadPool[i] }, {});
+			threadPool.emplace_back(std::thread{ basic_thread_pool::threadTask, this, &threadPool[i] });
 		}
 	}
 };
+
+template<typename T = std::function<void()>>
+class basic_timed_thread_pool {
+public:
+	using function_type = T;
+	using queue_type = basic_timed_task_queue<T>;
+	using time_point = queue_type::time_point;
+	static constexpr int core_count = 0;
+private:
+	struct pool_t {
+		std::thread thread;
+		queue_type queue{};
+		std::condition_variable cv{};
+	};
+	std::vector<pool_t> threadPool{};
+	std::atomic_bool running;
+
+
+	void threadTask(pool_t* p) {
+		while (running) {
+			p->queue.run_cv(p->cv);
+		}
+	}
+	pool_t* min() {
+		pool_t* minp = nullptr;
+		size_t min = std::numeric_limits<size_t>::max();
+		for (auto& p : threadPool) {
+			size_t s = p.queue.size();
+			if (s < min) {
+				minp = &p;
+			}
+		}
+		return minp;
+	}
+public:
+	void push(const function_type& func, const queue_type::time_point& t = {}) {
+		pool_t* minp = min();
+		if (minp == nullptr) return;
+		minp->queue.push(func, t);
+	}
+	void push_next(const function_type& func, const queue_type::time_point& t = {}) {
+		pool_t* minp = min();
+		if (minp == nullptr) return;
+		minp->queue.push_next(func, t);
+	}
+
+	basic_timed_thread_pool(int threads = core_count) {
+		if (threads == core_count) {
+			threads = threads = std::thread::hardware_concurrency();
+		}
+		threadPool.reserve(threads);
+
+		for (int i = 0; i < threads; i++) {
+			threadPool.emplace_back(std::thread{ basic_timed_thread_pool::threadTask, this, &threadPool[i] });
+		}
+	}
+};
+
+using task_queue = basic_task_queue<>;
+using thread_pool = basic_thread_pool<>;
+
+using timed_task_queue = basic_timed_task_queue<>;
+using timed_thread_pool = basic_timed_thread_pool<>;
 
 STAMP_CORE_NAMESPACE_END
 

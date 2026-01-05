@@ -65,7 +65,7 @@ public:
 		DeleteBuffer();
 	}
 
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::Vector2ui& size, texture_format_t format = texture_format::RGBA) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> Attachment(int attachment, const STAMP_MATH_NAMESPACE::vector2ui& size, texture_format_t format = texture_format::RGBA) {
 		if (format == 0) {
 			if (textures.size() > attachment) {
 				textures[attachment] = nullptr;
@@ -83,7 +83,7 @@ public:
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, tex.InternalTextureBuffer(), 0);
 		return textures[attachment];
 	}
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth(const STAMP_MATH_NAMESPACE::Vector2ui& size = { 256,256 }, texture_format_t format = texture_format::Depth32F) {
+	STAMP_CORE_NAMESPACE::threadsafe_ptr<Texture> AttachmentDepth(const STAMP_MATH_NAMESPACE::vector2ui& size = { 256,256 }, texture_format_t format = texture_format::Depth32F) {
 		Texture tex = { format, size.x, size.y };
 		tex.Set(ClearTexture2d(pixel_r32f{ 0 }), 0);
 		if (depthTexture == nullptr) depthTexture = STAMP_CORE_NAMESPACE::make_threadsafe<Texture>(std::move(tex));

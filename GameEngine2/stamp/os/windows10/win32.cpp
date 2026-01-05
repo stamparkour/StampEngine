@@ -357,7 +357,7 @@ static LRESULT Wndproc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		ClientToScreen(hWnd, &clientTopLeft);
 		RECT clientRectRaw;
 		GetClientRect(hWnd, &clientRectRaw);
-		Rect<int> clientRect;
+		rect<int> clientRect;
 		clientRect.left = clientRectRaw.left + clientTopLeft.x;
 		clientRect.right = clientRectRaw.right + clientTopLeft.x;
 		clientRect.top = clientRectRaw.top + clientTopLeft.y;

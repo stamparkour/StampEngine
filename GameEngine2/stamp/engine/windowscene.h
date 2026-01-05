@@ -66,7 +66,7 @@ void main() {
 )";
 
 class WindowScene : public IScene, STAMP_GRAPHICS_NAMESPACE::IWindowListener, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<WindowScene, IScene> {
-	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::Recti& newRect) override {
+	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::recti& newRect) override {
 		auto winSize = newRect.Size();
 		windowRatio.store(static_cast<float>(winSize.x) / static_cast<float>(winSize.y));
 	}
@@ -91,12 +91,9 @@ class WindowScene : public IScene, STAMP_GRAPHICS_NAMESPACE::IWindowListener, pu
 	void InitFrameBuffer() {
 		if (frameBuffer != nullptr) return;
 		if (!STAMP_NAMESPACE::IsRenderThread()) {
-			std::promise<void> fbPromise;
-			PushRenderTask([this, &fbPromise]() {
+			auto co = [this]() -> STAMP_CORE_NAMESPACE::coroutine<void> {
 				InitFrameBuffer();
-				fbPromise.set_value();
-				});
-			fbPromise.get_future().wait();
+			}
 			return;
 		}
 		frameBuffer = STAMP_CORE_NAMESPACE::make_threadsafe<STAMP_GRAPHICS_GL_NAMESPACE::FrameBuffer>();
@@ -137,8 +134,8 @@ public:
 			shaderProgram->Uniform(0, *tex);
 		}
 
-		if(ratio1 > ratio2)	shaderProgram->Uniform(1, STAMP_MATH_NAMESPACE::Vector4f(ratio2 / ratio1, 1.0f, 1.0f, 1.0f));
-		else				shaderProgram->Uniform(1, STAMP_MATH_NAMESPACE::Vector4f(1.0f, ratio1 / ratio2, 1.0f, 1.0f));
+		if(ratio1 > ratio2)	shaderProgram->Uniform(1, STAMP_MATH_NAMESPACE::vector4f(ratio2 / ratio1, 1.0f, 1.0f, 1.0f));
+		else				shaderProgram->Uniform(1, STAMP_MATH_NAMESPACE::vector4f(1.0f, ratio1 / ratio2, 1.0f, 1.0f));
 
 		quad->Bind();
 

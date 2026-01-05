@@ -12,7 +12,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
+// Unless `quired by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
@@ -52,10 +52,10 @@ struct Quaternion final {
 	Quaternion	()								noexcept requires Field<T> : x(0),   i(0),   j(0),   k(0)   {}
 	Quaternion	(T x)							noexcept requires Field<T> : x(x),   i(0),   j(0),   k(0)   {}
 	Quaternion	(T x, T i, T j, T k)			noexcept requires Field<T> : x(x),   i(i),   j(j),   k(k)   {}
-	explicit Quaternion	(const Vector2<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(0),   k(0)   {}
-	explicit Quaternion	(const Vector3<T>& v)	noexcept requires Field<T> : x(0),   i(v.x), j(v.y), k(v.z) {}
-	Quaternion	(T x, const Vector3<T>& v)		noexcept requires Field<T> : x(x),   i(v.x), j(v.y), k(v.z) {}
-	explicit Quaternion	(const Vector4<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(v.z), k(v.w) {}
+	explicit Quaternion	(const vector2<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(0),   k(0)   {}
+	explicit Quaternion	(const vector3<T>& v)	noexcept requires Field<T> : x(0),   i(v.x), j(v.y), k(v.z) {}
+	Quaternion	(T x, const vector3<T>& v)		noexcept requires Field<T> : x(x),   i(v.x), j(v.y), k(v.z) {}
+	explicit Quaternion	(const vector4<T>& v)	noexcept requires Field<T> : x(v.x), i(v.y), j(v.z), k(v.w) {}
 
 	template <typename T1> explicit	operator Quaternion<T1>	()	const	noexcept;
 	template <typename T1> explicit	operator			T1	()	const	noexcept;
@@ -77,9 +77,9 @@ template<typename T> Matrix4<T>		ToMatrix4	(const Quaternion<T>& q)	noexcept;
 template<typename T> Quaternion<T>	RotationX	(T v)						noexcept;
 template<typename T> Quaternion<T>	RotationY	(T v)						noexcept;
 template<typename T> Quaternion<T>	RotationZ	(T v)						noexcept;
-template<typename T> Quaternion<T>	RotationAxis(T r, const Vector3<T>& axis) noexcept;
-template<typename T> Quaternion<T>	Rotation(const Vector3<T>& angles, RotationOrder order = RotationOrder::ZXY) noexcept;
-template<typename T> Quaternion<T>	LookAt(const Vector3<T>& position)		noexcept;
+template<typename T> Quaternion<T>	RotationAxis(T r, const vector3<T>& axis) noexcept;
+template<typename T> Quaternion<T>	Rotation(const vector3<T>& angles, RotationOrder order = RotationOrder::ZXY) noexcept;
+template<typename T> Quaternion<T>	LookAt(const vector3<T>& position)		noexcept;
 
 STAMP_MATH_QUATERNION_NAMESPACE_END
 STAMP_MATH_NAMESPACE_BEGIN
@@ -88,8 +88,8 @@ template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Qua
 template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Quaternion<TR>	operator	-	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
 template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Quaternion<TR>	operator	*	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
 template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Quaternion<TR>	operator	/	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
-template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Vector3<TR>		operator	*	(const Quaternion<T1>& a, const Vector3<T2>& b)		noexcept;
-template<typename T1, typename T2>	Vector4<bool>&	operator	==	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
+template<typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	vector3<TR>		operator	*	(const Quaternion<T1>& a, const vector3<T2>& b)		noexcept;
+template<typename T1, typename T2>	vector4<bool>&	operator	==	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
 template<typename T1, typename T2>	bool			operator	!=	(const Quaternion<T1>& a, const Quaternion<T2>& b)	noexcept;
 template<typename T1, typename T2>	Quaternion<T1>&	operator	+=	(Quaternion<T1>& a, const Quaternion<T2>& b)		noexcept;
 template<typename T1, typename T2>	Quaternion<T1>&	operator	-=	(Quaternion<T1>& a, const Quaternion<T2>& b)		noexcept;
@@ -202,8 +202,8 @@ inline Quaternion<bool>& operator==(const Quaternion<T1>& a, const Quaternion<T2
 }
 #else
 template<typename T1, typename T2>
-inline Vector4<bool>& operator==(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
-	return Vector4<bool>(a.x == b.x, a.i == b.i, a.j == b.j, a.k == b.k);
+inline vector4<bool>& operator==(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcept {
+	return vector4<bool>(a.x == b.x, a.i == b.i, a.j == b.j, a.k == b.k);
 }
 #endif
 template<typename T1, typename T2>
@@ -211,9 +211,9 @@ inline bool operator!=(const Quaternion<T1>& a, const Quaternion<T2>& b) noexcep
 	return !(a == b);
 }
 template<typename T1, typename T2, typename TR>
-inline Vector3<TR> operator *(const Quaternion<T1>& a, const Vector3<T2>& b) noexcept {
+inline vector3<TR> operator *(const Quaternion<T1>& a, const vector3<T2>& b) noexcept {
 	Quaternion<TR> v = *this * (Quaternion<TR>)b * inverse(*this);
-	return (Vector3<TR>)v;
+	return (vector3<TR>)v;
 }
 template<typename T> 
 inline Quaternion<T> operator -(const Quaternion<T>& a) noexcept {
@@ -244,12 +244,12 @@ inline Quaternion<T> RotationZ(T v) noexcept {
 	return { (T)cos(v / 2),0,0,(T)sin(v / 2) };
 }
 template<typename T>
-inline Quaternion<T> RotationAxis(T r, const Vector3<T>& axis) noexcept {
-	Vector3<T> a = axis.Normal();
+inline Quaternion<T> RotationAxis(T r, const vector3<T>& axis) noexcept {
+	vector3<T> a = axis.Normal();
 	return { (T)cos(r / 2),a.x * (T)sin(r / 2),a.y * (T)sin(r / 2),a.z * (T)sin(r / 2) };
 }
 template<typename T>
-inline Quaternion<T> Rotation(const Vector3<T>& angles, RotationOrder order) noexcept {
+inline Quaternion<T> Rotation(const vector3<T>& angles, RotationOrder order) noexcept {
 	T x = angles.x, y = angles.y, z = angles.z;
 	switch (order) {
 	case RotationOrder::XYZ:
@@ -267,7 +267,7 @@ inline Quaternion<T> Rotation(const Vector3<T>& angles, RotationOrder order) noe
 	}
 }
 template<typename T>
-inline Quaternion<T> LookAt(const Vector3<T>& position) noexcept {
+inline Quaternion<T> LookAt(const vector3<T>& position) noexcept {
 	T x = position.x, y = position.y, z = position.z;
 	T thetaY = atan2(x, z);
 	T thetaX = atan2(y, sqrt(x * x + z * z));

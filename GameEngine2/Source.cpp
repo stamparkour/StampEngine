@@ -28,37 +28,37 @@ using namespace stamp;
 using namespace std;
 
 
-struct RectTransform {
-	Vector2f alignment{ 0,0 };
-	Vector2f alignmentOffset{ 0,0 };
-	Vector2f offset{ 0,0 };
-	Vector2f size{ 200, 200 };
-	Vector2f parentSize;
-	Vector2f parentOffset;
+struct rectTransform {
+	vector2f alignment{ 0,0 };
+	vector2f alignmentOffset{ 0,0 };
+	vector2f offset{ 0,0 };
+	vector2f size{ 200, 200 };
+	vector2f parentSize;
+	vector2f parentOffset;
 
-	void ParentRect(const Recti& rect) {
+	void Parentrect(const recti& rect) {
 		parentSize = rect.Size();
 		parentOffset = (rect.A + rect.B) / 2;
 	}
 
-	Recti Rect() {
-		Matrix3f mat = AlignmentMatrix(alignment * Vector2f{ 1, -1 }, alignmentOffset * Vector2f{ 1, -1 }, offset, size, parentSize);
-		Vector2f topLeft = static_cast<Vector2f>(mat * Vector3f{ -1,-1,1 }) * parentSize / 2 + parentOffset;
-		Vector2f bottomRight = static_cast<Vector2f>(mat * Vector3f{ 1,1,1 }) * parentSize / 2 + parentOffset;
+	recti rect() {
+		Matrix3f mat = AlignmentMatrix(alignment * vector2f{ 1, -1 }, alignmentOffset * vector2f{ 1, -1 }, offset, size, parentSize);
+		vector2f topLeft = static_cast<vector2f>(mat * vector3f{ -1,-1,1 }) * parentSize / 2 + parentOffset;
+		vector2f bottomRight = static_cast<vector2f>(mat * vector3f{ 1,1,1 }) * parentSize / 2 + parentOffset;
 
-		return { static_cast<Vector2i>(topLeft), static_cast<Vector2i>(bottomRight)};
+		return { static_cast<vector2i>(topLeft), static_cast<vector2i>(bottomRight)};
 	}
-	Vector2i Center() {
-		Matrix3f mat = AlignmentMatrix(alignment * Vector2f{ 1, -1 }, alignmentOffset * Vector2f{ 1, -1 }, offset, size, parentSize);
-		return static_cast<Vector2f>(mat * Vector3f{ 0,0,1 }) * parentSize / 2 + parentOffset;
+	vector2i Center() {
+		Matrix3f mat = AlignmentMatrix(alignment * vector2f{ 1, -1 }, alignmentOffset * vector2f{ 1, -1 }, offset, size, parentSize);
+		return static_cast<vector2f>(mat * vector3f{ 0,0,1 }) * parentSize / 2 + parentOffset;
 	}
 };
 
-class WindowRect {
+class Windowrect {
 	stamp::threadsafe_ptr<stamp::graphics::Window> window;
 public:
-	RectTransform transform;
-	WindowRect(const sstring& title, const Recti& rect, const Vector2f& alignment) {
+	rectTransform transform;
+	Windowrect(const sstring& title, const recti& rect, const vector2f& alignment) {
 		window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
 			.title = title,
 			.visibility = stamp::graphics::window::visibility::Visible,
@@ -74,12 +74,12 @@ public:
 
 	void Update() {
 		auto win = window.get();
-		transform.ParentRect(win->ParentRect());
-		win->Rect(transform.Rect());
+		transform.Parentrect(win->Parentrect());
+		win->rect(transform.rect());
 	}
 
-	Recti ParentRect() const {
-		return window.get_readonly_unsafe()->ParentRect();
+	recti Parentrect() const {
+		return window.get_readonly_unsafe()->Parentrect();
 	}
 
 	bool IsAlive() const {
@@ -105,7 +105,7 @@ int main(int argv, char* argc[]) {
 	stamp::InitStampEngine(stamp::StampEngineSettings{.showConsole = true});
 
 	{
-		stamp::TaskQueue renderQueue{};
+		stamp::task_queue renderQueue{};
 		stamp::engine::SceneManager sceneManager{ &renderQueue };
 
 		auto window = stamp::graphics::Window::Create(stamp::graphics::window::CreationSettings{
@@ -119,7 +119,7 @@ int main(int argv, char* argc[]) {
 
 		sceneManager.RegisterScene<stamp::engine::WindowScene>(window);
 
-		while (window.get_readonly()->IsAlive() && renderQueue.RunOnce());
+		while (window.get_readonly()->IsAlive()) renderQueue.run_all();
 	}
 
 	stamp::CloseStampEngine();
@@ -127,17 +127,17 @@ int main(int argv, char* argc[]) {
 
 
 
-	Recti monitor = { 0,0,1920,1080 };
-	Vector2i center = (monitor.A + monitor.B) / 2;
-	Vector2i centerY = { 0, center.y };
+	recti monitor = { 0,0,1920,1080 };
+	vector2i center = (monitor.A + monitor.B) / 2;
+	vector2i centerY = { 0, center.y };
 
-	WindowRect player1{ U"P1", Recti{20,-100,100,100} + centerY, alignment::TopLeft<float> };
-	WindowRect player2{ U"P2", Recti{-100,-100,-20,100} + centerY, alignment::TopRight<float> };
-	WindowRect ball{ U"Ball", {center.x - 50,center.y - 50,center.x + 50,center.y + 50}, alignment::TopLeft<float> };
+	Windowrect player1{ U"P1", recti{20,-100,100,100} + centerY, alignment::TopLeft<float> };
+	Windowrect player2{ U"P2", recti{-100,-100,-20,100} + centerY, alignment::TopRight<float> };
+	Windowrect ball{ U"Ball", {center.x - 50,center.y - 50,center.x + 50,center.y + 50}, alignment::TopLeft<float> };
 
 	Keyboard key(0);
 
-	Vector2f ballVelocity{ 20, 0 };
+	vector2f ballVelocity{ 20, 0 };
 
 	int p1Score = 0;
 	int p2Score = 0;
@@ -153,7 +153,7 @@ int main(int argv, char* argc[]) {
 			player1.transform.offset.y -= 8;
 			p1Vel -= 8;
 		}
-		if (key.ButtonDown(scancodeUS::S) && player1.transform.offset.y <= player1.ParentRect().bottom - 208) {
+		if (key.ButtonDown(scancodeUS::S) && player1.transform.offset.y <= player1.Parentrect().bottom - 208) {
 			player1.transform.offset.y += 8;
 			p1Vel += 8;
 		}
@@ -163,36 +163,36 @@ int main(int argv, char* argc[]) {
 			player2.transform.offset.y -= 8;
 			p2Vel -= 8;
 		}
-		if (aiMove > 0 && player2.transform.offset.y <= player2.ParentRect().bottom - 208) { //key.ButtonDown(scancodeUS::DownArrow)
+		if (aiMove > 0 && player2.transform.offset.y <= player2.Parentrect().bottom - 208) { //key.ButtonDown(scancodeUS::DownArrow)
 			player2.transform.offset.y += 8;
 			p2Vel += 8;
 		}
 
 		//y velocity stuff
 		ball.transform.offset.y += ballVelocity.y;
-		if (ball.transform.offset.y <= 0 || ball.transform.offset.y + ball.transform.size.y >= ball.ParentRect().bottom) {
+		if (ball.transform.offset.y <= 0 || ball.transform.offset.y + ball.transform.size.y >= ball.Parentrect().bottom) {
 			ballVelocity.y = -ballVelocity.y;
 			ball.transform.offset.y += ballVelocity.y;
 		}
-		if (player1.IsAlive() && RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
+		if (player1.IsAlive() && rectCollide(ball.transform.rect(), player1.transform.rect())) {
 			ballVelocity.y = -ballVelocity.y + p1Vel * 0.2;
 			ball.transform.offset.y += 2 * ballVelocity.y;
 		}
-		if (player2.IsAlive() && RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
+		if (player2.IsAlive() && rectCollide(ball.transform.rect(), player2.transform.rect())) {
 			ballVelocity.y = -ballVelocity.y + p2Vel * 0.2;
 			ball.transform.offset.y += 2 * ballVelocity.y;
 		}
 
 		//x velocity stuff
 		ball.transform.offset.x += ballVelocity.x;
-		if (player1.IsAlive() && RectCollide(ball.transform.Rect(), player1.transform.Rect())) {
+		if (player1.IsAlive() && rectCollide(ball.transform.rect(), player1.transform.rect())) {
 			float relativeOffset = ball.transform.Center().y - player1.transform.Center().y;
 			ballVelocity.x = -ballVelocity.x;
 			ballVelocity.y = p1Vel * 2 + relativeOffset * 0.2;
 			ball.transform.offset.x += 2 * ballVelocity.x;
 			//ball.transform.offset.y += ballVelocity.y;
 		}
-		if (player2.IsAlive() && RectCollide(ball.transform.Rect(), player2.transform.Rect())) {
+		if (player2.IsAlive() && rectCollide(ball.transform.rect(), player2.transform.rect())) {
 			float relativeOffset = ball.transform.Center().y - player2.transform.Center().y;
 			ballVelocity.x = -ballVelocity.x;
 			ballVelocity.y = p2Vel * 2 + relativeOffset * 0.2;
@@ -201,13 +201,13 @@ int main(int argv, char* argc[]) {
 		}
 		if (ball.transform.offset.x <= 0) {
 			ballVelocity.y = 0;
-			ball.transform.offset = Vector2i{ center.x - 50, center.y - 50 };
+			ball.transform.offset = vector2i{ center.x - 50, center.y - 50 };
 			p2Score++;
 			player2.SetTitle(U"P2 S:" + to_sstring(p2Score));
 		}
-		if (ball.transform.offset.x + ball.transform.size.x >= ball.ParentRect().right) {
+		if (ball.transform.offset.x + ball.transform.size.x >= ball.Parentrect().right) {
 			ballVelocity.y = 0;
-			ball.transform.offset = Vector2i{ center.x - 50, center.y - 50 };
+			ball.transform.offset = vector2i{ center.x - 50, center.y - 50 };
 			p1Score++;
 			player1.SetTitle(U"P1 S:" + to_sstring(p1Score));
 		}

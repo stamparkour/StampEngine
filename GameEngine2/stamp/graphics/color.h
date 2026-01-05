@@ -25,12 +25,12 @@
 STAMP_GRAPHICS_NAMESPACE_BEGIN
 
 template<typename T = uint8_t>
-struct ColorRGBA : STAMP_MATH_NAMESPACE::Vector4<T> {
+struct ColorRGBA : STAMP_MATH_NAMESPACE::vector4<T> {
 	using data_type = T;
 
-	ColorRGBA(T m) : STAMP_MATH_NAMESPACE::Vector4<T>(m, m, m, m) {}
-	ColorRGBA(T r, T g, T b) : STAMP_MATH_NAMESPACE::Vector4<T>(r, g, b, 1) {}
-	ColorRGBA(T r, T g, T b, T a) : STAMP_MATH_NAMESPACE::Vector4<T>(r, g, b, a) {}
+	ColorRGBA(T m) : STAMP_MATH_NAMESPACE::vector4<T>(m, m, m, m) {}
+	ColorRGBA(T r, T g, T b) : STAMP_MATH_NAMESPACE::vector4<T>(r, g, b, 1) {}
+	ColorRGBA(T r, T g, T b, T a) : STAMP_MATH_NAMESPACE::vector4<T>(r, g, b, a) {}
 
 	const T&	mono()	const	{ return this->x; }
 	T&			mono()			{ return this->x; }

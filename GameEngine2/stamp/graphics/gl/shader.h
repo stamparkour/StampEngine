@@ -78,18 +78,18 @@ public:
 	void Uniform(GLint location, unsigned int value);
 	void Uniform(GLint location, float value);
 	void Uniform(GLint location, double value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector2i& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector2ui& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector2f& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector2d& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector3i& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector3ui& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector3f& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector3d& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector4i& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector4ui& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector4f& value);
-	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Vector4d& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector2i& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector2ui& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector2f& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector2d& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector3i& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector3ui& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector3f& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector3d& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector4i& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector4ui& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector4f& value);
+	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::vector4d& value);
 	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Matrix3f& value);
 	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Matrix3d& value);
 	void Uniform(GLint location, const STAMP_MATH_NAMESPACE::Matrix4f& value);
@@ -107,41 +107,41 @@ public:
 	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<double> Iter>								void Uniform(GLint location, Iter begin, Iter end);
 	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<double> Iter>							void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 	
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector2d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector2d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector3d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector3d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4i> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4i> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4ui> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4ui> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4f> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
-	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
-	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Vector4d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4d> Iter>		void Uniform(GLint location, Iter begin, Iter end);
+	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::vector4d> Iter>	void Uniform(GLint location, Iter begin, Iter end);
 
 	template<STAMP_NAMESPACE::forward_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Matrix3f> Iter>		void Uniform(GLint location, Iter begin, Iter end);
 	template<STAMP_NAMESPACE::contiguous_iterator_derefrence_to<STAMP_MATH_NAMESPACE::Matrix3f> Iter>	void Uniform(GLint location, Iter begin, Iter end);

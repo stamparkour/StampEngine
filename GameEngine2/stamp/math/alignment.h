@@ -31,7 +31,7 @@ STAMP_MATH_NAMESPACE_BEGIN
 /// All values should be in the range [-1, 1].
 /// </summary>
 template<Field T>
-using alignment_t = Vector2<T>;
+using alignment_t = vector2<T>;
 
 using alignmentf = alignment_t<STAMP_DEFAULT_ALIGN_FLOATINGPOINT>;
 
@@ -57,7 +57,7 @@ namespace alignment {
 };
 
 template<Field T>
-Matrix3<T> AlignmentMatrix(const alignment_t<T>& align, const alignment_t<T>& alignOffset, const Vector2<T>& offset, const Vector2<T>& scale, const Vector2<T>& scaleParent) {
+Matrix3<T> AlignmentMatrix(const alignment_t<T>& align, const alignment_t<T>& alignOffset, const vector2<T>& offset, const vector2<T>& scale, const vector2<T>& scaleParent) {
 	return Matrix3<T>{
 		scale.x / scaleParent.x, 0, align.x + (offset.x * 2 - alignOffset.x * scale.x) / scaleParent.x,
 		0, scale.y / scaleParent.y, align.y + (offset.y * 2 - alignOffset.y * scale.y) / scaleParent.y,

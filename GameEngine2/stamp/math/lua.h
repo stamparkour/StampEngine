@@ -34,9 +34,9 @@ STAMP_LUA_NAMESPACE_BEGIN
 //matrix
 
 using lua_number_t = LUA_NUMBER;
-using lua_Vector2 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 2>;
-using lua_Vector3 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 3>;
-using lua_Vector4 = STAMP_MATH_NAMESPACE::Vector<lua_number_t, 4>;
+using lua_Vector2 = STAMP_MATH_NAMESPACE::vector<lua_number_t, 2>;
+using lua_Vector3 = STAMP_MATH_NAMESPACE::vector<lua_number_t, 3>;
+using lua_Vector4 = STAMP_MATH_NAMESPACE::vector<lua_number_t, 4>;
 using lua_Matrix2 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 2>;
 using lua_Matrix3 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 3>;
 using lua_Matrix4 = STAMP_MATH_NAMESPACE::Matrix<lua_number_t, 4>;

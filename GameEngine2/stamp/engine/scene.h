@@ -31,6 +31,7 @@
 #include <stamp/core/memory.h>
 #include <stamp/core/time.h>
 #include <stamp/core/taskqueue.h>
+#include <stamp/core/coroutine.h>
 
 STAMP_ENGINE_NAMESPACE_BEGIN
 
@@ -54,84 +55,6 @@ namespace scene_state {
 	};
 }
 
-using queue_priority_t = int;
-namespace queue_priority {
-	enum : queue_priority_t {
-		Low,
-		Normal,
-		High,
-	};
-}
-
-class SceneFixedUpdateTask : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<SceneFixedUpdateTask>, STAMP_CORE_NAMESPACE::INonCopyable {
-	STAMP_MEMORY_THREADSAFE_FRIEND;
-	friend class IScene;
-public:
-	using clock_t = std::chrono::high_resolution_clock;
-	using timepoint_t = std::chrono::high_resolution_clock::time_point;
-private:
-	std::thread thread;
-	std::function<bool(timepoint_t, double)> func;
-	std::function<bool(timepoint_t)> onerror;
-	std::chrono::high_resolution_clock::time_point prevTime;
-
-	std::chrono::microseconds interval;
-	double intervald;
-	
-	std::atomic_bool isActive = true;
-
-	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<IScene> owner;
-
-	SceneFixedUpdateTask(double interval, STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<IScene> owner, std::function<bool(timepoint_t, double)> func, std::function<bool(timepoint_t)> onerror = nullptr) {
-		this->func = func;
-		this->onerror = onerror;
-		this->owner = owner;
-		this->interval = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(interval));
-		this->intervald = interval;
-		thread = std::thread{ &SceneFixedUpdateTask::task, this, threadsafe_from_this() };
-	}
-
-	void task(STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneFixedUpdateTask> ptr) {
-		// ptr keep the object alive for the duration of the task
-
-		prevTime = clock_t::now();
-		double deltaTime = intervald;
-		try {
-			while (isActive && !owner.expired()) {
-				if (!func || !func(prevTime, deltaTime)) break;
-
-				timepoint_t now = clock_t::now();
-				if (now < prevTime + interval) {
-					std::this_thread::sleep_until(prevTime + interval);
-					prevTime += interval;
-					deltaTime = intervald;
-				}
-				else {
-					deltaTime = std::chrono::duration<double>(now - prevTime).count();
-					prevTime = now;
-				}
-
-				//should see time for sleep until and verify return time
-
-				//sleep_until a little before next wake and then spin until correct time
-
-			}
-		}
-		catch (std::exception& e) {
-			STAMPDMSG("stamp::engine::SceneFixedUpdateTask - " << e.what());
-			if(onerror) onerror(prevTime);
-		}
-
-		isActive = false;
-	}
-public:
-	void Stop() {
-		isActive = false;
-	}
-	bool IsActive() {
-		return isActive;
-	}
-};
 
 class IScene : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<IScene> {
 	friend class SceneManager;
@@ -140,13 +63,10 @@ class IScene : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<IScene> 
 protected:
 	IScene() {}
 
-	virtual void OnSceneOpen() {}
 	virtual void OnSceneClose();
 
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneFixedUpdateTask> RegesterFixedUpdate(const std::function<bool(SceneFixedUpdateTask::timepoint_t, double)>& func, double interval = 1.0/60.0) {
-		return STAMP_CORE_NAMESPACE::make_threadsafe<SceneFixedUpdateTask>(interval, STAMP_CORE_NAMESPACE::weak_threadsafe_ptr(threadsafe_from_this()), func);
-	}
-	void PushRenderTask(const std::function<void()>& func);
+	STAMP_CORE_NAMESPACE::awaitable<void> render_await() const;
+	void push_task(const std::coroutine_handle<>& func, const STAMP_CORE_NAMESPACE::co_thread_pool::time_point& t = {}) const;
 public:
 	virtual ~IScene() = 0;
 	bool IsSceneActive() {
@@ -159,56 +79,8 @@ public:
 	}
 };
 
-class IRunnableScene : public IScene, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<IRunnableScene, IScene> {
-	friend class SceneManager;
-
-	double interval;
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneFixedUpdateTask> mainLoop;
-
-	scene_state_t state = scene_state::Uninitialized;
-
-protected:
-	IRunnableScene(double interval = 1.0 / 60.0) : interval(interval) {
-		state = scene_state::Opened;
-	}
-	
-	virtual void OnSceneOpen() override {
-		IScene::OnSceneOpen();
-		state = scene_state::Running;
-		mainLoop = RegesterFixedUpdate([this](SceneFixedUpdateTask::timepoint_t now, double deltaTime) {
-			OnSceneUpdate(now, deltaTime);
-			return state == scene_state::Running;
-		}, interval);
-	}
-	virtual void OnSceneUpdate(SceneFixedUpdateTask::timepoint_t now, double deltaTime) = 0;
-	virtual void OnSceneClose() override {
-		state = scene_state::Closed;
-		mainLoop.get()->Stop();
-		IScene::OnSceneClose();
-	}
-
-
-public:
-	virtual ~IRunnableScene() {}
-};
-
-class IRenderableScene : public IRunnableScene, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<IRenderableScene, IRunnableScene> {
-private:
-	std::atomic_bool isRendering = false;
-protected:
-	virtual void OnSceneUpdate(SceneFixedUpdateTask::timepoint_t now, double deltaTime) override {
-		if (!isRendering) {
-			isRendering = true;
-			PushRenderTask([this, now, deltaTime]() {
-				OnRender(now, deltaTime);
-				isRendering = false;
-			});
-		}
-	}
-	virtual void OnRender(SceneFixedUpdateTask::timepoint_t now, double deltaTime) {}
-public:
-	~IRenderableScene()  {}
-};
+// irunnablescene
+// irenderablescene
 
 class SceneManager : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<SceneManager>, STAMP_CORE_NAMESPACE::INonCopyable {
 	friend class IScene;
@@ -259,12 +131,14 @@ private:
 	static inline STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneManager> instance = nullptr;
 	STAMP_CORE_NAMESPACE::lockable<std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene>>> scenes{};
 	std::atomic_bool isRunning = true;
-	STAMP_CORE_NAMESPACE::TaskQueue* renderQueue = nullptr;
+	STAMP_CORE_NAMESPACE::coroutine_queue* renderQueue = nullptr;
+	STAMP_CORE_NAMESPACE::co_thread_pool* threadPool = nullptr;
 public:
-	SceneManager(STAMP_CORE_NAMESPACE::TaskQueue* rq) {
+	SceneManager(STAMP_CORE_NAMESPACE::coroutine_queue* rq, STAMP_CORE_NAMESPACE::co_thread_pool* tp) {
 		STAMPASSERT(instance == nullptr, "stamp::engine::SceneManger - existing scene manager present before construction");
 		instance = threadsafe_from_this();
 		renderQueue = rq;
+		threadPool = tp;
 	}
 
 	template<std::derived_from<IScene> T, typename... Args>
@@ -328,13 +202,15 @@ STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneManager> scene_manager() {
 
 // implementation
 
-void IScene::OnSceneClose() {
+inline void IScene::OnSceneClose() {
 	SceneManager::instance.get()->UnregisterScene(threadsafe_from_this());
 }
-void IScene::PushRenderTask(const std::function<void()>& func) {
-	SceneManager::instance.get()->renderQueue->push(func);
+inline void IScene::push_render_task(const std::coroutine_handle<>& func) const {
+	scene_manager().get()->renderQueue->push_next(func);
+}
+inline void IScene::push_task(const std::coroutine_handle<>& func, const STAMP_CORE_NAMESPACE::co_thread_pool::time_point& t) const {
+	scene_manager().get()->threadPool->push_next(func, t);
 }
 
 STAMP_ENGINE_NAMESPACE_END
-
 #endif

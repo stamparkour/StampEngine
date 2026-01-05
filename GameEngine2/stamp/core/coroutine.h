@@ -31,44 +31,79 @@ STAMP_CORE_NAMESPACE_BEGIN
 template<typename T>
 class coroutine;
 
-using coroutine_queue = task_queue<std::coroutine_handle<>>;
-using co_thread_pool = thread_pool<std::coroutine_handle<>>;
+using coroutine_queue = basic_task_queue<std::coroutine_handle<>>;
+using co_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
 
-template<typename T>
+template<typename R = void, typename Q = coroutine_queue>
 class awaitable {
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<coroutine_queue> queue;
-	const T& val;
+public:
+	using return_type = R;
+	using queue_type = Q;
+private:
+	queue_type* queue;
+	completely change this: const return_type& val;
 	bool run_next;
 public:
-	awaitable(const STAMP_CORE_NAMESPACE::threadsafe_ptr<coroutine_queue>& queue, bool run_next = false, const T& val = {}) : queue(queue), val(val), run_next(run_next) {}
+	awaitable(const queue_type* queue, bool run_next = false, const T& val = {}) : queue(queue), val(val), run_next(run_next) {}
 
 	bool await_ready() { 
-		return !run_next && queue.get_readonly()->is_running_on_current_thread();
+		return !run_next && queue->is_running_on_current_thread();
 	}
 	void await_suspend(const std::coroutine_handle<>& h) {
-		if (run_next) queue.get()->push_next(h);
-		else queue.get()->push(h);
+		if (run_next) queue->push_next(h);
+		else queue->push(h);
 	}
 	const T& await_resume() {
 		return val;
 	}
 };
 
-template<>
-class awaitable<void> {
-	STAMP_CORE_NAMESPACE::threadsafe_ptr<coroutine_queue> queue;
+template<typename Q>
+class awaitable<void, Q> {
+public:
+	using return_type = void;
+	using queue_type = Q;
+private:
+	queue_type* queue;
 	bool run_next;
 public:
-	awaitable(const STAMP_CORE_NAMESPACE::threadsafe_ptr<coroutine_queue>& queue, bool run_next = false) : queue(queue), run_next(run_next) {}
+	awaitable(const queue_type* queue, bool run_next = false) : queue(queue), run_next(run_next) {}
 
-	bool await_ready() { 
-		return !run_next && queue.get_readonly()->is_running_on_current_thread();
+	bool await_ready() {
+		return !run_next && queue->is_running_on_current_thread();
 	}
 	void await_suspend(const std::coroutine_handle<>& h) {
-		if (run_next) queue.get()->push_next(h);
-		else queue.get()->push(h);
+		if (run_next) queue->push_next(h);
+		else queue->push(h);
 	}
-	void await_resume() {}
+	void await_resume() {
+		return;
+	}
+};
+
+template<typename R = void, typename Q = coroutine_queue>
+class timed_awaitable {
+public:
+	using return_type = R;
+	using queue_type = Q;
+private:
+	queue_type* queue;
+	const return_type& val;
+	bool run_next;
+	queue_type::time_point time;
+public:
+	awaitable(const queue_type* queue, const queue_type::time_point& t, bool run_next = false, const T& val = {}) : queue(queue), time(t), val(val), run_next(run_next) {}
+
+	bool await_ready() {
+		return !run_next && queue->is_running_on_current_thread() && std::chrono::steady_clock::now() >= time;
+	}
+	void await_suspend(const std::coroutine_handle<>& h) {
+		if (run_next) queue->push_next(h, time);
+		else queue->push(h, time);
+	}
+	const T& await_resume() {
+		return val;
+	}
 };
 
 struct suspend_conditional {
@@ -192,6 +227,9 @@ public:
 	coroutine<T>& operator =(coroutine<T>&&);
 	~coroutine();
 
+	operator handle_type_generic() const {
+		return get_handle();
+	}
 	operator bool() const {
 		return handle.address() != nullptr;
 	}

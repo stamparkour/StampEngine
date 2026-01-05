@@ -1,8 +1,8 @@
 //stamp/math/rect.h
 
 #pragma once
-#ifndef STAMP_MATH_RECT_H
-#define STAMP_MATH_RECT_H
+#ifndef STAMP_MATH_rect_H
+#define STAMP_MATH_rect_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -24,25 +24,25 @@
 
 STAMP_MATH_NAMESPACE_BEGIN
 
-template<typename T = STAMP_DEFAULT_FLOATINGPOINT>
-struct Rect;
+template<typename T>
+struct rect;
 
-STAMP_TEMPLATE_ALL_QUANTITY(Rect);
+STAMP_TEMPLATE_ALL_QUANTITY(rect);
 
 template<typename T>
-struct Rect {
+struct rect {
 	union {
 		struct {
-			Vector2<T> A;
-			Vector2<T> B;
+			vector2<T> A;
+			vector2<T> B;
 		};
 		struct {
-			Vector2<T> topLeft;
-			Vector2<T> bottomRight;
+			vector2<T> topLeft;
+			vector2<T> bottomRight;
 		};
 		struct {
-			Vector2<T> min;
-			Vector2<T> max;
+			vector2<T> min;
+			vector2<T> max;
 		};
 		struct {
 			T left;
@@ -53,104 +53,104 @@ struct Rect {
 		T V[4];
 	};
 
-	Rect() : A(), B() {}
-	Rect(T v) : A(v), B(v) {}
-	Rect(Vector2<T> A) : A(A), B(A) {}
-	Rect(Vector2<T> A, Vector2<T> B) : A(A), B(B) {}
-	Rect(T left, T top, T right, T bottom) : A({ left, top }), B({ right, bottom }) {}
-	Rect(T x, T y) : A({ x, y }), B({ x, y }) {}
+	rect() : A(), B() {}
+	rect(T v) : A(v), B(v) {}
+	rect(vector2<T> A) : A(A), B(A) {}
+	rect(vector2<T> A, vector2<T> B) : A(A), B(B) {}
+	rect(T left, T top, T right, T bottom) : A({ left, top }), B({ right, bottom }) {}
+	rect(T x, T y) : A({ x, y }), B({ x, y }) {}
 
-	Vector2<T> Size() const noexcept { return B - A; }
+	vector2<T> Size() const noexcept { return B - A; }
 };
 
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	+	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	-	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Matrix3<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	*	(const Rect<T1>& a, const Matrix3<T2>& b)	noexcept;
-template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	Rect<TR>	operator	/	(const Rect<T1>& a, const Rect<T2>& b)		noexcept;
-template <typename T1, typename T2>	Rect<T1>& operator	+=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2>	Rect<T1>& operator	-=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2>	Rect<T1>& operator	*=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
-template <typename T1, typename T2>	Rect<T1>& operator	/=	(Rect<T1>& a, const Rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	+	(const rect<T1>& a, const rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	-	(const rect<T1>& a, const rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	*	(const rect<T1>& a, const rect<T2>& b)		noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	*	(const Matrix3<T1>& a, const rect<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	*	(const rect<T1>& a, const Matrix3<T2>& b)	noexcept;
+template <typename T1, typename T2, typename TR = std::common_type_t<T1, T2>>	rect<TR>	operator	/	(const rect<T1>& a, const rect<T2>& b)		noexcept;
+template <typename T1, typename T2>	rect<T1>& operator	+=	(rect<T1>& a, const rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	rect<T1>& operator	-=	(rect<T1>& a, const rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	rect<T1>& operator	*=	(rect<T1>& a, const rect<T2>& b)	noexcept;
+template <typename T1, typename T2>	rect<T1>& operator	/=	(rect<T1>& a, const rect<T2>& b)	noexcept;
 
-STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, Vector2<T2>, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
-STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(Rect<T1>, T2, Rect<T2>, Rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
+STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(rect<T1>, vector2<T2>, rect<T2>, rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
+STAMP_OPERATOR_ALL_QUANTITY_TEMPLATED(rect<T1>, T2, rect<T2>, rect<TR>, template <typename T1 COMMA typename T2>, template <typename T1 COMMA typename T2 COMMA typename TR = std::common_type_t<T1 COMMA T2>>);
 
 template<Field T>
-bool RectCollide(const Rect<T>& a, const Rect<T>& b) noexcept;
+bool rectCollide(const rect<T>& a, const rect<T>& b) noexcept;
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
-template <typename T> std::ostream& operator <<(std::ostream& stream, const Rect<T>& v);
+template <typename T> std::ostream& operator <<(std::ostream& stream, const rect<T>& v);
 #endif
 #ifdef STAMP_STRING_HEADER_INCLUDED
-template <typename T> std::string to_string(const Rect<T>& v);
+template <typename T> std::string to_string(const rect<T>& v);
 #endif
 
 // Definitions
 
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator+(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o;
+inline rect<TR> operator+(const rect<T1>& a, const rect<T2>& b) noexcept {
+	rect<TR> o;
 	o.A = a.A + b.A;
 	o.B = a.B + b.B;
 	return o;
 }
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator-(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o;
+inline rect<TR> operator-(const rect<T1>& a, const rect<T2>& b) noexcept {
+	rect<TR> o;
 	o.A = a.A - b.A;
 	o.B = a.B - b.B;
 	return o;
 }
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator*(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o{};
+inline rect<TR> operator*(const rect<T1>& a, const rect<T2>& b) noexcept {
+	rect<TR> o{};
 	o.A = a.A * b.A;
 	o.B = a.B * b.B;
 	return o;
 }
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator*(const Matrix3<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o;
-	o.A = static_cast<Vector2<TR>>(a * Vector3<T2>{b.A, 1});
-	o.B = static_cast<Vector2<TR>>(a * Vector3<T2>{b.B, 1});
+inline rect<TR> operator*(const Matrix3<T1>& a, const rect<T2>& b) noexcept {
+	rect<TR> o;
+	o.A = static_cast<vector2<TR>>(a * vector3<T2>{b.A, 1});
+	o.B = static_cast<vector2<TR>>(a * vector3<T2>{b.B, 1});
 	return o;
 }
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator*(const Rect<T1>& a, const Matrix3<T2>& b) noexcept {
-	Rect<TR> o;
-	o.A = static_cast<Vector2<TR>>(Vector3<T2>{a.A, 1} * b);
-	o.B = static_cast<Vector2<TR>>(Vector3<T2>{a.B, 1} * b);
+inline rect<TR> operator*(const rect<T1>& a, const Matrix3<T2>& b) noexcept {
+	rect<TR> o;
+	o.A = static_cast<vector2<TR>>(vector3<T2>{a.A, 1} * b);
+	o.B = static_cast<vector2<TR>>(vector3<T2>{a.B, 1} * b);
 	return o;
 }
 template<typename T1, typename T2, typename TR>
-inline Rect<TR> operator/(const Rect<T1>& a, const Rect<T2>& b) noexcept {
-	Rect<TR> o;
+inline rect<TR> operator/(const rect<T1>& a, const rect<T2>& b) noexcept {
+	rect<TR> o;
 	o.A = a.A / b.A;
 	o.B = a.B / b.B;
 	return o;
 }
 template<typename T1, typename T2>
-inline Rect<T1>& operator+=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+inline rect<T1>& operator+=(rect<T1>& a, const rect<T2>& b) noexcept {
 	a.A += b.A;
 	a.B += b.B;
 	return a;
 }
 template<typename T1, typename T2>
-inline Rect<T1>& operator-=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+inline rect<T1>& operator-=(rect<T1>& a, const rect<T2>& b) noexcept {
 	a.A -= b.A;
 	a.B -= b.B;
 	return a;
 }
 template<typename T1, typename T2>
-inline Rect<T1>& operator*=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+inline rect<T1>& operator*=(rect<T1>& a, const rect<T2>& b) noexcept {
 	a.A *= b.A;
 	a.B *= b.B;
 	return a;
 }
 template<typename T1, typename T2>
-inline Rect<T1>& operator/=(Rect<T1>& a, const Rect<T2>& b) noexcept {
+inline rect<T1>& operator/=(rect<T1>& a, const rect<T2>& b) noexcept {
 	a.A /= b.A;
 	a.B /= b.B;
 	return a;
@@ -158,8 +158,8 @@ inline Rect<T1>& operator/=(Rect<T1>& a, const Rect<T2>& b) noexcept {
 
 #ifdef STAMP_OSTREAM_HEADER_INCLUDED
 template <typename T>
-inline std::ostream& operator <<(std::ostream& stream, const Rect<T>& v) {
-	stream << "Rect(";
+inline std::ostream& operator <<(std::ostream& stream, const rect<T>& v) {
+	stream << "rect(";
 	stream << v.A << ", " << v.B;
 	stream << ")";
 	return stream;
@@ -167,8 +167,8 @@ inline std::ostream& operator <<(std::ostream& stream, const Rect<T>& v) {
 #endif
 #ifdef STAMP_STRING_HEADER_INCLUDED
 template <typename T>
-inline std::string to_string(const Rect<T>& v) {
-	std::string result = "Rect(";
+inline std::string to_string(const rect<T>& v) {
+	std::string result = "rect(";
 	result += to_string(v.A) + ", " + to_string(v.B);
 	result += ")";
 	return result;
@@ -176,7 +176,7 @@ inline std::string to_string(const Rect<T>& v) {
 #endif
 
 template<Field T>
-inline bool RectCollide(const Rect<T>& a, const Rect<T>& b) noexcept {
+inline bool rectCollide(const rect<T>& a, const rect<T>& b) noexcept {
 	return (a.left < b.right) && (a.right > b.left) && (a.top < b.bottom) && (a.bottom > b.top);
 }
 
