@@ -31,20 +31,33 @@ STAMP_CORE_NAMESPACE_BEGIN
 template<typename T>
 class coroutine;
 
-using coroutine_queue = basic_task_queue<std::coroutine_handle<>>;
-using co_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
+using awaitable_response_enum_t = int;
+namespace awaitable_response_enum {
+	enum : awaitable_response_enum_t {
+		None = 0,
+		Finished = 1,
+		Canceled = 2,
+	};
+}
+
+template<typename T>
+struct awaitable_response {
+	T value;
+	awaitable_response_enum_t response;
+};
 
 template<typename R = void, typename Q = coroutine_queue>
 class awaitable {
 public:
-	using return_type = R;
+	using function_type = R;
+	using return_type = decltype(std::declval<R>().get_return());
 	using queue_type = Q;
 private:
 	queue_type* queue;
-	completely change this: const return_type& val;
 	bool run_next;
+	function_type func;
 public:
-	awaitable(const queue_type* queue, bool run_next = false, const T& val = {}) : queue(queue), val(val), run_next(run_next) {}
+	awaitable(const queue_type* queue, bool run_next = false, const function_type& func) : queue(queue), run_next(run_next), func(func) {}
 
 	bool await_ready() { 
 		return !run_next && queue->is_running_on_current_thread();
@@ -53,8 +66,8 @@ public:
 		if (run_next) queue->push_next(h);
 		else queue->push(h);
 	}
-	const T& await_resume() {
-		return val;
+	return_type await_resume() {
+		return func();
 	}
 };
 
@@ -80,6 +93,9 @@ public:
 		return;
 	}
 };
+
+using coroutine_queue = basic_task_queue<std::coroutine_handle<>>;
+using co_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
 
 template<typename R = void, typename Q = coroutine_queue>
 class timed_awaitable {

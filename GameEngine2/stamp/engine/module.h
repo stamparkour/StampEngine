@@ -1,8 +1,8 @@
-//stamp/engine/scene.h
+//stamp/engine/module.h
 
 #pragma once
-#ifndef STAMP_ENGINE_SCENE_H
-#define STAMP_ENGINE_SCENE_H
+#ifndef STAMP_ENGINE_MODULE_H
+#define STAMP_ENGINE_MODULE_H
 
 // Copyright 2025 Elijah Clark, Stamparkour
 // 
@@ -56,39 +56,17 @@ namespace scene_state {
 }
 
 
-class IScene : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<IScene> {
-	friend class SceneManager;
-
-	std::atomic_bool isActive = true;
-protected:
-	IScene() {}
-
-	virtual void OnSceneClose();
-
-	STAMP_CORE_NAMESPACE::awaitable<void> render_await() const;
-	void push_task(const std::coroutine_handle<>& func, const STAMP_CORE_NAMESPACE::co_thread_pool::time_point& t = {}) const;
-public:
-	virtual ~IScene() = 0;
-	bool IsSceneActive() {
-		return isActive.load();
-	}
-	void Close() {
-		if (!isActive) return;
-		isActive = false;
-		OnSceneClose();
-	}
-};
 
 // irunnablescene
 // irenderablescene
 
-class SceneManager : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<SceneManager>, STAMP_CORE_NAMESPACE::INonCopyable {
-	friend class IScene;
-	friend STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneManager> scene_manager();
+class module_manager : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<module_manager>, STAMP_CORE_NAMESPACE::INonCopyable {
+	friend class IModule;
+	friend const STAMP_CORE_NAMESPACE::threadsafe_ptr<module_manager>& global_module_manager_instance();
 public:
-	template<std::derived_from<class IScene> T>
+	template<std::derived_from<class IModule> T>
 	class SceneTypeIterator {
-		friend class SceneManager;
+		friend class module_manager;
 	public:
 		using iterator_category = std::forward_iterator_tag;
 		using difference_type = std::ptrdiff_t;
@@ -96,7 +74,7 @@ public:
 		using pointer = value_type*;  // or also value_type*
 		using reference = value_type&;  // or also value_type&
 	private:
-		using iterator_type = std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene>>::iterator;
+		using iterator_type = std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<IModule>>::iterator;
 		iterator_type current;
 		iterator_type end;
 
@@ -128,38 +106,44 @@ public:
 		}
 	};
 private:
-	static inline STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneManager> instance = nullptr;
-	STAMP_CORE_NAMESPACE::lockable<std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene>>> scenes{};
-	std::atomic_bool isRunning = true;
+	static inline STAMP_CORE_NAMESPACE::threadsafe_ptr<module_manager> instance = nullptr;
+	STAMP_CORE_NAMESPACE::lockable<std::vector<STAMP_CORE_NAMESPACE::threadsafe_ptr<IModule>>> modules{};
 	STAMP_CORE_NAMESPACE::coroutine_queue* renderQueue = nullptr;
 	STAMP_CORE_NAMESPACE::co_thread_pool* threadPool = nullptr;
 public:
-	SceneManager(STAMP_CORE_NAMESPACE::coroutine_queue* rq, STAMP_CORE_NAMESPACE::co_thread_pool* tp) {
+	module_manager(STAMP_CORE_NAMESPACE::coroutine_queue* rq, STAMP_CORE_NAMESPACE::co_thread_pool* tp) {
 		STAMPASSERT(instance == nullptr, "stamp::engine::SceneManger - existing scene manager present before construction");
 		instance = threadsafe_from_this();
 		renderQueue = rq;
 		threadPool = tp;
 	}
 
-	template<std::derived_from<IScene> T, typename... Args>
-	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<T> RegisterScene(Args&... args) {
+	STAMP_CORE_NAMESPACE::awaitable<void, STAMP_CORE_NAMESPACE::coroutine_queue> await_render(bool run_next = false) {
+		return { renderQueue, run_next };
+	}
+	STAMP_CORE_NAMESPACE::awaitable<void, STAMP_CORE_NAMESPACE::co_thread_pool> await(bool run_next = false) {
+		return { threadPool, run_next };
+	}
+
+	template<std::derived_from<IModule> T, typename... Args>
+	STAMP_CORE_NAMESPACE::weak_threadsafe_ptr<T> register_scene(Args&... args) {
 		auto scene = STAMP_CORE_NAMESPACE::make_threadsafe<T>(args...);
-		STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene> s = STAMP_CORE_NAMESPACE::static_pointer_cast<class IScene>(scene);
+		STAMP_CORE_NAMESPACE::threadsafe_ptr<IModule> s = STAMP_CORE_NAMESPACE::static_pointer_cast<class IModule>(scene);
 		{
-			auto lock = scenes.get_unique_lock();
-			scenes.push_back(s);
+			auto lock = modules.get_unique_lock();
+			modules.push_back(s);
 		}
-		s.get_unsafe()->OnOpen();
+		s.get_unsafe()->OnModuleOpen();
 		return scene;
 	}
 
-	bool UnregisterScene(STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene> scene) {
+	bool unregister_scene(STAMP_CORE_NAMESPACE::threadsafe_ptr<IModule> scene) {
 		bool found = false;
 		{
-			auto lock = scenes.get_unique_lock();
-			auto it = std::find(scenes.begin(), scenes.end(), scene);
-			if (it != scenes.end()) {
-				scenes.erase(it);
+			auto lock = modules.get_unique_lock();
+			auto it = std::find(modules.begin(), modules.end(), scene);
+			if (it != modules.end()) {
+				modules.erase(it);
 				found = true;
 			}
 		}
@@ -171,7 +155,7 @@ public:
 
 	template<typename T>
 	SceneTypeIterator<T> find() {
-		return SceneTypeIterator<T>(scenes->begin(), scenes->end());
+		return SceneTypeIterator<T>(modules->begin(), modules->end());
 	}
 
 	template<typename T>
@@ -180,37 +164,53 @@ public:
 		for (auto& s : find<T>()) c++;
 		return c;
 	}
+	size_t size() const {
+		return modules.size();
+	}
 
 	auto begin() {
-		auto lock = scenes.get_unique_lock();
-		return scenes.begin();
+		auto lock = modules.get_unique_lock();
+		return modules.begin();
 	}
 	auto end() {
-		auto lock = scenes.get_unique_lock();
-		return scenes.end();
+		auto lock = modules.get_unique_lock();
+		return modules.end();
 	}
+};
+inline const STAMP_CORE_NAMESPACE::threadsafe_ptr<module_manager>& global_module_manager_instance() {
+	return module_manager::instance;
+}
+inline const STAMP_CORE_NAMESPACE::threadsafe_ptr<module_manager>& global_module_manager = global_module_manager_instance();
 
-	void End() {
-		isRunning = false;
+class IModule : public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this<IModule> {
+	friend class module_manager;
+private:
+	static inline thread_local STAMP_CORE_NAMESPACE::threadsafe_ptr<IModule> currentModule = nullptr;
+	std::atomic_bool isActive = true;
+protected:
+	IModule() {}
+
+	virtual void OnModuleOpen() = 0;
+	virtual void OnModuleClose() = 0;
+public:
+	virtual ~IModule() {
+		Close();
+	}
+	bool IsSceneActive() {
+		return isActive.load();
+	}
+	void Close() {
+		if (!isActive) return;
+		isActive = false;
+		global_module_manager.get()->unregister_scene(threadsafe_from_this());
+		OnModuleClose();
 	}
 };
 
-STAMP_CORE_NAMESPACE::threadsafe_ptr<IScene> this_scene();
-STAMP_CORE_NAMESPACE::threadsafe_ptr<SceneManager> scene_manager() {
-	return SceneManager::instance;
-}
 
 // implementation
 
-inline void IScene::OnSceneClose() {
-	SceneManager::instance.get()->UnregisterScene(threadsafe_from_this());
-}
-inline void IScene::push_render_task(const std::coroutine_handle<>& func) const {
-	scene_manager().get()->renderQueue->push_next(func);
-}
-inline void IScene::push_task(const std::coroutine_handle<>& func, const STAMP_CORE_NAMESPACE::co_thread_pool::time_point& t) const {
-	scene_manager().get()->threadPool->push_next(func, t);
-}
 
 STAMP_ENGINE_NAMESPACE_END
+
 #endif

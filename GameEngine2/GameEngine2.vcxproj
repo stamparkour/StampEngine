@@ -385,7 +385,7 @@
     <ClCompile Include="stamp\core\bit_extension.cpp" />
     <ClCompile Include="stamp\core\string_extension.cpp" />
     <ClCompile Include="stamp\core\time.cpp" />
-    <ClCompile Include="stamp\engine\scene.cpp" />
+    <ClCompile Include="stamp\engine\module.cpp" />
     <ClCompile Include="stamp\graphics\gl\glmanager.cpp" />
     <ClCompile Include="stamp\graphics\gl\mesh.cpp" />
     <ClCompile Include="stamp\graphics\gl\shader.cpp" />
@@ -746,7 +746,7 @@
     <ClInclude Include="stamp\define.h" />
     <ClInclude Include="stamp\engine\define.h" />
     <ClInclude Include="stamp\engine\windowscene.h" />
-    <ClInclude Include="stamp\engine\scene.h" />
+    <ClInclude Include="stamp\engine\module.h" />
     <ClInclude Include="stamp\graphics\color.h" />
     <ClInclude Include="stamp\graphics\gl\define.h" />
     <ClInclude Include="stamp\graphics\gl\framebuffer.h" />

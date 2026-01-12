@@ -20,7 +20,7 @@
 
 
 #include <stamp/engine/define.h>
-#include <stamp/engine/scene.h>
+#include <stamp/engine/module.h>
 #include <stamp/core/memory.h>
 #include <stamp/graphics/window.h>
 #include <stamp/math/rect.h>
@@ -65,7 +65,7 @@ void main() {
 #endif
 )";
 
-class WindowScene : public IScene, STAMP_GRAPHICS_NAMESPACE::IWindowListener, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<WindowScene, IScene> {
+class WindowScene : public IModule, STAMP_GRAPHICS_NAMESPACE::IWindowListener, public STAMP_CORE_NAMESPACE::enable_threadsafe_from_this_derived<WindowScene, IModule> {
 	virtual void OnWindowResize(const STAMP_MATH_NAMESPACE::recti& newRect) override {
 		auto winSize = newRect.Size();
 		windowRatio.store(static_cast<float>(winSize.x) / static_cast<float>(winSize.y));
@@ -75,9 +75,7 @@ class WindowScene : public IScene, STAMP_GRAPHICS_NAMESPACE::IWindowListener, pu
 	}
 	virtual void OnWindowDisplay(STAMP_GRAPHICS_NAMESPACE::window::displaymode_t displaymode) override {}
 	virtual void OnWindowFocus(bool isFocused) override {}
-	virtual void OnWindowClose() override {
-		this->Close();
-	}
+	virtual void OnWindowClose() override {}
 	
 	static std::weak_ptr<STAMP_GRAPHICS_GL_NAMESPACE::RenderShaderProgram> shaderProgram_w;
 

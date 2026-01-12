@@ -620,7 +620,7 @@
     <ClCompile Include="gl\glew.c">
       <Filter>libraries\gl</Filter>
     </ClCompile>
-    <ClCompile Include="stamp\engine\scene.cpp">
+    <ClCompile Include="stamp\engine\module.cpp">
       <Filter>libraries\stamp\engine</Filter>
     </ClCompile>
     <ClCompile Include="stamp\os\windows10\win32keyboard.cpp">
@@ -1723,7 +1723,7 @@
     <ClInclude Include="stamp\network\network_mutex.h">
       <Filter>libraries\stamp\network</Filter>
     </ClInclude>
-    <ClInclude Include="stamp\engine\scene.h">
+    <ClInclude Include="stamp\engine\module.h">
       <Filter>libraries\stamp\engine</Filter>
     </ClInclude>
     <ClInclude Include="stamp\engine\define.h">
