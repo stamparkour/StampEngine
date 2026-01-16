@@ -95,7 +95,8 @@ public:
 };
 
 using coroutine_queue = basic_task_queue<std::coroutine_handle<>>;
-using co_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
+using co_thread_pool = basic_thread_pool<std::coroutine_handle<>>;
+using co_timed_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
 
 template<typename R = void, typename Q = coroutine_queue>
 class timed_awaitable {
@@ -283,6 +284,14 @@ public:
 		c(f, *this);
 		return f;
 	}
+};
+
+class co_mutex {
+	std::thread::id ownerId;
+	coroutine_queue queue;
+public:
+	void lock() {}
+	void unlock() {}
 };
 
 // definition
