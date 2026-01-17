@@ -348,6 +348,14 @@ public:
 	}
 };
 
+class co_mutex {
+	std::thread::id ownerId;
+	coroutine_queue queue;
+public:
+	void lock() {}
+	void unlock() {}
+};
+
 // definition
 
 template<typename T>

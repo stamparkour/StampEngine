@@ -194,12 +194,12 @@ protected:
 	virtual void OnModuleClose() = 0;
 public:
 	virtual ~IModule() {
-		Close();
+		CloseModule();
 	}
 	bool IsSceneActive() {
 		return isActive.load();
 	}
-	void Close() {
+	void CloseModule() {
 		if (!isActive) return;
 		isActive = false;
 		global_module_manager.get()->unregister_scene(threadsafe_from_this());

@@ -664,10 +664,10 @@ void IWindowListener::AttachWindowListener(const STAMP_CORE_NAMESPACE::threadsaf
 	auto l = w->windowData->listeners.get_unique_lock();
 	w->windowData->listeners.insert(this);
 
-	this->OnResize(w->windowData->rect);
-	this->OnVisibility(w->windowData->visibility);
-	this->OnDisplay(w->windowData->displayMode);
-	this->OnFocus(w->windowData->focus);
+	this->OnWindowResize(w->windowData->rect);
+	this->OnWindowVisibility(w->windowData->visibility);
+	this->OnWindowDisplay(w->windowData->displayMode);
+	this->OnWindowFocus(w->windowData->focus);
 }
 IWindowListener::IWindowListener() {}
 IWindowListener::~IWindowListener() {

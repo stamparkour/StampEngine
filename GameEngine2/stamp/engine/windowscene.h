@@ -75,7 +75,9 @@ class WindowScene : public IModule, STAMP_GRAPHICS_NAMESPACE::IWindowListener, p
 	}
 	virtual void OnWindowDisplay(STAMP_GRAPHICS_NAMESPACE::window::displaymode_t displaymode) override {}
 	virtual void OnWindowFocus(bool isFocused) override {}
-	virtual void OnWindowClose() override {}
+	virtual void OnWindowClose() override {
+		CloseModule();
+	}
 	
 	static std::weak_ptr<STAMP_GRAPHICS_GL_NAMESPACE::RenderShaderProgram> shaderProgram_w;
 
@@ -91,7 +93,7 @@ class WindowScene : public IModule, STAMP_GRAPHICS_NAMESPACE::IWindowListener, p
 		if (!STAMP_NAMESPACE::IsRenderThread()) {
 			auto co = [this]() -> STAMP_CORE_NAMESPACE::coroutine<void> {
 				InitFrameBuffer();
-			}
+			};
 			return;
 		}
 		frameBuffer = STAMP_CORE_NAMESPACE::make_threadsafe<STAMP_GRAPHICS_GL_NAMESPACE::FrameBuffer>();
