@@ -31,26 +31,61 @@ STAMP_CORE_NAMESPACE_BEGIN
 template<typename T>
 class coroutine;
 
-using awaitable_response_enum_t = int;
-namespace awaitable_response_enum {
-	enum : awaitable_response_enum_t {
-		None = 0,
-		Finished = 1,
-		Canceled = 2,
+using co_conditional_enum_t = int;
+namespace co_conditional_enum{
+	enum : co_conditional_enum_t {
+		None,
+		Finished,
+		Cancelled,
 	};
 }
 
 template<typename T>
-struct awaitable_response {
-	T value;
-	awaitable_response_enum_t response;
+class co_conditional {
+public:
+	constexpr static auto has_return_value = true;
+	using return_type = T;
+
+	co_conditional_enum_t state = co_conditional_enum::None;
+	T return_value;
+};
+
+template<>
+class co_conditional<void> {
+public:
+	constexpr static auto has_return_value = false;
+	using return_type = void;
+
+	co_conditional_enum_t state = co_conditional_enum::None;
+};
+
+class coroutine_handle_conditional {
+public:
+	std::coroutine_handle<> handle;
+	co_conditional_enum_t* state_ptr;
+
+	coroutine_handle_conditional(const std::coroutine_handle<>& h, co_conditional_enum_t* state_ptr = nullptr) : handle(h), state_ptr(state_ptr) {}
+	coroutine_handle_conditional(const std::coroutine_handle<>& h) : handle(h), state_ptr(nullptr) {}
+
+	void operator()() {
+		if (state_ptr != nullptr) {
+			*state_ptr = co_conditional_enum::Finished;
+		}
+		handle();
+	}
+	void task_queue_failed() {
+		if (state_ptr != nullptr) {
+			*state_ptr = co_conditional_enum::Cancelled;
+			handle();
+		}
+	}
 };
 
 template<typename R = void, typename Q = coroutine_queue>
 class awaitable {
 public:
 	using function_type = R;
-	using return_type = decltype(std::declval<R>().get_return());
+	using return_type = decltype(std::declval<R>().get_co_return());
 	using queue_type = Q;
 private:
 	queue_type* queue;
@@ -94,8 +129,36 @@ public:
 	}
 };
 
+template<typename R = void, typename Q = coroutine_queue>
+class awaitable_conditional {
+public:
+	using function_type = R;
+	using return_type = co_conditional<decltype(std::declval<R>().get_co_return())>;
+	using queue_type = Q;
+private:
+	queue_type* queue;
+	bool run_next;
+	function_type func;
+	co_conditional_enum_t state = co_conditional_enum::None;
+public:
+	awaitable_conditional(const queue_type* queue, bool run_next = false, const function_type& func) : queue(queue), run_next(run_next), func(func) {}
+
+	bool await_ready() { 
+		return !run_next && queue->is_running_on_current_thread();
+	}
+	void await_suspend(const std::coroutine_handle<>& h) {
+		if (run_next) queue->push_next(coroutine_handle_conditional{h, &state });
+		else queue->push(coroutine_handle_conditional{ h, &state });
+	}
+	return_type await_resume() {
+		return func();
+	}
+};
+
 using coroutine_queue = basic_task_queue<std::coroutine_handle<>>;
 using co_thread_pool = basic_timed_thread_pool<std::coroutine_handle<>>;
+using coroutine_queue_conditional = basic_task_queue<coroutine_handle_conditional>;
+using co_thread_pool_conditional = basic_timed_thread_pool<coroutine_handle_conditional>;
 
 template<typename R = void, typename Q = coroutine_queue>
 class timed_awaitable {

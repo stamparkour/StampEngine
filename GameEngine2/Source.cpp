@@ -15,7 +15,7 @@
 #include <stamp/graphics/window.h>
 #include <stamp/stamp.h>
 #include <stamp/hid/keyboard.h>
-#include <stamp/engine/scene.h>
+#include <stamp/engine/module.h>
 #include <stamp/graphics/gl/shader.h>
 #include <stamp/engine/windowscene.h>
 #include <Windows.h>

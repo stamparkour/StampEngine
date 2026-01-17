@@ -18,6 +18,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+//need to implement "run_failed" for timed task queue
+
 #include <queue>
 #include <functional>
 #include <atomic>
@@ -44,6 +47,13 @@ private:
 	std::thread::id runningThread{};
 	std::atomic_int _size;
 public:
+	basic_task_queue() {}
+	~basic_task_queue() {
+		if(is_running()) {
+			throw std::runtime_error("stamp::core::basic_task_queue - cannot destroy a task queue while it is running");
+		}
+		run_failed();
+	}
 	bool is_running() const {
 		return isRunning;
 	}
@@ -130,6 +140,37 @@ public:
 		}
 
 		isRunning = false;
+	}
+
+	void run_failed() {
+		if constexpr (requires { std::declval< function_type>().task_queue_failed(); }) {
+			STAMPASSERT(!isRunning, "can only have one thread running a task_queue at a time");
+			isRunning = true;
+			runningThread = std::this_thread::get_id();
+			while (true) {
+				function_type task = nullptr;
+				{
+					auto l = taskQueue.get_unique_lock();
+					if (taskQueue.empty()) {
+						auto l2 = nextQueue.get_unique_lock();
+						std::swap(taskQueue, nextQueue);
+						break;
+					}
+					_size--;
+					task = taskQueue.front();
+					taskQueue.pop();
+				}
+				if (task) {
+					try {
+						task.task_queue_failed();
+					}
+					catch (std::exception& e) {
+						STAMPDMSG("stamp::engine::coroutine_queue - Task Exception: " << e.what());
+					}
+				}
+			}
+			isRunning = false;
+		}
 	}
 };
 
