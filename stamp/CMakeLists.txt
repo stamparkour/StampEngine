@@ -7,14 +7,14 @@ set(STAMP_SOURCES
 )
 set(STAMP_HEADERS
 
-
+	"include/stamp/service/display.h"
 	"include/stamp/service/resource.h"
 	"include/stamp/service/network.h"
 	"include/stamp/type_traits.h"
 	"include/stamp/scene.h"
 )
 
-# add the executable
+# add the library
 add_library(stamp STATIC ${STAMP_SOURCES} ${STAMP_HEADERS})
 target_compile_features(stamp PRIVATE cxx_std_23)
 
@@ -59,6 +59,7 @@ if(NOT eigen_POPULATED)
 	FetchContent_MakeAvailable(eigen)
 endif()
 target_link_libraries(stamp PUBLIC eigen)
+
 #glew
 message("Fetching GLEW library...")
 FetchContent_Declare(
