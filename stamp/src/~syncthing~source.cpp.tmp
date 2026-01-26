@@ -1,4 +1,0 @@
-#include <iostream>
-#include <stamp/stamp_config.h>
-#include <Eigen/Eigen>
-#include <gl/glew.h>
