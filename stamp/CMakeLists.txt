@@ -32,7 +32,7 @@ set(BUILD_SHARED_LIBS ON)
 
 # boost
 message("Finding package Boost library...")
-find_package(Boost 1.90.0)
+find_package(Boost 1.90.0 CONFIG)
 if(NOT Boost_FOUND)
 	message("Boost not found")
 	message("Fetching Boost library...")
