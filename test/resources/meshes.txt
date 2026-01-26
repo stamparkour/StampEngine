@@ -1,3 +1,0 @@
-Mesh stamp:boat {
-	path = resources\mesh.mesh
-}

@@ -1,2 +1,0 @@
-gravity sound\gravityFalls.wav
-mySong sound\mySong.wav

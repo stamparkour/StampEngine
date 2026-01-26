@@ -1,7 +1,0 @@
-Mesh stamp:boat {
-	path = resources\mesh.mesh
-}
-
-Mesh stamp:cone {
-	path = resources\mesh.mesh
-}
