@@ -18,8 +18,6 @@ set(STAMP_HEADERS
 add_library(stamp STATIC ${STAMP_SOURCES} ${STAMP_HEADERS})
 target_compile_features(stamp PRIVATE cxx_std_23)
 
-
-
 # adds a directory to search when finding header files
 target_include_directories(stamp 
 	PUBLIC "include/" 
@@ -37,24 +35,33 @@ if(NOT Boost_FOUND)
 	message("Boost not found")
 	message("Fetching Boost library...")
 	FetchContent_Declare(
-		boost
+		Boost
 		URL https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-cmake.tar.xz
 		URL_HASH SHA256=aca59f889f0f32028ad88ba6764582b63c916ce5f77b31289ad19421a96c555f
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 	)
-	message("Populating Boost library...")
-	if(NOT boost_POPULATED)
-		FetchContent_MakeAvailable(boost)
+	FetchContent_GetProperties(Boost)
+	if(NOT Boost_POPULATED)
+		message("Populating Boost library...")
+		FetchContent_MakeAvailable(Boost)
 	endif()
 endif()
-target_link_libraries(stamp PUBLIC boost)
+
+target_link_libraries(stamp PUBLIC 
+	Boost::asio
+	Boost::filesystem
+	Boost::thread
+	Boost::program_options
+)
 
 #eigen
+message("Fetching Eigen library...")
 FetchContent_Declare(
 	eigen 
 	GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git 
 	GIT_TAG origin/5.0
 )
+FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
 	FetchContent_MakeAvailable(eigen)
 endif()
@@ -68,6 +75,7 @@ FetchContent_Declare(
 	URL_HASH SHA256=b64790f94b926acd7e8f84c5d6000a86cb43967bd1e688b03089079799c9e889
 	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
+FetchContent_GetProperties(glew)
 if(NOT glew_POPULATED)
 	FetchContent_MakeAvailable(glew)
 	add_subdirectory(${glew_SOURCE_DIR}/build/cmake ${glew_BINARY_DIR})
@@ -80,8 +88,9 @@ message("Fetching GLFW library...")
 FetchContent_Declare(
 	glfw 
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
-	GIT_TAG origin/master
+	GIT_TAG origin/master # should change to explicit commit
 )
+FetchContent_GetProperties(glfw)
 if(NOT glfw_POPULATED)
 	FetchContent_MakeAvailable(glfw)
 endif()
@@ -92,17 +101,22 @@ message("Fetching Deer Imgui library...")
 FetchContent_Declare(
 	deerimgui
 	GIT_REPOSITORY https://github.com/ocornut/imgui.git
-	GIT_TAG origin/master
+	GIT_TAG origin/master # should change to explicit commit
 	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
-message("Populating Deer Imgui library...")
+FetchContent_GetProperties(deerimgui)
 if(NOT deerimgui_POPULATED)
 	FetchContent_MakeAvailable(deerimgui)
-	file(GLOB_RECURSE DEERIMGUI_SOURCES "${deerimgui_SOURCE_DIR}/*.cpp")
-	add_library(deerimgui STATIC ${DEERIMGUI_SOURCES})
+	file(GLOB DEERIMGUI_BASE_SOURCES "${deerimgui_SOURCE_DIR}/*.cpp")
+	set(DEERIMGUI_BACKEND_SOURCES 
+		"${deerimgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+		"${deerimgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
+	)
+	add_library(deerimgui STATIC ${DEERIMGUI_BASE_SOURCES} ${DEERIMGUI_BACKEND_SOURCES})
 	target_include_directories(deerimgui 
 		PUBLIC "${deerimgui_SOURCE_DIR}"
 	)
+	target_link_libraries(deerimgui PUBLIC glfw)
 endif()
 target_link_libraries(stamp PUBLIC deerimgui)
 
@@ -111,8 +125,9 @@ message("Fetching MiniAudio library...")
 FetchContent_Declare(
 	miniaudio 
 	GIT_REPOSITORY https://github.com/mackron/miniaudio.git
-	GIT_TAG origin/master
+	GIT_TAG origin/master # should change to explicit commit
 )
+FetchContent_GetProperties(miniaudio)
 if(NOT miniaudio_POPULATED)
 	set(BUILD_SHARED_LIBS OFF)
 	FetchContent_MakeAvailable(miniaudio)
@@ -125,17 +140,14 @@ message("Fetching MoodyCamel Concurrent Queue library...")
 FetchContent_Declare(
 	moodycamel_concurrentqueue
 	GIT_REPOSITORY https://github.com/cameron314/concurrentqueue.git
-	GIT_TAG origin/master
+	GIT_TAG origin/master # should change to explicit commit
 )
+FetchContent_GetProperties(moodycamel_concurrentqueue)
 if(NOT moodycamel_concurrentqueue_POPULATED)
 	FetchContent_MakeAvailable(moodycamel_concurrentqueue)
 endif()
 target_link_libraries(stamp PUBLIC concurrentqueue)
 
-get_target_property(PUBLIC_INCLUDES_CONFIG eigen INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "eigen: ${PUBLIC_INCLUDES_CONFIG}")
-get_target_property(PUBLIC_INCLUDES_CONFIG miniaudio INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "glew: ${PUBLIC_INCLUDES_CONFIG}")
-
 # set the configure file for the project
+
 configure_file("include/stamp/stamp_config.h.in" "include/stamp/stamp_config.h")

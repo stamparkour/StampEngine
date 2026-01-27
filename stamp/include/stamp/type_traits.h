@@ -1,7 +1,7 @@
 #ifndef STAMP_TYPE_TRAITS_H
 #define STAMP_TYPE_TRAITS_H
 
-#include <type_traits.h>
+#include <type_traits>
 
 namespace stamp {
 	template<typename T> 

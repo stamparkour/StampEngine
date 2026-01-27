@@ -3,5 +3,7 @@
 
 int main(int argc, char** argv) {
 	std::cout << "Hello World!" << STAMP_VERSION_MAJOR << std::endl;
+	printf("hello world");
 	return 0;
 }
+
