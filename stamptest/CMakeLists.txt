@@ -16,3 +16,10 @@ target_compile_features(stamptest PRIVATE cxx_std_23)
 
 message("stamptest linking to stamp")
 target_link_libraries(stamptest PRIVATE stamp)
+
+#configuring build envirnment
+if (MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
