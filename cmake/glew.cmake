@@ -1,4 +1,4 @@
-include(FetchContent)
+message("importing glew...")
 
 FetchContent_Declare(
 	glew 
@@ -6,9 +6,16 @@ FetchContent_Declare(
 	URL_HASH SHA256=b64790f94b926acd7e8f84c5d6000a86cb43967bd1e688b03089079799c9e889
 	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
+
 FetchContent_GetProperties(glew)
 if(NOT glew_POPULATED)
 	FetchContent_MakeAvailable(glew)
 	add_subdirectory(${glew_SOURCE_DIR}/build/cmake ${glew_BINARY_DIR})
 	target_include_directories(glew_s PUBLIC ${glew_SOURCE_DIR}/include) # fix to allow for fetchContent
+endif()
+
+if(glew_POPULATED)
+	message("glew found!")
+else()
+	message("failed to find glew")
 endif()

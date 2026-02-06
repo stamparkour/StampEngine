@@ -1,4 +1,4 @@
-include(FetchContent)
+message("importing boost...")
 
 find_package(Boost 1.90.0 CONFIG)
 if(NOT Boost_FOUND)
@@ -16,3 +16,10 @@ if(NOT Boost_FOUND)
 		FetchContent_MakeAvailable(Boost)
 	endif()
 endif()
+
+if(Boost_POPULATED)
+	message("boost found!")
+else()
+	message("failed to find boost")
+endif()
+

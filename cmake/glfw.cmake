@@ -1,11 +1,16 @@
-include(FetchContent)
+message("importing glfw...")
 
 FetchContent_Declare(
 	glfw 
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
 	GIT_TAG origin/master # should change to explicit commit
+	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
-FetchContent_GetProperties(glfw)
-if(NOT glfw_POPULATED)
-	FetchContent_MakeAvailable(glfw)
+
+FetchContent_MakeAvailable(glfw)
+
+if(glfw_POPULATED)
+	message("glfw found!")
+else()
+	message("failed to find glfw")
 endif()

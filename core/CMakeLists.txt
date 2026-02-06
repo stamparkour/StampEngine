@@ -6,58 +6,45 @@ set(STAMP_CORE_SOURCES
 	"src/source.cpp"
 )
 set(STAMP_CORE_HEADERS
+	"include/stamp/stamp_config.h.in"
+	"include/stamp/core/core.h"
 )
 
 # add the library
 add_library(core STATIC ${STAMP_CORE_SOURCES} ${STAMP_CORE_HEADERS})
 add_library(stamp::core ALIAS core)
-target_compile_features(core PRIVATE cxx_std_23)
+target_compile_features(core PUBLIC cxx_std_23)
 
 # adds a directory to search when finding header files
 target_include_directories(core 
 	PUBLIC "include" 
-	PUBLIC "${stamp_BINARY_DIR}/core/include" 
-	PRIVATE "./"
+	PUBLIC "${stamp_BINARY_DIR}/core/include"
 )
 
 # dependencies
-set(BUILD_SHARED_LIBS ON)
+# include(boost)
+# target_link_libraries(core PUBLIC 
+# 	Boost::asio
+#	Boost::filesystem
+#	Boost::thread
+#	Boost::program_options
+# )
 
-# boost
-message("Finding package Boost library...")
-include(boost)
-target_link_libraries(core PUBLIC 
-	Boost::asio
-	Boost::filesystem
-	Boost::thread
-	Boost::program_options
-)
+# include(glew)
+# target_link_libraries(core PUBLIC glew_s)
 
-#glew
-message("Fetching GLEW library...")
-include(glew)
-target_link_libraries(core PUBLIC glew_s)
+# include(glfw)
+# target_link_libraries(core PUBLIC glfw)
 
-#glfw
-message("Fetching GLFW library...")
-include(glfw)
-target_link_libraries(core PUBLIC glfw)
+# include(imgui)
+# target_link_libraries(core PUBLIC imgui)
 
-# deer imgui
-message("Fetching Deer Imgui library...")
-include(deerimgui)
-target_link_libraries(core PUBLIC deerimgui)
+# include(miniaudio)
+# target_link_libraries(core PUBLIC miniaudio)
 
-#miniaudio
-message("Fetching MiniAudio library...")
-include(miniaudio)
-target_link_libraries(core PUBLIC miniaudio)
-
-# moody camel concurrent queue
-message("Fetching MoodyCamel Concurrent Queue library...")
-include(concurrentqueue)
-target_link_libraries(core PUBLIC concurrentqueue)
+# include(concurrentqueue)
+# target_link_libraries(core PUBLIC concurrentqueue)
 
 # set the configure file for the project
 
-configure_file("include/stamp/core/config.h.in" "include/stamp/core/config.h")
+configure_file("include/stamp/stamp_config.h.in" "include/stamp/stamp_config.h")
