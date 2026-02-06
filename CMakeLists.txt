@@ -20,4 +20,4 @@ add_subdirectory(test)
 
 add_library(stamp INTERFACE)
 add_library(stamp::stamp ALIAS stamp)
-target_link_libraries(stamp INTERFACE stamp::core)
+target_link_libraries(stamp INTERFACE stamp::core stamp::math)

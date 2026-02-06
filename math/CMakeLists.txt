@@ -3,9 +3,10 @@ include(FetchContent)
 
 #source files
 set(STAMP_MATH_SOURCES
-	"src/source.cpp"
 )
 set(STAMP_DIAGNOSE_HEADERS
+	"include/stamp/math/cayley_dickson.h"
+	"include/stamp/math/tuple_base.h"
 )
 
 # add the library
