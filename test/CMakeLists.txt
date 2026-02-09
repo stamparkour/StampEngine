@@ -14,16 +14,15 @@ set(PROJECT_HEADERS
 	"src/signal_test.h"
 )
 
+
 # add the executable
 add_executable(stamp_test ${PROJECT_SOURCES} ${PROJECT_HEADERS})
-target_compile_features(stamp_test PRIVATE cxx_std_23)
-target_link_libraries(stamp_test stamp::stamp)
+target_link_libraries(stamp_test PUBLIC stamp::stamp)
 
-# dependencies
-set(BUILD_SHARED_LIBS ON)
+enable_testing() # Enable testing in CMake
 
 include(gtest)
-target_link_libraries(stamp_test GTest::gtest_main)
+target_link_libraries(stamp_test PUBLIC GTest::gtest_main)
 
 
 #google test required lines

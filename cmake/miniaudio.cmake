@@ -4,7 +4,7 @@ FetchContent_Declare(
 	miniaudio 
 	GIT_REPOSITORY https://github.com/mackron/miniaudio.git
 	GIT_TAG origin/master # should change to explicit commit
-	DOWNLOAD_EXTRACT_TIMESTAMP ON
+	# DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
 
 set(BUILD_SHARED_LIBS OFF)

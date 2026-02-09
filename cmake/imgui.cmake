@@ -1,10 +1,19 @@
 message("importing imgui...")
 
+FetchContent_GetProperties(glfw)
+if(NOT glfw_POPULATED)
+	message(FATAL_ERROR "imgui requires glfw")
+endif()
+FetchContent_GetProperties(glew)
+if(NOT glew_POPULATED)
+	message(FATAL_ERROR "imgui requires glew")
+endif()
+
 FetchContent_Declare(
 	imgui
 	GIT_REPOSITORY https://github.com/ocornut/imgui.git
 	GIT_TAG origin/master # should change to explicit commit
-	DOWNLOAD_EXTRACT_TIMESTAMP ON
+	# DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)
@@ -18,7 +27,7 @@ if(NOT imgui_POPULATED)
 	target_include_directories(imgui 
 		PUBLIC "${imgui_SOURCE_DIR}"
 	)
-	target_link_libraries(imgui PUBLIC glfw)
+	target_link_libraries(imgui PUBLIC glfw glew_s)
 endif()
 
 if(imgui_POPULATED)

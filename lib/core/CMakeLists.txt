@@ -3,7 +3,7 @@ include(FetchContent)
 
 #source files
 set(STAMP_CORE_SOURCES
-	"src/source.cpp"
+	"src/core.cpp"
 )
 set(STAMP_CORE_HEADERS
 	"include/stamp/stamp_config.h.in"
@@ -11,14 +11,14 @@ set(STAMP_CORE_HEADERS
 )
 
 # add the library
-add_library(core STATIC ${STAMP_CORE_SOURCES} ${STAMP_CORE_HEADERS})
-add_library(stamp::core ALIAS core)
-target_compile_features(core PUBLIC cxx_std_23)
+add_library(stamp_core STATIC ${STAMP_CORE_SOURCES} ${STAMP_CORE_HEADERS})
+add_library(stamp::core ALIAS stamp_core)
+# target_compile_features(stamp_core PUBLIC cxx_std_23)
 
 # adds a directory to search when finding header files
-target_include_directories(core 
+target_include_directories(stamp_core 
 	PUBLIC "include" 
-	PUBLIC "${stamp_BINARY_DIR}/core/include"
+	PUBLIC "${stamp_BINARY_DIR}/lib/core/include"
 )
 
 # dependencies

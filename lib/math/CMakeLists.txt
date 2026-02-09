@@ -3,6 +3,7 @@ include(FetchContent)
 
 #source files
 set(STAMP_MATH_SOURCES
+	"src/math.cpp"
 )
 set(STAMP_DIAGNOSE_HEADERS
 	"include/stamp/math/cayley_dickson.h"
@@ -10,14 +11,13 @@ set(STAMP_DIAGNOSE_HEADERS
 )
 
 # add the library
-add_library(math STATIC ${STAMP_MATH_SOURCES} ${STAMP_DIAGNOSE_HEADERS})
-add_library(stamp::math ALIAS math)
-target_compile_features(math PUBLIC cxx_std_23)
+add_library(stamp_math STATIC ${STAMP_MATH_SOURCES} ${STAMP_DIAGNOSE_HEADERS})
+add_library(stamp::math ALIAS stamp_math)
 
 # adds a directory to search when finding header files
-target_include_directories(math 
+target_include_directories(stamp_math 
 	PUBLIC "include" 
 )
 
 include(imgui)
-target_link_libraries(math PUBLIC imgui)
+target_link_libraries(stamp_math PUBLIC imgui)
