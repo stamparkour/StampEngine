@@ -33,7 +33,7 @@ namespace stamp::reflect {
 	struct reflect_traits<T const> {
 		static_assert(concepts::reflect_traits_c<T>, "must have valid reflection definition of T");
 		using type = const T;
-		static constexpr auto& name = concat_cstring_v<reflect_traits<T>::name, " const">;
+		static constexpr auto name = concat_cstring_v<reflect_traits<T>::name, " const">;
 		static constexpr auto members = reflect_traits<T>::members;
 	};
 
@@ -41,7 +41,7 @@ namespace stamp::reflect {
 	struct reflect_traits<T&> {
 		static_assert(concepts::reflect_traits_c<T>, "must have valid reflection definition of T");
 		using type = T&;
-		static constexpr auto& name = concat_cstring_v<reflect_traits<T>::name, "&">;
+		static constexpr auto name = concat_cstring_v<reflect_traits<T>::name, "&">;
 		static constexpr auto members = reflect_traits<T>::members;
 	};
 
@@ -49,7 +49,7 @@ namespace stamp::reflect {
 	struct reflect_traits<T*> {
 		static_assert(concepts::reflect_traits_c<T>, "must have valid reflection definition of T");
 		using type = T*;
-		static constexpr auto& name = concat_cstring_v<reflect_traits<T>::name, "*">;
+		static constexpr auto name = concat_cstring_v<reflect_traits<T>::name, "*">;
 		static constexpr auto members = std::tuple{};
 	};
 	template<typename R, typename B>
@@ -57,7 +57,7 @@ namespace stamp::reflect {
 		static_assert(concepts::reflect_traits_c<R>, "must have valid reflection definition of R");
 		static_assert(concepts::reflect_traits_c<B>, "must have valid reflection definition of B");
 		using type = R B::*;
-		static constexpr auto& name = concat_cstring_v<reflect_traits<R>::name, " ", reflect_traits<B>::name, "::*">;
+		static constexpr auto name = concat_cstring_v<reflect_traits<R>::name, " ", reflect_traits<B>::name, "::*">;
 		static constexpr auto members = std::tuple{};
 	};
 	template<typename R, typename B>
@@ -66,7 +66,7 @@ namespace stamp::reflect {
 		static_assert(concepts::reflect_traits_c<B>, "must have valid reflection definition of B");
 
 		using type = R (B::*)();
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (", reflect_traits<B>::name, "::*)()"
 		>;
 		static constexpr auto members = std::tuple{};
@@ -79,7 +79,7 @@ namespace stamp::reflect {
 		static_assert((concepts::reflect_traits_c<Arg>&&...), "must have valid reflection definition of Arg");
 
 		using type = R (B::*)(Arg1, Arg...);
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (", reflect_traits<B>::name, "::*)(",
 			reflect_traits<Arg1>::name,
 			concat_cstring_v<", ",reflect_traits_space_name_v<Arg>>...,
@@ -93,7 +93,7 @@ namespace stamp::reflect {
 		static_assert(concepts::reflect_traits_c<B>, "must have valid reflection definition of B");
 
 		using type = R(B::*)() const;
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (", reflect_traits<B>::name, "::*)() const"
 		>;
 		static constexpr auto members = std::tuple{};
@@ -106,7 +106,7 @@ namespace stamp::reflect {
 		static_assert((concepts::reflect_traits_c<Arg>&&...), "must have valid reflection definition of Arg");
 
 		using type = R(B::*)(Arg1, Arg...) const;
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (", reflect_traits<B>::name, "::*)(",
 			reflect_traits<Arg1>::name,
 			concat_cstring_v<", ",reflect_traits_space_name_v<Arg>>...,
@@ -119,7 +119,7 @@ namespace stamp::reflect {
 		static_assert(concepts::reflect_traits_c<R>, "must have valid reflection definition of R");
 
 		using type = R(*)();
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (*)()"
 		>;
 		static constexpr auto members = std::tuple{};
@@ -131,7 +131,7 @@ namespace stamp::reflect {
 		static_assert((concepts::reflect_traits_c<Arg>&&...), "must have valid reflection definition of Arg");
 
 		using type = R(*)(Arg1, Arg...);
-		static constexpr auto& name = concat_cstring_v<
+		static constexpr auto name = concat_cstring_v<
 			reflect_traits<R>::name, " (*)(",
 			reflect_traits<Arg1>::name,
 			concat_cstring_v<", ", reflect_traits_space_name_v<Arg>>...,
