@@ -10,19 +10,6 @@
 namespace stamp::reflect {
 	
 
-	template<typename T>
-	constexpr auto& reflect_traits_space_name_v = reflect_traits<T>::name;
-	template<typename T> requires requires { reflect_traits<T>::space; }
-	constexpr auto& reflect_traits_space_name_v<T> = concat_cstring_v<reflect_traits<T>::space, "::", reflect_traits<T>::name>;
-
-	template<typename T>
-	constexpr auto& reflect_traits_optional_space_name_v = "unknown";
-	template<typename T> requires concepts::reflect_traits_c<T>
-	constexpr auto& reflect_traits_optional_space_name_v<T> = reflect_traits_space_name_v<T>;
-
-	template<typename T>
-	constexpr auto reflect_traits_member
-
 	// runs the Func on all members of T’s reflect traits
 	template<typename T, typename Func>
 	constexpr void for_each_reflect(Func func) {

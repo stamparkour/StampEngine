@@ -6,7 +6,9 @@ set(STAMP_DIAGNOSE_SOURCES
 )
 set(STAMP_DIAGNOSE_HEADERS
 	"include/stamp/diagnose.h"
- "include/stamp/diagnose/dynamic_type.h")
+	"include/stamp/diagnose/dynamic.h"
+	"include/stamp/diagnose/to_string.h"
+)
 
 # add the library
 add_library(stamp_diagnose STATIC ${STAMP_DIAGNOSE_SOURCES} ${STAMP_DIAGNOSE_HEADERS})

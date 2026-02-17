@@ -14,35 +14,33 @@ namespace stamp::reflect {
 	struct reflect_traits<void> {
 		using type = void;
 		static constexpr auto& name = "void";
-		static constexpr auto members = std::tuple{};
 	};
 	template<>
 	struct reflect_traits<int> {
 		using type = int;
 		static constexpr auto& name = "int";
-		static constexpr auto members = std::tuple{};
 	};
 	template<>
 	struct reflect_traits<short> {
 		using type = short;
 		static constexpr auto& name = "short";
-		static constexpr auto members = std::tuple{};
 	};
 
 	template<typename T>
 	struct reflect_traits<T const> {
-		static_assert(concepts::reflect_traits_c<T>, "must have valid reflection definition of T");
 		using type = const T;
-		static constexpr auto name = concat_cstring_v<reflect_traits_space_name_v<T>, " const">;
-		static constexpr auto members = reflect_traits<T>::members;
+		static constexpr auto name = concat_cstring_v<reflect_traits_optional<T>::full_name, " const">;
 	};
 
 	template<typename T>
 	struct reflect_traits<T&> {
-		static_assert(concepts::reflect_traits_c<T>, "must have valid reflection definition of T");
 		using type = T&;
-		static constexpr auto name = concat_cstring_v<reflect_traits_space_name_v<T>, "&">;
-		static constexpr auto members = reflect_traits<T>::members;
+		static constexpr auto name = concat_cstring_v<reflect_traits_optional<T>::full_name, "&">;
+		constexpr static auto properties = reflect_traits_optional<T>::properties;
+		constexpr static auto functions = reflect_traits_optional<T>::functions;
+		constexpr static auto constructors = reflect_traits_optional<T>::constructors;
+		constexpr static auto static_functions = reflect_traits_optional<T>::static_functions;
+		constexpr static auto static_properties = reflect_traits_optional<T>::static_properties;
 	};
 
 	template<typename T>
