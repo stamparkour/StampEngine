@@ -8,7 +8,11 @@ namespace stamp::reflect {
 	// using type = T;
 	// constexpr static auto space = "";
 	// constexpr static auto name = "";
-	// constexpr static auto member = std::tuple{};
+	// constexpr static auto properties = std::tuple{};
+	// constexpr static auto functions = std::tuple{};
+	// constexpr static auto operators = std::tuple{};
+	// constexpr static auto constructors = std::tuple{};
+	// constexpr static auto deconstructors = std::tuple{};
 
 	namespace concepts {
 		template<typename T>

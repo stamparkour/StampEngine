@@ -24,11 +24,7 @@ set(STAMP_REFLECT_HEADERS
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})
 add_library(stamp::reflect ALIAS stamp_reflect)
 target_link_libraries(stamp_reflect INTERFACE stamp::core)
-
-set_target_properties(stamp_reflect PROPERTIES 
-	CXX_STANDARD 20 
-	CXX_STANDARD_REQUIRED ON
-)
+target_compile_features(stamp_reflect PUBLIC cxx_std_20)
 
 
 # adds a directory to search when finding header files

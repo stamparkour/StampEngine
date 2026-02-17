@@ -251,24 +251,6 @@ namespace stamp::math {
 	template<typename ValT1, unsigned Dim1, typename ValT2, unsigned Dim2, typename ValTO = std::common_type_t<ValT1, ValT2>, unsigned DimO = std::max(Dim1, Dim2)>
 	cayley_dickson_construct<ValTO, DimO> operator/(const cayley_dickson_construct<ValT1, Dim1>&, const cayley_dickson_construct<ValT2, Dim2>&);
 
-	template<typename ValT1, unsigned Dim, typename ValT2, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator+(const cayley_dickson_construct<ValT1, Dim>&, ValT2);
-	template<typename ValT1, unsigned Dim, typename ValT2, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator-(const cayley_dickson_construct<ValT1, Dim>&, ValT2);
-	template<typename ValT1, unsigned Dim, typename ValT2, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator*(const cayley_dickson_construct<ValT1, Dim>&, ValT2);
-	template<typename ValT1, unsigned Dim, typename ValT2, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator/(const cayley_dickson_construct<ValT1, Dim>&, ValT2);
-
-	template<typename ValT1, typename ValT2, unsigned Dim, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator+(ValT1, const cayley_dickson_construct<ValT2, Dim>&);
-	template<typename ValT1, typename ValT2, unsigned Dim, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator-(ValT1, const cayley_dickson_construct<ValT2, Dim>&);
-	template<typename ValT1, typename ValT2, unsigned Dim, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator*(ValT1, const cayley_dickson_construct<ValT2, Dim>&);
-	template<typename ValT1, typename ValT2, unsigned Dim, typename ValTO = std::common_type_t<ValT1, ValT2>>
-	cayley_dickson_construct<ValTO, Dim> operator/(ValT1, const cayley_dickson_construct<ValT2, Dim>&);
-
 	template<typename ValT>
 	ValT conjugate(const ValT& v) {
 		return v;

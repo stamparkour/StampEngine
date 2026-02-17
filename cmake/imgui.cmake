@@ -13,7 +13,7 @@ FetchContent_Declare(
 	imgui
 	GIT_REPOSITORY https://github.com/ocornut/imgui.git
 	GIT_TAG origin/master # should change to explicit commit
-	# DOWNLOAD_EXTRACT_TIMESTAMP ON
+	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)

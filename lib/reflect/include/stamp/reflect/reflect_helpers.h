@@ -20,6 +20,9 @@ namespace stamp::reflect {
 	template<typename T> requires concepts::reflect_traits_c<T>
 	constexpr auto& reflect_traits_optional_space_name_v<T> = reflect_traits_space_name_v<T>;
 
+	template<typename T>
+	constexpr auto reflect_traits_member
+
 	// runs the Func on all members of T’s reflect traits
 	template<typename T, typename Func>
 	constexpr void for_each_reflect(Func func) {
@@ -36,6 +39,19 @@ namespace stamp::reflect {
 	consteval std::size_t count_of_reflect() {
 		return count_of<Pred>(reflect_traits<T>::members);
 	}
+
+	template<string_literal... Other>
+	struct comma_list_string_literals;
+	template<string_literal A, string_literal... Other>
+	struct comma_list_string_literals<A, Other...> {
+		constexpr static auto value = concat_cstring_v<A, concat_cstring_v<", ", Other>...>;
+	};
+	template<>
+	struct comma_list_string_literals<> {
+		constexpr static auto value = string_literal{""};
+	};
+	template<string_literal... Arg>
+	constexpr auto comma_list_string_literals_v = comma_list_string_literals< Arg...>::value;
 }
 
 #endif // STAMP_REFLECT_REFLECT_HELPERS_H

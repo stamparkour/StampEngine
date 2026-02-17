@@ -12,12 +12,7 @@ set(STAMP_CORE_HEADERS
 # add the library
 add_library(stamp_core STATIC ${STAMP_CORE_SOURCES} ${STAMP_CORE_HEADERS})
 add_library(stamp::core ALIAS stamp_core)
-# target_compile_features(stamp_core PUBLIC cxx_std_23)
-
-set_target_properties(stamp_core PROPERTIES 
-	CXX_STANDARD 20 
-	CXX_STANDARD_REQUIRED ON
-)
+target_compile_features(stamp_core PUBLIC cxx_std_20)
 
 # adds a directory to search when finding header files
 target_include_directories(stamp_core 

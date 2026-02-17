@@ -4,7 +4,7 @@ FetchContent_Declare(
 	concurrentqueue
 	GIT_REPOSITORY https://github.com/cameron314/concurrentqueue.git
 	GIT_TAG origin/master # should change to explicit commit
-	# DOWNLOAD_EXTRACT_TIMESTAMP ON
+	DOWNLOAD_EXTRACT_TIMESTAMP ON
 )
 
 FetchContent_MakeAvailable(concurrentqueue)
