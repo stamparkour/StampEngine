@@ -29,13 +29,18 @@ namespace stamp::reflect {
 	template<typename T>
 	constexpr auto has_reflect_traits_v = has_reflect_traits<T>::value;
 
+	namespace details {
+		template<typename T>
+		constexpr auto reflect_space = "";
+		template<concepts::reflect_traits_c T>
+		constexpr auto reflect_space<T> = reflect_traits<T>::space;
+	}
+
 	template<typename T>
 	struct reflect_traits_optional {
 		using type = T;
 
-		static constexpr auto& space = "";
-		requires requires { reflect_traits<T>::space; }
-		static constexpr auto& space = reflect_traits<T>::space;
+		static constexpr auto& space = details::reflect_space<T>;
 
 		static constexpr auto& name = "unknown";
 		requires requires { reflect_traits<T>::space; }
