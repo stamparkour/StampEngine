@@ -16,8 +16,8 @@ namespace stamp::reflect {
 
 	// runs the Func on all members of the tuple<Arg...>
 	template<typename Func, typename... Arg>
-	constexpr void for_each(std::tuple<Arg...> tuple, Func func) {
-		std::apply([&](Arg... arg) { (func(arg), ...); }, tuple);
+	constexpr void for_each(const std::tuple<Arg...>& tuple, Func func) {
+		std::apply([&](const Arg&... arg) { (func(arg), ...); }, tuple);
 	}
 
 	// runs the Func on all the types of the tuple<Arg...> that match Pred. passes a std::tuple_element to the func
@@ -28,25 +28,25 @@ namespace stamp::reflect {
 			if constexpr (Pred<type>::value) {
 				func(arg);
 			}
-			});
+		});
 	}
 
 
 	// runs the Func on all members of the tuple<Arg...> that match Pred
 	template<template<typename> typename Pred, typename Func, typename... Arg>
-	constexpr void for_each_of(std::tuple<Arg...> tuple, Func func) {
-		for_each(tuple, [&](auto arg) {
+	constexpr void for_each_of(const std::tuple<Arg...>& tuple, Func func) {
+		for_each(tuple, [&](auto& arg) {
 			using type = std::decay_t<decltype(arg)>;
 			if constexpr (Pred<type>::value) {
 				func(arg);
 			}
-			});
+		});
 	}
 
 	template<template<typename> typename Pred, typename... Arg>
-	consteval std::size_t count_of(std::tuple<Arg...> tuple) {
+	consteval std::size_t count_of(const std::tuple<Arg...>& tuple) {
 		std::size_t count = 0;
-		for_each_of<Pred>(tuple, [&](auto arg) {
+		for_each_of<Pred>(tuple, [&](auto& arg) {
 			count++;
 			});
 		return count;

@@ -24,16 +24,16 @@ namespace stamp::reflect {
 		constexpr const char* begin() const { return chars; }
 		constexpr const char* end() const { return chars + N - 1; }
 
-		constexpr std::size_t size() const { return N - 1; }
+		constexpr std::size_t length() const { return N - 1; }
 		constexpr operator const char* () const { return chars; }
 	};
 
 	template<string_literal... Arg>
 	struct concat_cstring {
-		constexpr static std::size_t size = (Arg.size() + ...) + 1;
+		constexpr static std::size_t size = (Arg.length() + ...) + 1;
 		constexpr static auto value = []() {
 			std::array<char, size> buffer{};
-			auto buffer_it = std::begin(buffer);
+			auto buffer_it = buffer.begin();
 			((buffer_it = std::copy(Arg.begin(), Arg.end(), buffer_it)), ...);
 			*buffer_it = '\0';
 			return string_literal{ buffer };
