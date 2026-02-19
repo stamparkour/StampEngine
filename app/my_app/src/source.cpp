@@ -9,7 +9,7 @@ using namespace stamp::reflect;
 // Helper to make compile-time testing clean
 template<typename T>
 constexpr std::string_view get_name() {
-	return std::string_view(reflect_traits<T>::name);
+	return std::string_view(reflect_name_v<T>);
 }
 
 // 1. Primitive Tests

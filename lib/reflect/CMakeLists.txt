@@ -14,7 +14,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/std/reflect_array.h"
 
 	"include/stamp/reflect/reflect_types.h"
-	"include/stamp/reflect/types/member.h"
+	"include/stamp/reflect/types/property.h"
 	"include/stamp/reflect/types/function.h"
 	"include/stamp/reflect/types/operator.h"
 	"include/stamp/reflect/types/constructor.h"

@@ -2,7 +2,7 @@
 #ifndef STAMP_REFLECT_REFLECT_TYPES_H
 #define STAMP_REFLECT_REFLECT_TYPES_H
 
-#include "types/member.h"
+#include "types/property.h"
 #include "types/function.h"
 #include "types/operator.h"
 #include "types/constructor.h"
