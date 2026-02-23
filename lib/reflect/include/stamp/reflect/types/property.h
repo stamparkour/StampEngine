@@ -3,25 +3,31 @@
 #define STAMP_REFLECT_MEMBER_H
 
 #include<tuple>
+#include <stamp/reflect/string_literal.h>
 #include<type_traits>
 
 namespace stamp::reflect {
-	template<typename B, typename T, typename... Arg>
-	struct property {
+	template<typename B, typename T, std::size_t, typename... Arg>
+	struct member_property_generic {
 		using class_type = B;
 		using value_type = T;
 		using ptr_type = T B::*;
 		using attrib_type = std::tuple<Arg...>;
 
-		const char* name;
+		string_literal<N> name;
 		ptr_type ptr;
 		attrib_type attributes;
 
-		constexpr property(const char* name, ptr_type ptr, Arg... attributes) :
+		constexpr member_property_generic(string_literal<N> name, ptr_type ptr, Arg... attributes) :
 			name(name),
-			ptr(ptr), 
-			attributes(attributes...) {}
-
+			ptr(ptr),
+			attributes(attributes...) {
+		}
+		constexpr member_property_generic(const char (&name)[N], ptr_type ptr, Arg... attributes) :
+			name(name),
+			ptr(ptr),
+			attributes(attributes...) {
+		}
 	};
 }
 

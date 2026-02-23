@@ -81,6 +81,11 @@ namespace stamp::reflect {
 		using type = long double;
 		static constexpr string_literal name = "long double";
 	};
+	template<>
+	struct reflect_traits<bool> {
+		using type = bool;
+		static constexpr string_literal name = "bool";
+	};
 
 	template<typename T>
 	struct reflect_traits<T const> {

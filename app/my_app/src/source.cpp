@@ -3,6 +3,7 @@
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
+#include <concepts>
 
 using namespace stamp::reflect;
 
@@ -48,9 +49,13 @@ static_assert(get_name<CrazyPtr>() == "void (Dummy::*)(int, int (Dummy::*)(short
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
-	stamp::reflect::for_each_of_reflect<stamp::reflect::is_member_function, decltype(v)>([](auto member) {
-		using type = typename decltype(member)::ptr_type;
-		std::cout << member.name << " -> " << stamp::reflect::reflect_traits<type>::name << std::endl;
+	auto tuple = stamp::reflect::reflect_functions_v<std::array<int, 10>>;
+	stamp::reflect::for_each(tuple, [](auto member) {
+		using type = decltype(member);
+		using ptr_type = typename decltype(member)::ptr_type;
+		std::cout << member.name << " -> " << stamp::reflect::reflect_name_v<ptr_type> << std::endl;
+		std::cout << "is const: " << type::is_const << std::endl;
 	});
+
 	return 0;
 }
