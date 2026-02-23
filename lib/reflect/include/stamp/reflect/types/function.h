@@ -58,7 +58,6 @@ namespace stamp::reflect {
 		static constexpr bool is_const = member_function_traits<T>::is_const;
 		static constexpr bool is_noexcept = member_function_traits<T>::is_noexcept;
 		using attrib_type = std::tuple<Arg...>;
-	public:
 
 		string_literal<N> name;
 		ptr_type member_ptr;
