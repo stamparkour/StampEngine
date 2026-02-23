@@ -8,7 +8,7 @@
 #include "function.h"
 
 namespace stamp::reflect {
-	enum struct operator_type {
+	enum struct operator_t {
 		addition,
 		subtraction,
 		multiplication,
@@ -32,33 +32,36 @@ namespace stamp::reflect {
 		delete_operator
 	};
 
-	template<operator_type O> constexpr auto& operator_to_string_v = "operator unknown";
-	template<> constexpr auto& operator_to_string_v<operator_type::addition> = "operator +";
-	template<> constexpr auto& operator_to_string_v<operator_type::subtraction> = "operator -";
-	template<> constexpr auto& operator_to_string_v<operator_type::multiplication> = "operator *";
-	template<> constexpr auto& operator_to_string_v<operator_type::division> = "operator /";
-	template<> constexpr auto& operator_to_string_v<operator_type::modulo> = "operator %";
-	template<> constexpr auto& operator_to_string_v<operator_type::post_increment> = "operator ++";
-	template<> constexpr auto& operator_to_string_v<operator_type::post_decrement> = "operator --";
-	template<> constexpr auto& operator_to_string_v<operator_type::pre_increment> = "operator ++";
-	template<> constexpr auto& operator_to_string_v<operator_type::pre_decrement> = "operator --";
-	template<> constexpr auto& operator_to_string_v<operator_type::logical_not> = "operator !";
-	template<> constexpr auto& operator_to_string_v<operator_type::bitwise_not> = "operator ~";
-	template<> constexpr auto& operator_to_string_v<operator_type::unary_plus> = "operator +";
-	template<> constexpr auto& operator_to_string_v<operator_type::unary_minus> = "operator -";
-	template<> constexpr auto& operator_to_string_v<operator_type::dereference> = "operator *";
-	template<> constexpr auto& operator_to_string_v<operator_type::address_of> = "operator &";
-	template<> constexpr auto& operator_to_string_v<operator_type::member_access_through_pointer> = "operator ->";
-	template<> constexpr auto& operator_to_string_v<operator_type::function_call> = "operator ()";
-	template<> constexpr auto& operator_to_string_v<operator_type::subscript> = "operator []";
-	template<> constexpr auto& operator_to_string_v<operator_type::comma> = "operator ,";
-	template<> constexpr auto& operator_to_string_v<operator_type::new_operator> = "operator new";
-	template<> constexpr auto& operator_to_string_v<operator_type::delete_operator> = "operator delete";
+	template<operator_t O> constexpr auto& operator_to_string_v = "operator unknown";
+	template<> constexpr auto& operator_to_string_v<operator_t::addition> = "operator +";
+	template<> constexpr auto& operator_to_string_v<operator_t::subtraction> = "operator -";
+	template<> constexpr auto& operator_to_string_v<operator_t::multiplication> = "operator *";
+	template<> constexpr auto& operator_to_string_v<operator_t::division> = "operator /";
+	template<> constexpr auto& operator_to_string_v<operator_t::modulo> = "operator %";
+	template<> constexpr auto& operator_to_string_v<operator_t::post_increment> = "operator ++";
+	template<> constexpr auto& operator_to_string_v<operator_t::post_decrement> = "operator --";
+	template<> constexpr auto& operator_to_string_v<operator_t::pre_increment> = "operator ++";
+	template<> constexpr auto& operator_to_string_v<operator_t::pre_decrement> = "operator --";
+	template<> constexpr auto& operator_to_string_v<operator_t::logical_not> = "operator !";
+	template<> constexpr auto& operator_to_string_v<operator_t::bitwise_not> = "operator ~";
+	template<> constexpr auto& operator_to_string_v<operator_t::unary_plus> = "operator +";
+	template<> constexpr auto& operator_to_string_v<operator_t::unary_minus> = "operator -";
+	template<> constexpr auto& operator_to_string_v<operator_t::dereference> = "operator *";
+	template<> constexpr auto& operator_to_string_v<operator_t::address_of> = "operator &";
+	template<> constexpr auto& operator_to_string_v<operator_t::member_access_through_pointer> = "operator ->";
+	template<> constexpr auto& operator_to_string_v<operator_t::function_call> = "operator ()";
+	template<> constexpr auto& operator_to_string_v<operator_t::subscript> = "operator []";
+	template<> constexpr auto& operator_to_string_v<operator_t::comma> = "operator ,";
+	template<> constexpr auto& operator_to_string_v<operator_t::new_operator> = "operator new";
+	template<> constexpr auto& operator_to_string_v<operator_t::delete_operator> = "operator delete";
 
-	template<operator_type O>
+	template<operator_t O>
 	struct operator_attrib {
-
+		constexpr operator_t operator_type = O;
+		constexpr auto& operator_name = operator_to_string_v<O>;
 	};
+
+
 }
 
 #endif // STAMP_REFLECT_MEMBER_H
