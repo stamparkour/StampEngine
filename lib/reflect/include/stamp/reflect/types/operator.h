@@ -61,4 +61,4 @@ namespace stamp::reflect {
 	};
 }
 
-#endif // STAMP_REFLECT_MEMBER_H
+#endif // STAMP_REFLECT_OPERATOR_H
