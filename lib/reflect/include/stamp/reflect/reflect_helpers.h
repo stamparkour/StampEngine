@@ -46,21 +46,15 @@ namespace stamp::reflect {
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_properties; }
 	constexpr auto reflect_static_properties_v<T> = reflect_traits<T>::static_properties;
 
-	// runs the Func on all members of T’s reflect traits
+	// runs the Func on all member functions of T’s reflect traits
 	template<typename T, typename Func>
-	constexpr void for_each_reflect(Func func) {
-		for_each(reflect_traits<T>::members, func);
+	constexpr void for_each_reflect_member_functions(Func func) {
+		for_each(reflect_traits<T>::member_functions, func);
 	}
-
-	// runs the Func on all members of T’s reflect traits that match Pred
-	template<template<typename> typename Pred, typename T, typename Func>
-	constexpr void for_each_of_reflect(Func func) {
-		for_each_of<Pred>(reflect_traits<T>::members, func);
-	}
-	
-	template<template<typename> typename Pred, typename T>
-	consteval std::size_t count_of_reflect() {
-		return count_of<Pred>(reflect_traits<T>::members);
+	// runs the Func on all member properties of T’s reflect traits
+	template<typename T, typename Func>
+	constexpr void for_each_reflect_member_properties(Func func) {
+		for_each(reflect_traits<T>::member_functions, func);
 	}
 
 	template<string_literal... Other>

@@ -13,7 +13,7 @@ namespace stamp::reflect {
 		static constexpr string_literal space = "std::";
 		static constexpr string_literal name = "vector";
 		static constexpr auto members = std::tuple{
-			member_operator{operator_type::subscript, static_cast<typename type::reference (type::*)(typename type::size_type)>(&type::operator[])}
+			// member_operator{operator_type::subscript, static_cast<typename type::reference (type::*)(typename type::size_type)>(&type::operator[])}
 		};
 	};
 }

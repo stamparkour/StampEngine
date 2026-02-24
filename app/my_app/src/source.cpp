@@ -54,7 +54,10 @@ int main(int argc, char** argv) {
 		using type = decltype(member);
 		using ptr_type = typename decltype(member)::ptr_type;
 		std::cout << member.name << " -> " << stamp::reflect::reflect_name_v<ptr_type> << std::endl;
-		std::cout << "is const: " << type::is_const << std::endl;
+		
+		stamp::reflect::for_each(member.attributes, [](auto attrib) {
+			std::cout << "attribute: " << attrib.operator_name << std::endl;
+		});
 	});
 
 	return 0;

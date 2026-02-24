@@ -15,11 +15,11 @@ namespace stamp::reflect {
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",reflect_full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
-			member_function("at",&type::at),
+			member_function<std::size_t, std::size_t>("at",&type::at),
 			member_function_const("at", &type::at),
 
-			// member_operator{operator_type::subscript, static_cast<typename type::reference(type::*)(typename type::size_type)>(&type::operator[])},
-			// member_operator{operator_type::subscript, static_cast<typename type::const_reference(type::*)(typename type::size_type) const>(&type::operator[])},
+			member_operator<operator_t::subscript>(&type::operator[]),
+			member_operator_const<operator_t::subscript>(&type::operator[]),
 
 			member_function("front", &type::front),
 			member_function_const("front", &type::front),

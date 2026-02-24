@@ -7,7 +7,7 @@
 #include<type_traits>
 
 namespace stamp::reflect {
-	template<typename B, typename T, std::size_t, typename... Arg>
+	template<typename B, typename T, std::size_t N, typename... Arg>
 	struct member_property_generic {
 		using class_type = B;
 		using value_type = T;

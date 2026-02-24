@@ -43,6 +43,7 @@ namespace stamp::reflect {
 		});
 	}
 
+	/*
 	template<template<typename> typename Pred, typename... Arg>
 	consteval std::size_t count_of(const std::tuple<Arg...>& tuple) {
 		std::size_t count = 0;
@@ -51,6 +52,7 @@ namespace stamp::reflect {
 			});
 		return count;
 	}
+	*/
 }
 
 #endif // STAMP_REFLECT_META_TUPLE_H
