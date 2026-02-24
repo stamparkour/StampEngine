@@ -126,7 +126,7 @@ namespace stamp::reflect {
 	struct reflect_traits<R(B::*)(Arg...) const> {
 		using type = R(B::*)(Arg...) const;
 		static constexpr string_literal space = reflect_space_v<B>;
-		static constexpr auto name = concat_cstring_v<
+		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
 			" (",
 			reflect_name_v<B>,
@@ -147,7 +147,7 @@ namespace stamp::reflect {
 	struct reflect_traits<R (B::*)(Arg...)> {
 		using type = R (B::*)(Arg...);
 		static constexpr string_literal space = reflect_space_v<B>;
-		static constexpr auto name = concat_cstring_v<
+		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
 			" (",
 			reflect_name_v<B>,
@@ -155,7 +155,7 @@ namespace stamp::reflect {
 			comma_list_string_literals_v<reflect_name_v<Arg>...>,
 			")"
 		>;
-		static constexpr auto full_name = concat_cstring_v<
+		static constexpr string_literal full_name = concat_cstring_v<
 			reflect_full_name_v<R>,
 			" (",
 			reflect_full_name_v<B>,
@@ -167,15 +167,28 @@ namespace stamp::reflect {
 	template<typename R, typename... Arg>
 	struct reflect_traits<R (*)(Arg...)> {
 		using type = R(*)(Arg...);
-		static constexpr auto name = concat_cstring_v<
+		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
 			" (*)(",
 			comma_list_string_literals_v<reflect_name_v<Arg>...>,
 			")"
 		>;
-		static constexpr auto full_name = concat_cstring_v<
+		static constexpr string_literal full_name = concat_cstring_v<
 			reflect_full_name_v<R>,
 			" (*)(",
+			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			")"
+		>;
+
+		static constexpr string_literal c_prefix = reflect_name_v<R>;
+		static constexpr string_literal c_suffix = concat_cstring_v<
+			"(",
+			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			")"
+		>;
+		static constexpr string_literal c_full_prefix = reflect_full_name_v<R>;
+		static constexpr string_literal c_full_suffix = concat_cstring_v<
+			"(",
 			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
 			")"
 		>;
