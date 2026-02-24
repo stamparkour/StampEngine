@@ -15,7 +15,7 @@ namespace stamp::reflect {
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",reflect_full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
-			member_function<std::size_t, std::size_t>("at",&type::at),
+			member_function<std::size_t>("at",&type::at),
 			member_function_const("at", &type::at),
 
 			member_operator<operator_t::subscript>(&type::operator[]),
@@ -37,7 +37,9 @@ namespace stamp::reflect {
 
 			// Operations
 			member_function("fill", &type::fill),
-			member_function("swap", &type::swap)
+			member_function("swap", &type::swap),
+
+
 		};
 
 		static constexpr auto constructors = std::tuple{

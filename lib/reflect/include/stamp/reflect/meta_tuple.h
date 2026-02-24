@@ -43,6 +43,11 @@ namespace stamp::reflect {
 		});
 	}
 
+	template<template<typename> typename Pred, typename... Arg>
+	constexpr auto tuple_fetch(const std::tuple<Arg...>& tuple) {
+
+	}
+
 	/*
 	template<template<typename> typename Pred, typename... Arg>
 	consteval std::size_t count_of(const std::tuple<Arg...>& tuple) {

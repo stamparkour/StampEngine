@@ -69,6 +69,7 @@ namespace stamp::reflect {
 	};
 	template<string_literal... Arg>
 	constexpr auto comma_list_string_literals_v = comma_list_string_literals< Arg...>::value;
+
 }
 
 #endif // STAMP_REFLECT_REFLECT_HELPERS_H

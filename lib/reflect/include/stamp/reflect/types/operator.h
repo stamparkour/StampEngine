@@ -56,40 +56,58 @@ namespace stamp::reflect {
 	template<> constexpr string_literal operator_to_string_v<operator_t::delete_operator> = "operator delete";
 
 	template<operator_t O>
-	struct operator_attrib {
+	struct function_operator_attrib {
 		static constexpr operator_t operator_type = O;
 		static constexpr string_literal operator_name = operator_to_string_v<O>;
-		constexpr operator_attrib() {}
+		constexpr function_operator_attrib() {}
 	};
 
 	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...), operator_to_string_v<O>.size(), operator_attrib<O>, Attr...> member_operator(R(B::* member_ptr)(Arg...), Attr... attr) {
-		return { operator_to_string_v<O>, member_ptr, operator_attrib<O>(), attr... };
+	constexpr auto member_operator(R(B::* member_ptr)(Arg...), Attr... attr) {
+		return member_function(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
 	}
 	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const, operator_to_string_v<O>.size(), operator_attrib<O>, Attr...> member_operator_const(R(B::* member_ptr)(Arg...) const, Attr... attr) {
-		return { operator_to_string_v<O>, member_ptr, operator_attrib<O>(), attr... };
+	constexpr auto member_operator_const(R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		return member_function_const(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
 	}
 	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) noexcept, operator_to_string_v<O>.size(), operator_attrib<O>, Attr...> member_operator_noexcept(R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
-		return { operator_to_string_v<O>, member_ptr, operator_attrib<O>(), attr...};
+	constexpr auto member_operator_noexcept(R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		return member_function_noexcept(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
 	}
 	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const noexcept, operator_to_string_v<O>.size(), operator_attrib<O>, Attr...> member_operator_const_noexcept(R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
-		return { operator_to_string_v<O>, member_ptr, operator_attrib<O>(), attr... };
+	constexpr auto member_operator_const_noexcept(R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		return member_function_const_noexcept(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
+	}
+
+	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
+	constexpr auto member_operator_generic(R(B::* member_ptr)(Arg...), Attr... attr) {
+		return member_function(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
+	}
+	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
+	constexpr auto member_operator_generic(R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		return member_function_const(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
+	}
+	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
+	constexpr auto member_operator_generic(R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		return member_function_noexcept(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
+	}
+	template<operator_t O, typename... Arg, typename R, typename B, typename... Attr>
+	constexpr auto member_operator_generic(R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		return member_function_const_noexcept(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>(), attr...);
 	}
 
 	template<typename T>
-	constexpr bool is_operator_attrib_v = false;
+	constexpr bool is_function_operator_attrib_v = false;
 	template<operator_t O>
-	constexpr bool is_operator_attrib_v<operator_attrib<O>> = true;
+	constexpr bool is_function_operator_attrib_v<function_operator_attrib<O>> = true;
+
 
 	template<typename T>
-	struct is_operator_attrib : std::bool_constant<is_operator_attrib_v<T>> {};
+	struct is_function_operator_attrib : std::bool_constant<is_function_operator_attrib_v<T>> {};
 
 	namespace concepts {
 		template<typename T>
-		concept operator_attrib_c = is_operator_attrib_v<T>;
+		concept function_operator_attrib_c = is_function_operator_attrib_v<T>;
 	}
 }
 

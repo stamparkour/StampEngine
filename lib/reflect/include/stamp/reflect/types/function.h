@@ -75,6 +75,7 @@ namespace stamp::reflect {
 		}
 	};
 
+	// member function variations
 	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
 	constexpr member_function_t<R(B::*)(Arg...), N, Attr...> member_function(const string_literal<N>& name, R(B::* member_ptr)(Arg...), Attr... attr) {
 		return { name, member_ptr, attr... };
@@ -109,10 +110,40 @@ namespace stamp::reflect {
 		return { name, member_ptr, attr... };
 	}
 
-	/*template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...), N, Attr...> member_function_generic(const string_literal<N>& name, R(B::* member_ptr)(Arg...), Attr... attr) {
-		return { name, member_ptr, attr... };
-	}*/
+	// member_function_generic 
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const string_literal<N>& name, R(B::* member_ptr)(Arg...), Attr... attr) {
+		return member_function(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const string_literal<N>& name, R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		return member_function_const(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const string_literal<N>& name, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		return member_function_noexcept(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const string_literal<N>& name, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		return member_function_const_noexcept(name, member_ptr, attr...);
+	}
+
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const char(&name)[N], R(B::* member_ptr)(Arg...), Attr... attr) {
+		return member_function(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const char(&name)[N], R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		return member_function_const(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const char(&name)[N], R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		return member_function_noexcept(name, member_ptr, attr...);
+	}
+	template<typename... Arg, std::size_t N, typename R, typename B, typename... Attr>
+	constexpr auto member_function_generic(const char(&name)[N], R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		return member_function_const_noexcept(name, member_ptr, attr...);
+	}
 
 	template<typename T>
 	constexpr bool is_member_function_v = false;
