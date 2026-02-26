@@ -15,31 +15,30 @@ namespace stamp::reflect {
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",reflect_full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
-			member_function<std::size_t>("at",&type::at),
-			member_function_const("at", &type::at),
+			reflect(tag::rf_none,"at", &type::at),
+			
+			reflect(tag::rf_const,"at", &type::at),
 
-			member_operator<operator_t::subscript>(&type::operator[]),
-			member_operator_const<operator_t::subscript>(&type::operator[]),
+			reflect(tag::rf_none,tag::rf_subscript, &type::operator[]),
+			reflect(tag::rf_const,tag::rf_subscript, &type::operator[]),
 
-			member_function("front", &type::front),
-			member_function_const("front", &type::front),
+			reflect(tag::rf_none,"front", &type::front),
+			reflect(tag::rf_const,"front", &type::front),
 
-			member_function("back", &type::back),
-			member_function_const("back", &type::back),
+			reflect(tag::rf_none,"back", &type::back),
+			reflect(tag::rf_const,"back", &type::back),
 
-			member_function("data", &type::data),
-			member_function_const("data", &type::data),
+			reflect(tag::rf_none,"data", &type::data),
+			reflect(tag::rf_const,"data", &type::data),
 
 			// Capacity
-			member_function_const("empty", &type::empty),
-			member_function_const("size", &type::size),
-			member_function_const("max_size", &type::max_size),
+			reflect("empty",& type::empty),
+			reflect("size", &type::size),
+			reflect("max_size", &type::max_size),
 
 			// Operations
-			member_function("fill", &type::fill),
-			member_function("swap", &type::swap),
-
-
+			reflect("fill", &type::fill),
+			reflect("swap", &type::swap),
 		};
 
 		static constexpr auto constructors = std::tuple{

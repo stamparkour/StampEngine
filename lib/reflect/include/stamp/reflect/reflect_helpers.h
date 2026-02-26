@@ -10,17 +10,17 @@
 namespace stamp::reflect {
 
 	template<typename T>
-	constexpr auto& reflect_space_v = "";
+	constexpr string_literal reflect_space_v = "";
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::space; }
-	constexpr auto& reflect_space_v<T> = reflect_traits<T>::space;
+	constexpr string_literal reflect_space_v<T> = reflect_traits<T>::space;
 	template<typename T>
-	constexpr auto& reflect_name_v = "unknown";
+	constexpr string_literal reflect_name_v = "unknown";
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::name; }
-	constexpr auto& reflect_name_v<T> = reflect_traits<T>::name;
+	constexpr string_literal reflect_name_v<T> = reflect_traits<T>::name;
 	template<typename T>
-	constexpr auto& reflect_full_name_v = concat_cstring_v<reflect_space_v<T>, reflect_name_v<T>>;
+	constexpr string_literal reflect_full_name_v = concat_cstring_v<reflect_space_v<T>, reflect_name_v<T>>;
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::full_name; }
-	constexpr auto& reflect_full_name_v<T> = reflect_traits<T>::full_name;
+	constexpr string_literal reflect_full_name_v<T> = reflect_traits<T>::full_name;
 	template<typename T>
 	constexpr auto reflect_base_v = std::tuple{};
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::base; }

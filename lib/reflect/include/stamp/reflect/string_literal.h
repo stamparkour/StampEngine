@@ -15,7 +15,7 @@ namespace stamp::reflect {
 		constexpr string_literal(const char(&str)[N]) {
 			std::copy_n(str, N, chars);
 		}
-		constexpr string_literal(const char(&&str)[N]) {
+		constexpr string_literal(const char(&& str)[N]) {
 			std::copy_n(str, N, chars);
 		}
 
@@ -29,6 +29,7 @@ namespace stamp::reflect {
 
 		consteval std::size_t length() const { return N - 1; }
 		consteval std::size_t size() const { return N; }
+		consteval const char* data() const { return chars; }
 		constexpr operator const char* () const { return chars; }
 		constexpr operator std::string_view() const { return { chars }; }
 	};
@@ -40,7 +41,7 @@ namespace stamp::reflect {
 		((buffer_it = std::copy(Arg.begin(), Arg.end(), buffer_it)), ...);
 		*buffer_it = '\0';
 		return string_literal{ buffer };
-	}();
+		}();
 
 	constexpr std::size_t count_digits(long long val, std::size_t base = 10) {
 		if (val == 0) return 0;
@@ -57,7 +58,7 @@ namespace stamp::reflect {
 		else return (char)(d + '0');
 	}
 
-	template<typename T, T val, std::size_t base = 10, std::size_t N = count_digits(val, base)+1>
+	template<typename T, T val, std::size_t base = 10, std::size_t N = count_digits(val, base) + 1>
 	constexpr string_literal<N> integral_to_string_literal_v = []() {
 		std::array<char, N> o{};
 		T v = val;
@@ -72,7 +73,14 @@ namespace stamp::reflect {
 			v /= base;
 		}
 		return string_literal<N>{o};
-	}();
+		}();
+
+	template<typename T>
+	constexpr std::size_t string_literal_length_v;
+	template<std::size_t N>
+	constexpr std::size_t string_literal_length_v < const char(&)[N]> = N;
+	template<std::size_t N>
+	constexpr std::size_t string_literal_length_v <string_literal<N>> = N;
 }
 
 #endif // STAMP_REFLECT_STRING_LITERAL_H

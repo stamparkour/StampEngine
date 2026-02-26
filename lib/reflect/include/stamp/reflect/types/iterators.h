@@ -8,14 +8,22 @@
 #include "function.h"
 
 namespace stamp::reflect {
-	struct function_begin_attrib {};
-	struct function_end_attrib {};
-	struct function_cbegin_attrib {};
-	struct function_cend_attrib {};
-	struct function_rbegin_attrib {};
-	struct function_rend_attrib {};
-	struct function_crbegin_attrib {};
-	struct function_crend_attrib {};
+	struct 
+
+	template<typename B, typename... Attr>
+	constexpr auto reflect(Attr... attr) {
+		auto member_ptr = &B::begin;
+		using traits = member_function_traits<decltype(member_ptr)>;
+		using iterator_type = typename traits::result_type;
+		return member_function("begin", member_ptr, function_begin_attrib<iterator_type>(), attr...);
+	}
+	template<typename B, typename... Attr>
+	constexpr auto reflect (Attr... attr) {
+		auto member_ptr = &B::begin;
+		using traits = member_function_traits<decltype(member_ptr)>;
+		using iterator_type = typename traits::result_type;
+		return member_function("begin", member_ptr, function_begin_attrib<iterator_type>(), attr...);
+	}
 }
 
 #endif // STAMP_REFLECT_ITERATOR_H

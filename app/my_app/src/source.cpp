@@ -47,6 +47,7 @@ static_assert(get_name<void(Dummy::*)() const>() == "void (Dummy::*)() const", "
 using CrazyPtr = void (Dummy::*)(int, int (Dummy::*)(short, short));
 static_assert(get_name<CrazyPtr>() == "void (Dummy::*)(int, int (Dummy::*)(short, short))", "Nested function ptr failed");
 
+
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
 	auto tuple = stamp::reflect::reflect_functions_v<std::array<int, 10>>;

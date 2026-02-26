@@ -164,6 +164,48 @@ namespace stamp::reflect {
 			")"
 		>;
 	};
+	template<typename R, typename B, typename... Arg>
+	struct reflect_traits<R(B::*)(Arg...) const noexcept> {
+		using type = R(B::*)(Arg...) const noexcept;
+		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr string_literal name = concat_cstring_v<
+			reflect_name_v<R>,
+			" (",
+			reflect_name_v<B>,
+			"::*)(",
+			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			") const noexcept"
+		>;
+		static constexpr auto full_name = concat_cstring_v<
+			reflect_full_name_v<R>,
+			" (",
+			reflect_full_name_v<B>,
+			"::*)(",
+			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			") const noexcept"
+		>;
+	};
+	template<typename R, typename B, typename... Arg>
+	struct reflect_traits<R(B::*)(Arg...) noexcept> {
+		using type = R(B::*)(Arg...);
+		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr string_literal name = concat_cstring_v<
+			reflect_name_v<R>,
+			" (",
+			reflect_name_v<B>,
+			"::*)(",
+			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			") noexcept"
+		>;
+		static constexpr string_literal full_name = concat_cstring_v<
+			reflect_full_name_v<R>,
+			" (",
+			reflect_full_name_v<B>,
+			"::*)(",
+			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			") noexcept"
+		>;
+	};
 	template<typename R, typename... Arg>
 	struct reflect_traits<R (*)(Arg...)> {
 		using type = R(*)(Arg...);
