@@ -30,8 +30,14 @@ namespace stamp::reflect {
 		}
 	};
 
-	template<>
-	constexpr auto reflect() 
+	template<typename B, typename T, std::size_t N, typename... Attr>
+	constexpr member_property_t<B, T, N, Attr...> reflect(const string_literal<N>& name, T B::* member_ptr, Attr... attr) {
+		return { name, member_ptr, attr... };
+	}
+	template<typename B, typename T, std::size_t N, typename... Attr>
+	constexpr auto reflect(const char (&name), T B::* member_ptr, Attr... attr) {
+		return reflect(string_literal{ name }, member_ptr, attr)
+	}
 }
 
 #endif // STAMP_REFLECT_MEMBER_H
