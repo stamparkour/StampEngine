@@ -5,6 +5,7 @@
 #include <stamp/reflect/reflect_traits.h>
 #include <stamp/reflect/reflect_types.h>
 #include <array>
+#include "reflect_iterator.h"
 
 namespace stamp::reflect {
 	template<typename T, std::size_t N>
@@ -16,7 +17,6 @@ namespace stamp::reflect {
 		static constexpr auto functions = std::tuple{
 			// Element Access
 			reflect(tag::rf_none,"at", &type::at),
-			
 			reflect(tag::rf_const,"at", &type::at),
 
 			reflect(tag::rf_none,tag::rf_subscript, &type::operator[]),
@@ -39,10 +39,29 @@ namespace stamp::reflect {
 			// Operations
 			reflect("fill", &type::fill),
 			reflect("swap", &type::swap),
+
+			// Iterators
+			reflect(tag::rf_none, tag::rf_begin, &type::begin),
+			reflect(tag::rf_const, tag::rf_begin, &type::begin),
+
+			reflect(tag::rf_none, tag::rf_end, &type::end),
+			reflect(tag::rf_const, tag::rf_end, &type::end),
+
+			reflect(tag::rf_cbegin, &type::cbegin),
+			reflect(tag::rf_cend, &type::cend),
+
+			reflect(tag::rf_none, tag::rf_rbegin, &type::rbegin),
+			reflect(tag::rf_const, tag::rf_rbegin, &type::rbegin),
+
+			reflect(tag::rf_none, tag::rf_rend, &type::rend),
+			reflect(tag::rf_const, tag::rf_rend, &type::rend),
+
+			reflect(tag::rf_crbegin, &type::crbegin),
+			reflect(tag::rf_crend, &type::crend),
 		};
 
 		static constexpr auto constructors = std::tuple{
-
+			reflect_constructor<type>()
 		};
 	};
 }

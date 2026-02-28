@@ -18,6 +18,7 @@ namespace stamp::reflect {
 	namespace concepts {
 		template<typename T>
 		concept reflect_traits_c = requires {
+			reflect_traits<T>{};
 			typename reflect_traits<T>::type;
 		};
 

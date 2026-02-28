@@ -6,5 +6,6 @@
 
 #include "reflect_array.h"
 #include "reflect_vector.h"
+#include "reflect_iterator.h"
 
 #endif // STAMP_REFLECT_REFLECT_STD_H

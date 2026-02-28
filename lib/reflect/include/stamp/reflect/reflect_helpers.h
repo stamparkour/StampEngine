@@ -22,6 +22,10 @@ namespace stamp::reflect {
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::full_name; }
 	constexpr string_literal reflect_full_name_v<T> = reflect_traits<T>::full_name;
 	template<typename T>
+	constexpr string_literal reflect_basic_name_v = reflect_name_v<T>;
+	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::basic_name; }
+	constexpr string_literal reflect_basic_name_v<T> = reflect_traits<T>::basic_name;
+	template<typename T>
 	constexpr auto reflect_base_v = std::tuple{};
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::base; }
 	constexpr auto reflect_base_v<T> = reflect_traits<T>::base;

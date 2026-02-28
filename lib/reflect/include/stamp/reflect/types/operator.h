@@ -11,8 +11,18 @@
 
 namespace stamp::reflect {
 
+
+	template<typename O>
+	struct function_operator_attrib {
+		using operator_type = O;
+		static constexpr string_literal name = tag::to_string_v<O>;
+	};
+
 	namespace tag {
-		struct operator_generic_tag_t {};
+		struct operator_generic_tag_t : function_generic_tag_t {
+			template<typename T>
+			using attrib_type = function_operator_attrib<T>;
+		};
 
 		struct addition_operator_tag_t : operator_generic_tag_t {} rf_addition;
 		struct subtraction_operator_tag_t : operator_generic_tag_t {} rf_subtraction;
@@ -35,67 +45,30 @@ namespace stamp::reflect {
 		struct comma_operator_tag_t : operator_generic_tag_t {} rf_comma;
 		struct new_operator_operator_tag_t : operator_generic_tag_t {} rf_new_operator;
 		struct delete_operator_operator_tag_t : operator_generic_tag_t {} rf_delete_operator;
+
+		template<> constexpr string_literal to_string_v<addition_operator_tag_t> = "operator +";
+		template<> constexpr string_literal to_string_v<subtraction_operator_tag_t> = "operator -";
+		template<> constexpr string_literal to_string_v<multiplication_operator_tag_t> = "operator *";
+		template<> constexpr string_literal to_string_v<division_operator_tag_t> = "operator /";
+		template<> constexpr string_literal to_string_v<modulo_operator_tag_t> = "operator %";
+		template<> constexpr string_literal to_string_v<post_increment_operator_tag_t> = "operator ++";
+		template<> constexpr string_literal to_string_v<post_decrement_operator_tag_t> = "operator --";
+		template<> constexpr string_literal to_string_v<pre_increment_operator_tag_t> = "operator ++";
+		template<> constexpr string_literal to_string_v<pre_decrement_operator_tag_t> = "operator --";
+		template<> constexpr string_literal to_string_v<logical_not_operator_tag_t> = "operator !";
+		template<> constexpr string_literal to_string_v<bitwise_not_operator_tag_t> = "operator ~";
+		template<> constexpr string_literal to_string_v<unary_plus_operator_tag_t> = "operator +";
+		template<> constexpr string_literal to_string_v<unary_minus_operator_tag_t> = "operator -";
+		template<> constexpr string_literal to_string_v<dereference_operator_tag_t> = "operator *";
+		template<> constexpr string_literal to_string_v<address_of_operator_tag_t> = "operator &";
+		template<> constexpr string_literal to_string_v<member_access_through_pointer_operator_tag_t> = "operator ->";
+		template<> constexpr string_literal to_string_v<function_call_operator_tag_t> = "operator ()";
+		template<> constexpr string_literal to_string_v<subscript_operator_tag_t> = "operator []";
+		template<> constexpr string_literal to_string_v<comma_operator_tag_t> = "operator ,";
+		template<> constexpr string_literal to_string_v<new_operator_operator_tag_t> = "operator new";
+		template<> constexpr string_literal to_string_v<delete_operator_operator_tag_t> = "operator delete";
 	}
 
-	template<typename O> constexpr string_literal operator_to_string_v = "operator unknown";
-	template<> constexpr string_literal operator_to_string_v<tag::addition_operator_tag_t> = "operator +";
-	template<> constexpr string_literal operator_to_string_v<tag::subtraction_operator_tag_t> = "operator -";
-	template<> constexpr string_literal operator_to_string_v<tag::multiplication_operator_tag_t> = "operator *";
-	template<> constexpr string_literal operator_to_string_v<tag::division_operator_tag_t> = "operator /";
-	template<> constexpr string_literal operator_to_string_v<tag::modulo_operator_tag_t> = "operator %";
-	template<> constexpr string_literal operator_to_string_v<tag::post_increment_operator_tag_t> = "operator ++";
-	template<> constexpr string_literal operator_to_string_v<tag::post_decrement_operator_tag_t> = "operator --";
-	template<> constexpr string_literal operator_to_string_v<tag::pre_increment_operator_tag_t> = "operator ++";
-	template<> constexpr string_literal operator_to_string_v<tag::pre_decrement_operator_tag_t> = "operator --";
-	template<> constexpr string_literal operator_to_string_v<tag::logical_not_operator_tag_t> = "operator !";
-	template<> constexpr string_literal operator_to_string_v<tag::bitwise_not_operator_tag_t> = "operator ~";
-	template<> constexpr string_literal operator_to_string_v<tag::unary_plus_operator_tag_t> = "operator +";
-	template<> constexpr string_literal operator_to_string_v<tag::unary_minus_operator_tag_t> = "operator -";
-	template<> constexpr string_literal operator_to_string_v<tag::dereference_operator_tag_t> = "operator *";
-	template<> constexpr string_literal operator_to_string_v<tag::address_of_operator_tag_t> = "operator &";
-	template<> constexpr string_literal operator_to_string_v<tag::member_access_through_pointer_operator_tag_t> = "operator ->";
-	template<> constexpr string_literal operator_to_string_v<tag::function_call_operator_tag_t> = "operator ()";
-	template<> constexpr string_literal operator_to_string_v<tag::subscript_operator_tag_t> = "operator []";
-	template<> constexpr string_literal operator_to_string_v<tag::comma_operator_tag_t> = "operator ,";
-	template<> constexpr string_literal operator_to_string_v<tag::new_operator_operator_tag_t> = "operator new";
-	template<> constexpr string_literal operator_to_string_v<tag::delete_operator_operator_tag_t> = "operator delete";
-
-	template<typename O>
-	struct function_operator_attrib {
-		using operator_type = O;
-		static constexpr string_literal operator_name = operator_to_string_v<O>;
-	};
-
-
-	template<typename... Arg, std::derived_from<tag::operator_generic_tag_t> O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...), Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-	template<typename... Arg, std::derived_from<tag::operator_generic_tag_t> O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-	template<typename... Arg, std::derived_from<tag::operator_generic_tag_t> O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-	template<typename... Arg, std::derived_from<tag::operator_generic_tag_t> O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-
-	template<typename Arg1, typename... Arg, std::derived_from<tag::operator_generic_tag_t> O, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-	template<std::same_as<void> Arg, std::derived_from<tag::operator_generic_tag_t> O, concepts::member_function_with_param_c<> T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
-	template<std::derived_from<tag::operator_generic_tag_t> O, concepts::is_member_function_c T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		return reflect(operator_to_string_v<O>, member_ptr, function_operator_attrib<O>{}, attr...);
-	}
 
 	template<typename T>
 	constexpr bool is_function_operator_attrib_v = false;

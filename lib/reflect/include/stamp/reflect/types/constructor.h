@@ -1,33 +1,57 @@
 #pragma once
-#ifndef STAMP_REFLECT_OPERATOR_H
-#define STAMP_REFLECT_OPERATOR_H
+#ifndef STAMP_REFLECT_CONSTRUCTOR_H
+#define STAMP_REFLECT_CONSTRUCTOR_H
 
 #include<tuple>
 #include<type_traits>
 #include "function.h"
 
 namespace stamp::reflect {
-	template<typename B, typename Param, typename... Arg>
-	class member_function {
-	public:
-		using class_type = member_function_type<T>::class_type;
-		using result_type = member_function_type<T>::result_type;
-		using ptr_type = T;
-		using param_type = member_function_type<T>::param_type;
-		static constexpr bool is_const = member_function_type<T>::is_const;
-		using attrib_type = std::tuple<Arg...>;
-	public:
 
-		const char* name;
-		ptr_type member_ptr;
-		attrib_type attributes;
+	namespace detail {
+		template<typename R, typename... Arg>
+		consteval auto expand_tuple_to_constructor_ptr_f(std::tuple<Arg...>) {
+			return [](Arg... arg) -> R {
+				return R{ arg ... };
+			};
+		}
 
-		constexpr member_function(Arg... attributes) :
-			name(name),
-			member_ptr(member_ptr),
-			attributes(attributes...) {
+		template<typename R, typename Tuple>
+		constexpr auto expand_tuple_to_constructor_ptr_v = expand_tuple_to_constructor_ptr_f<R>(Tuple{});
+		template<typename R, typename Tuple>
+		using expand_tuple_to_constructor_ptr_type_v = decltype(expand_tuple_to_constructor_ptr_v<R, Tuple>);
+	}
+	template<typename B, typename Arg, typename... Attr>
+	struct member_constructor_t {
+		using class_type = B;
+		using arg_type = Arg;
+		using attrib_type = std::tuple<Attr...>;
+
+		using ptr_type = detail::expand_tuple_to_constructor_ptr_type_v<B, arg_type>;
+	private:
+		attrib_type _attributes;
+	public:
+		constexpr member_constructor_t(Attr... attributes) :
+			_attributes(attributes...) {
+		}
+
+		constexpr auto name() const noexcept {
+			return reflect_name_v<B>;
+		}
+		constexpr ptr_type member_ptr() const noexcept {
+			return detail::expand_tuple_to_constructor_ptr_v<B, arg_type>;
+		}
+		const attrib_type& attributes() const noexcept {
+			return _attributes;
 		}
 	};
+
+	template<typename B, typename... Arg, typename... Attr>
+	constexpr member_constructor_t<B, std::tuple<Arg...>, Attr...> reflect_constructor(Attr... attr) {
+		return { attr... };
+	}
+
+
 }
 
-#endif // STAMP_REFLECT_MEMBER_H
+#endif // STAMP_REFLECT_CONSTRUCTOR_H

@@ -14,14 +14,15 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/std/reflect_std.h" 
 	"include/stamp/reflect/std/reflect_vector.h" 
 	"include/stamp/reflect/std/reflect_array.h"
+	"include/stamp/reflect/std/reflect_iterator.h"
 
 	"include/stamp/reflect/reflect_types.h"
 	"include/stamp/reflect/types/property.h"
 	"include/stamp/reflect/types/function.h"
 	"include/stamp/reflect/types/operator.h"
 	"include/stamp/reflect/types/constructor.h"
-	"include/stamp/reflect/types/iterators.h"
-)
+	"include/stamp/reflect/types/iterator.h"
+ "include/stamp/reflect/reflect_any.h")
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})

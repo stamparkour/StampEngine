@@ -30,7 +30,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R (B::*)(Arg...);
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -42,7 +42,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -54,7 +54,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) noexcept;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = true;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -66,7 +66,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const noexcept;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = true;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -78,7 +78,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) &;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = true;
@@ -90,7 +90,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const &;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = true;
@@ -102,7 +102,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) &&;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -114,7 +114,7 @@ namespace stamp::reflect {
 		using class_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const &&;
-		using param_type = std::tuple<Arg...>;
+		using arg_type = std::tuple<Arg...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -128,7 +128,7 @@ namespace stamp::reflect {
 
 	namespace concepts {
 		template<typename T, typename... Arg>
-		concept member_function_with_param_c = std::same_as<typename member_function_traits<T>::param_type, std::tuple<Arg...>>;
+		concept member_function_with_param_c = std::same_as<typename member_function_traits<T>::arg_type, std::tuple<Arg...>>;
 		template<typename T>
 		concept is_member_function_c = requires {
 			member_function_traits<T>{};
@@ -139,31 +139,43 @@ namespace stamp::reflect {
 
 
 	template<typename T, std::size_t N, typename... Arg>
-	class member_function_t {
-	public:
+	struct member_function_t {
 		using class_type = member_function_traits<T>::class_type;
 		using result_type = member_function_traits<T>::result_type;
 		using ptr_type = T;
-		using param_type = member_function_traits<T>::param_type;
+		using arg_type = member_function_traits<T>::arg_type;
 		static constexpr bool is_const = member_function_traits<T>::is_const;
 		static constexpr bool is_noexcept = member_function_traits<T>::is_noexcept;
 		static constexpr bool is_ref_qual_lvalue = member_function_traits<T>::is_ref_qual_lvalue;
 		static constexpr bool is_ref_qual_rvalue = member_function_traits<T>::is_ref_qual_rvalue;
 		using attrib_type = std::tuple<Arg...>;
+		static constexpr std::size_t name_length = N;
+		using name_type = string_literal<N>;
+	private:
+		name_type _name;
+		ptr_type _member_ptr;
+		attrib_type _attributes;
+	public:
 
-		string_literal<N> name;
-		ptr_type member_ptr;
-		attrib_type attributes;
-
-		constexpr member_function_t(const string_literal<N>& name, ptr_type member_ptr, Arg... attributes) :
-			name(name),
-			member_ptr(member_ptr),
-			attributes(attributes...) {
+		constexpr member_function_t(const name_type& name, ptr_type member_ptr, Arg... attributes) :
+			_name(name),
+			_member_ptr(member_ptr),
+			_attributes(attributes...) {
 		}
 		constexpr member_function_t(const char(&name)[N], ptr_type member_ptr, Arg... attributes) :
-			name(name),
-			member_ptr(member_ptr),
-			attributes(attributes...) {
+			_name(name),
+			_member_ptr(member_ptr),
+			_attributes(attributes...) {
+		}
+
+		const name_type& name() const noexcept {
+			return _name;
+		}
+		const ptr_type& member_ptr() const noexcept {
+			return _member_ptr;
+		}
+		const attrib_type& attributes() const noexcept {
+			return _attributes;
 		}
 	};
 
@@ -282,6 +294,117 @@ namespace stamp::reflect {
 	namespace concepts {
 		template<typename T>
 		concept member_function_c = is_member_function_v<T>;
+	}
+
+	// tags
+
+	namespace tag {
+		struct function_generic_tag_t {};
+
+		template<typename T>
+		constexpr string_literal to_string_v = "unknown tag";
+	}
+
+	// tag reflects
+
+	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...), Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+
+	template<typename Arg1, typename... Arg, std::derived_from<tag::function_generic_tag_t> O, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
+	constexpr auto reflect(O, T member_ptr, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+	template<std::same_as<void> Arg, std::derived_from<tag::function_generic_tag_t> O, concepts::member_function_with_param_c<> T, typename... Attr>
+	constexpr auto reflect(O, T member_ptr, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
+	}
+	template<std::derived_from<tag::function_generic_tag_t> O, concepts::is_member_function_c T, typename... Attr>
+	constexpr auto reflect(O, T member_ptr, Attr... attr) {
+		if constexpr (requires { typename O::attrib_type; }) {
+			using attrib = typename O::attrib_type;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else if constexpr (requires { typename O::template attrib_type<O>; }) {
+			using attrib = typename O::template attrib_type<O>;
+			return reflect(tag::to_string_v<O>, member_ptr, attrib{}, attr...);
+		}
+		else {
+			return reflect(tag::to_string_v<O>, member_ptr, attr...);
+		}
 	}
 }
 
