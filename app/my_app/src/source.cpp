@@ -3,6 +3,7 @@
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
+#include <stamp/reflect/std/view.h>
 #include <concepts>
 
 using namespace stamp::reflect;

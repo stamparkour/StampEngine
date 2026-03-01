@@ -13,6 +13,7 @@ namespace stamp::reflect {
 		using type = std::array<T, N>;
 		static constexpr string_literal space = "std::";
 		static constexpr string_literal name = concat_cstring_v<"array<", reflect_name_v<T>, ",", integral_to_string_literal_v<std::size_t, N>, ">">;
+		static constexpr string_literal basic_name = "array";
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",reflect_full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
