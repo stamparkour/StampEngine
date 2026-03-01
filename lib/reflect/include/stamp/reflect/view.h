@@ -8,6 +8,8 @@
 #include <vector>
 #include <memory>
 
+// unified way to access class member attributes and methods and interact with them.
+
 namespace reflect::stamp {
 	class view;
 	using reflect_member_fetch_ptr_v = view(*)(const std::shared_ptr<void>&, std::size_t);
