@@ -15,7 +15,7 @@ namespace reflect::stamp {
 	using reflect_member_fetch_ptr_v = view(*)(const std::shared_ptr<void>&, std::size_t);
 	using reflect_member_call_ptr_v = view(*)(const std::shared_ptr<void>&, const std::vector<view>&);
 
-	class view_vtable {
+	class view_vtable_base {
 		reflect_member_fetch_ptr_v fetch;
 		reflect_member_call_ptr_v call;
 	};
@@ -23,7 +23,7 @@ namespace reflect::stamp {
 	class view {
 	private:
 		std::weak_ptr<void> ptr;
-		const view_vtable* vtable;
+		const view_vtable_base* vtable;
 	public:
 		view() = default;
 		virtual ~view() = default;
