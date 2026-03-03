@@ -49,6 +49,10 @@ namespace stamp::reflect {
 	constexpr auto reflect_static_properties_v = std::tuple{};
 	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_properties; }
 	constexpr auto reflect_static_properties_v<T> = reflect_traits<T>::static_properties;
+	template<typename T>
+	constexpr auto reflect_is_member_type_v = false;
+	template<concepts::reflect_traits_c T> requires requires { reflect_traits<T>::is_member_type; }
+	constexpr auto reflect_is_member_type_v<T> = reflect_traits<T>::is_member_type;
 
 	// runs the Func on all member functions of T’s reflect traits
 	template<typename T, typename Func>

@@ -10,6 +10,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/reflect_ctypes.h"
 	"include/stamp/reflect/string_literal.h"
 	"include/stamp/reflect/meta_tuple.h"
+	 "include/stamp/reflect/view.h"
 
 	"include/stamp/reflect/std/reflect_std.h" 
 	"include/stamp/reflect/std/reflect_vector.h" 
@@ -22,7 +23,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/types/operator.h"
 	"include/stamp/reflect/types/constructor.h"
 	"include/stamp/reflect/types/iterator.h"
- "include/stamp/reflect/view.h")
+ "include/stamp/reflect/member_funtion_traits.h" "include/stamp/reflect/types/tag.h")
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})

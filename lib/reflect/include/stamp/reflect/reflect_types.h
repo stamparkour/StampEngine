@@ -9,7 +9,7 @@
 #include "types/iterator.h"
 
 namespace stamp::reflect::type {
-	template<typename T, std::size_t N = T::name_length>
+	template<typename T, std::size_t N = T::name_size>
 	inline string_literal<N> name(const T& t) {
 		return t.name();
 	}

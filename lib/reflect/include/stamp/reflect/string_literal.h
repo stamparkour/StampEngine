@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <array>
 
 namespace stamp::reflect {
@@ -32,16 +33,17 @@ namespace stamp::reflect {
 		consteval const char* data() const { return chars; }
 		constexpr operator const char* () const { return chars; }
 		constexpr operator std::string_view() const { return { chars }; }
+		constexpr operator std::string() const { return { chars }; }
 	};
 
 	template<string_literal... Arg>
 	constexpr auto concat_cstring_v = []() {
-		std::array<char, 0 + (Arg.length() + ...) + 1> buffer{};
+		std::array<char, 1 + (Arg.length() + ...)> buffer{};
 		auto buffer_it = buffer.begin();
 		((buffer_it = std::copy(Arg.begin(), Arg.end(), buffer_it)), ...);
 		*buffer_it = '\0';
 		return string_literal{ buffer };
-		}();
+	}();
 
 	constexpr std::size_t count_digits(long long val, std::size_t base = 10) {
 		if (val == 0) return 0;

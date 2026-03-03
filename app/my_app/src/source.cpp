@@ -3,7 +3,7 @@
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
-#include <stamp/reflect/std/view.h>
+// #include <stamp/reflect/view.h>
 #include <concepts>
 
 using namespace stamp::reflect;
@@ -34,7 +34,7 @@ namespace stamp::reflect {
 		using type = Dummy;
 		static constexpr auto name = string_literal<6>{ "Dummy" };
 		static constexpr auto properties = std::tuple{
-			reflect("test", &Dummy::test)
+			reflect<"test">(&Dummy::test)
 		};
 	};
 }

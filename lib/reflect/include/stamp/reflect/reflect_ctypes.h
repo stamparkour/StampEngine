@@ -107,6 +107,18 @@ namespace stamp::reflect {
 		static constexpr auto static_functions = reflect_static_functions_v<T>;
 		static constexpr auto static_properties = reflect_static_properties_v<T>;
 	};
+	template<typename T>
+	struct reflect_traits<T&&> {
+		using type = T&&;
+		static constexpr string_literal space = reflect_space_v<T>;
+		static constexpr string_literal name = concat_cstring_v<reflect_name_v<T>, "&&">;
+		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<T>, "&&">;
+		static constexpr auto properties = reflect_properties_v<T>;
+		static constexpr auto functions = reflect_functions_v<T>;
+		static constexpr auto constructors = reflect_constructors_v<T>;
+		static constexpr auto static_functions = reflect_static_functions_v<T>;
+		static constexpr auto static_properties = reflect_static_properties_v<T>;
+	};
 
 	template<typename T>
 	struct reflect_traits<T*> {
@@ -118,6 +130,7 @@ namespace stamp::reflect {
 	template<typename R, typename B>
 	struct reflect_traits<R B::*> {
 		using type = R B::*;
+		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = reflect_space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<reflect_name_v<R>, " ", reflect_name_v<B>, "::*">;
 		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<R>, " ", reflect_full_name_v<B>, "::*">;
@@ -125,6 +138,7 @@ namespace stamp::reflect {
 	template<typename R, typename B, typename... Arg>
 	struct reflect_traits<R(B::*)(Arg...) const> {
 		using type = R(B::*)(Arg...) const;
+		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = reflect_space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
@@ -146,6 +160,7 @@ namespace stamp::reflect {
 	template<typename R, typename B, typename... Arg>
 	struct reflect_traits<R (B::*)(Arg...)> {
 		using type = R (B::*)(Arg...);
+		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = reflect_space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
@@ -167,6 +182,7 @@ namespace stamp::reflect {
 	template<typename R, typename B, typename... Arg>
 	struct reflect_traits<R(B::*)(Arg...) const noexcept> {
 		using type = R(B::*)(Arg...) const noexcept;
+		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = reflect_space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
@@ -188,6 +204,7 @@ namespace stamp::reflect {
 	template<typename R, typename B, typename... Arg>
 	struct reflect_traits<R(B::*)(Arg...) noexcept> {
 		using type = R(B::*)(Arg...);
+		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = reflect_space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
 			reflect_name_v<R>,
