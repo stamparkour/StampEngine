@@ -21,14 +21,14 @@ namespace stamp::reflect {
 			using attrib_type = function_iterator_attrib<T>;
 		};
 
-		struct begin_iterator_tag_t : iterator_generic_tag_t {} rf_begin;
-		struct end_iterator_tag_t : iterator_generic_tag_t {} rf_end;
-		struct cbegin_iterator_tag_t : iterator_generic_tag_t {} rf_cbegin;
-		struct cend_iterator_tag_t : iterator_generic_tag_t {} rf_cend;
-		struct rbegin_iterator_tag_t : iterator_generic_tag_t {} rf_rbegin;
-		struct rend_iterator_tag_t : iterator_generic_tag_t {} rf_rend;
-		struct crbegin_iterator_tag_t : iterator_generic_tag_t {} rf_crbegin;
-		struct crend_iterator_tag_t : iterator_generic_tag_t {} rf_crend;
+		struct begin_iterator_tag_t : iterator_generic_tag_t {} begin_rf;
+		struct end_iterator_tag_t : iterator_generic_tag_t {} end_rf;
+		struct cbegin_iterator_tag_t : iterator_generic_tag_t {} cbegin_rf;
+		struct cend_iterator_tag_t : iterator_generic_tag_t {} cend_rf;
+		struct rbegin_iterator_tag_t : iterator_generic_tag_t {} rbegin_rf;
+		struct rend_iterator_tag_t : iterator_generic_tag_t {} rend_rf;
+		struct crbegin_iterator_tag_t : iterator_generic_tag_t {} crbegin_rf;
+		struct crend_iterator_tag_t : iterator_generic_tag_t {} crend_rf;
 
 		template<> constexpr string_literal to_string_v<begin_iterator_tag_t> = "begin";
 		template<> constexpr string_literal to_string_v<end_iterator_tag_t> = "end";

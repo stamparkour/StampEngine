@@ -34,7 +34,7 @@ namespace stamp::reflect {
 		using type = Dummy;
 		static constexpr auto name = string_literal<6>{ "Dummy" };
 		static constexpr auto properties = std::tuple{
-			reflect<"test">(&Dummy::test)
+			reflect("test"_rf, &Dummy::test)
 		};
 	};
 }

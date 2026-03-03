@@ -10,7 +10,6 @@
 namespace stamp::reflect {
 	template<typename T, std::size_t N>
 	struct reflect_traits<std::array<T, N>> {
-		using namespace stamp::reflect::literals
 		using type = std::array<T, N>;
 		static constexpr string_literal space = "std::";
 		static constexpr string_literal name = concat_cstring_v<"array<", reflect_name_v<T>, ",", integral_to_string_literal_v<std::size_t, N>, ">">;
@@ -18,48 +17,48 @@ namespace stamp::reflect {
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",reflect_full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
-			reflect<"at">(tag::rf_none, &type::at),
-			reflect<"at">(tag::rf_const, &type::at),
+			reflect(tag::none_rf, "at"_rf, &type::at),
+			reflect(tag::const_rf, "at"_rf, &type::at),
 
-			reflect(tag::rf_none,tag::rf_subscript, &type::operator[]),
-			reflect(tag::rf_const,tag::rf_subscript, &type::operator[]),
+			reflect(tag::none_rf,tag::subscript_rf, &type::operator[]),
+			reflect(tag::const_rf,tag::subscript_rf, &type::operator[]),
 
-			reflect<"front">(tag::rf_none, &type::front),
-			reflect<"front">(tag::rf_const, &type::front),
+			reflect(tag::none_rf, "front"_rf, &type::front),
+			reflect(tag::const_rf, "front"_rf, &type::front),
 
-			reflect<"back">(tag::rf_none, &type::back),
-			reflect<"back">(tag::rf_const, &type::back),
+			reflect(tag::none_rf, "back"_rf, &type::back),
+			reflect(tag::const_rf, "back"_rf, &type::back),
 
-			reflect<"data">(tag::rf_none, &type::data),
-			reflect<"data">(tag::rf_const, &type::data),
+			reflect(tag::none_rf, "data"_rf, &type::data),
+			reflect(tag::const_rf, "data"_rf, &type::data),
 
 			// Capacity
-			reflect<"empty">(& type::empty),
-			reflect<"size">(&type::size),
-			reflect<"max_size">(&type::max_size),
+			reflect("empty"_rf, &type::empty),
+			reflect("size"_rf, &type::size),
+			reflect("max_size"_rf, &type::max_size),
 
 			// Operations
-			reflect<"fill">(&type::fill),
-			reflect<"swap">(&type::swap),
+			reflect("fill"_rf, &type::fill),
+			reflect("swap"_rf, &type::swap),
 
 			// Iterators
-			reflect(tag::rf_none, tag::rf_begin, &type::begin),
-			reflect(tag::rf_const, tag::rf_begin, &type::begin),
+			reflect(tag::none_rf, tag::begin_rf, &type::begin),
+			reflect(tag::const_rf, tag::begin_rf, &type::begin),
 
-			reflect(tag::rf_none, tag::rf_end, &type::end),
-			reflect(tag::rf_const, tag::rf_end, &type::end),
+			reflect(tag::none_rf, tag::end_rf, &type::end),
+			reflect(tag::const_rf, tag::end_rf, &type::end),
 
-			reflect(tag::rf_cbegin, &type::cbegin),
-			reflect(tag::rf_cend, &type::cend),
+			reflect(tag::cbegin_rf, &type::cbegin),
+			reflect(tag::cend_rf, &type::cend),
 
-			reflect(tag::rf_none, tag::rf_rbegin, &type::rbegin),
-			reflect(tag::rf_const, tag::rf_rbegin, &type::rbegin),
+			reflect(tag::none_rf, tag::rbegin_rf, &type::rbegin),
+			reflect(tag::const_rf, tag::rbegin_rf, &type::rbegin),
 
-			reflect(tag::rf_none, tag::rf_rend, &type::rend),
-			reflect(tag::rf_const, tag::rf_rend, &type::rend),
+			reflect(tag::none_rf, tag::rend_rf, &type::rend),
+			reflect(tag::const_rf, tag::rend_rf, &type::rend),
 
-			reflect(tag::rf_crbegin, &type::crbegin),
-			reflect(tag::rf_crend, &type::crend),
+			reflect(tag::crbegin_rf, &type::crbegin),
+			reflect(tag::crend_rf, &type::crend),
 		};
 
 		static constexpr auto constructors = std::tuple{

@@ -6,12 +6,12 @@ namespace stamp::reflect {
 	namespace tag {
 		struct overload_tag_generic_t {};
 
-		struct none_overload_tag_t : overload_tag_generic_t {} rf_none;
-		struct const_overload_tag_t : overload_tag_generic_t {} rf_const;
-		struct lvalue_overload_tag_t : overload_tag_generic_t {} rf_lvalue;
-		struct const_lvalue_overload_tag_t : overload_tag_generic_t {} rf_const_lvalue;
-		struct rvalue_overload_tag_t : overload_tag_generic_t {} rf_rvalue;
-		struct const_rvalue_overload_tag_t : overload_tag_generic_t {} rf_const_rvalue;
+		struct none_overload_tag_t : overload_tag_generic_t {} none_rf;
+		struct const_overload_tag_t : overload_tag_generic_t {} const_rf;
+		struct lvalue_overload_tag_t : overload_tag_generic_t {} lvalue_rf;
+		struct const_lvalue_overload_tag_t : overload_tag_generic_t {} const_lvalue_rf;
+		struct rvalue_overload_tag_t : overload_tag_generic_t {} rvalue_rf;
+		struct const_rvalue_overload_tag_t : overload_tag_generic_t {} const_rvalue_rf;
 	}
 
 	template<typename T>

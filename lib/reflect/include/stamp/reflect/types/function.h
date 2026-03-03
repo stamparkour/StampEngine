@@ -9,6 +9,7 @@
 #include<stamp/reflect/reflect_helpers.h>
 #include <stamp/reflect/string_literal.h>
 #include <stamp/reflect/member_funtion_traits.h>
+#include "tag.h"
 #include <string>
 
 namespace stamp::reflect {
@@ -117,15 +118,12 @@ namespace stamp::reflect {
 	// tags
 
 	namespace tag {
-		struct function_generic_tag_t {};
-
-		template<typename T>
-		constexpr string_literal to_string_v = "unknown tag";
+		struct function_generic_tag_t : generic_tag_t {};
 	}
 
 	// tag reflects
 
-	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	template<typename... Arg, std::derived_from<tag::generic_tag_t> O, typename B, typename R, typename... Attr>
 	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...), Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -139,7 +137,7 @@ namespace stamp::reflect {
 			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
-	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	template<typename... Arg, std::derived_from<tag::generic_tag_t> O, typename B, typename R, typename... Attr>
 	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -153,7 +151,7 @@ namespace stamp::reflect {
 			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
-	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	template<typename... Arg, std::derived_from<tag::generic_tag_t> O, typename B, typename R, typename... Attr>
 	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -167,7 +165,7 @@ namespace stamp::reflect {
 			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
-	template<typename... Arg, std::derived_from<tag::function_generic_tag_t> O, typename B, typename R, typename... Attr>
+	template<typename... Arg, std::derived_from<tag::generic_tag_t> O, typename B, typename R, typename... Attr>
 	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -182,7 +180,7 @@ namespace stamp::reflect {
 		}
 	}
 
-	template<typename Arg1, typename... Arg, std::derived_from<tag::function_generic_tag_t> O, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
+	template<typename Arg1, typename... Arg, std::derived_from<tag::generic_tag_t> O, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
 	constexpr auto reflect(O, T member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -196,7 +194,7 @@ namespace stamp::reflect {
 			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
-	template<std::same_as<void> Arg, std::derived_from<tag::function_generic_tag_t> O, concepts::member_function_with_param_c<> T, typename... Attr>
+	template<std::same_as<void> Arg, std::derived_from<tag::generic_tag_t> O, concepts::member_function_with_param_c<> T, typename... Attr>
 	constexpr auto reflect(O, T member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
@@ -210,7 +208,7 @@ namespace stamp::reflect {
 			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
-	template<std::derived_from<tag::function_generic_tag_t> O, concepts::is_member_function_c T, typename... Attr>
+	template<std::derived_from<tag::generic_tag_t> O, concepts::is_member_function_c T, typename... Attr>
 	constexpr auto reflect(O, T member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;

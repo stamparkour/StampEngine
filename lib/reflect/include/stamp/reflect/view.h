@@ -82,109 +82,6 @@ namespace stamp::reflect {
 	};
 	inline const view view_none = view{};
 
-	template<typename T>
-	struct basic_view_generator;
-	template<stamp::reflect::concepts::reflect_traits_c T, template<typename> typename View_Base_Gen = basic_view_generator>
-	class basic_view;
-	template<stamp::reflect::concepts::reflect_traits_c T, template<typename> typename View_Base_Gen = basic_view_generator>
-	class basic_member_view;
-	template<typename T>
-	struct basic_view_generator {
-		static const auto view = basic_view<T>{};
-		template<string_literal S>
-		static const auto member_view = basic_member_view<T, S>{};
-	};
-
-	template<template<typename> typename View_Base_Gen=basic_view_generator, typename T>
-	view make_view_shared(const std::shared_ptr<T>& t) {
-		return view{ t, &View_Base_Gen<T>::view };
-	}
-	template<template<typename> typename View_Base_Gen=basic_view_generator, typename T>
-	view make_view_copy(const T& t) {
-		return make_view_shared<View_Base_Gen>(std::make_shared(t));
-	}
-	template<template<typename> typename View_Base_Gen=basic_view_generator, typename T>
-	view make_view_shallow(T* t) {
-		return make_view_shared<View_Base_Gen>(std::shared_ptr(t, [](T*) {}));
-	}
-
-	template<stamp::reflect::concepts::reflect_traits_c T, template<typename> typename View_Base_Gen>
-	class basic_view : view_base {
-	public:
-		using value_type = T;
-		std::unordered_map <std::size_t, const view_base*> member_properties_map{};
-		basic_view() {
-			for_each_reflect_member_properties([&]<typename T>(T prop) {
-				using type = T;
-				/*auto key = view::to_key(prop.name());
-				auto value = &View_Base_Gen<type>::member_view<;
-				member_properties_map.insert(key, value);*/
-			});
-		}
-	protected:
-		virtual view do_fetch(const this_type& self, key_type key) const override {
-			return {};
-		}
-		virtual view do_call(const this_type& self, call_iterator begin, call_iterator end) const override {
-			return {};
-		}
-
-		virtual std::string do_name() const override {
-			return reflect_full_name_v<T>;
-		}
-		virtual std::string do_to_string(const this_type& _self) const override {
-			auto self = static_pointer_cast<T>(_self);
-			if constexpr (requires (T t) { std::to_string(t); }) {
-				return std::to_string(*self);
-			}
-			else {
-				return "no 'std::to_string' available.";
-			}
-		}
-		virtual std::size_t do_type_hash() const override {
-			return typeid(T).hash_code();
-		}
-	};
-
-	template<stamp::reflect::concepts::reflect_traits_c T, template<typename> typename View_Base_Gen>
-	class basic_view : view_base {
-	public:
-		using value_type = T;
-		std::unordered_map <std::size_t, const view_base*> member_properties_map{};
-		basic_view() {
-			for_each_reflect_member_properties([&]<typename T>(T prop) {
-				using type = T;
-				auto key = view::to_key(prop.name());
-				auto value = &View_Base_Gen<type>::member_view;
-				member_properties_map.insert(key, value);
-			});
-		}
-	protected:
-		virtual view do_fetch(const this_type& self, key_type key) const override {
-			return {};
-		}
-		virtual view do_call(const this_type& self, iterator begin, iterator end) const override {
-			return {};
-		}
-
-		virtual std::string do_name() const override {
-			return reflect_full_name_v<T>;
-		}
-		virtual std::string do_to_string(const this_type& _self) const override {
-			auto self = static_pointer_cast<T>(_self);
-			if constexpr (requires (T t) { std::to_string(t); }) {
-				return std::to_string(*self);
-			}
-			else {
-				return "no 'std::to_string' available.";
-			}
-		}
-		virtual std::size_t do_type_hash() const override {
-			return typeid(T).hash_code();
-		}
-	};
-
-
 	// view definitions
 
 	template<std::forward_iterator T>
@@ -241,6 +138,125 @@ namespace stamp::reflect {
 	std::string view_base::to_string(const this_type& t) const {
 		return do_to_string(t);
 	}
+
+	// basic view types
+
+	template<typename T>
+	struct default_to_string {
+		template<typename Q>
+		std::string operator()(Q q) {
+			return std::to_string(std::forward(q));
+		}
+	};
+
+	struct basic_view_generator;
+	template<concepts::reflect_traits_c T, typename To_String = default_to_string<T>, typename View_Base_Gen = basic_view_generator>
+	class basic_view;
+	template<concepts::reflect_traits_c T, typename P, string_literal S, typename To_String = default_to_string<T>, typename View_Base_Gen = basic_view_generator>
+	class basic_member_view;
+
+	struct basic_view_generator {
+		template<typename T>
+		static const auto view = basic_view<T, default_to_string<T>, basic_view_generator>{};
+		template<typename T, typename P>
+		using member_view_type = basic_member_view<T, P, default_to_string<T>, basic_view_generator>;
+	};
+
+	template<typename View_Base_Gen = basic_view_generator, typename T>
+	view make_view_shared(const std::shared_ptr<T>& t) {
+		return view{ t, &View_Base_Gen::view<T> };
+	}
+	template<typename View_Base_Gen = basic_view_generator, typename T>
+	view make_view_copy(const T& t) {
+		return make_view_shared<View_Base_Gen>(std::make_shared(t));
+	}
+	template<typename View_Base_Gen = basic_view_generator, typename T>
+	view make_view_shallow(T* t) {
+		return make_view_shared<View_Base_Gen>(std::shared_ptr(t, [](T*) {}));
+	}
+
+	template<concepts::reflect_traits_c T, typename To_String, typename View_Base_Gen>
+	class basic_view : view_base {
+	public:
+		using value_type = T;
+		std::unordered_map <std::size_t, const view_base*> member_properties_map{};
+		basic_view() {
+			for_each_reflect_member_properties([&]<typename T>(T prop) {
+				using type = T;
+				using ptr_type = typename type::ptr_type;
+				auto key = view::to_key(prop.name());
+				auto value = View_Base_Gen::member_view_type<type, ptr_type>(prop.name(), prop.member_ptr());
+				member_properties_map.insert(key, value);
+			});
+		}
+	protected:
+		virtual view do_fetch(const this_type& self, key_type key) const override {
+			// manage getting subobjects
+			return {};
+		}
+		virtual view do_call(const this_type& self, call_iterator begin, call_iterator end) const override {
+			//manage calls
+			return {};
+		}
+
+		virtual std::string do_name() const override {
+			return reflect_full_name_v<T>;
+		}
+		virtual std::string do_to_string(const this_type& _self) const override {
+			auto self = static_pointer_cast<T>(_self);
+			To_String to_string_v{};
+			if constexpr (requires (T t, To_String s) { s(t); }) {
+				return to_string_v(*self);
+			}
+			else {
+				return "no to string available.";
+			}
+		}
+		virtual std::size_t do_type_hash() const override {
+			return typeid(T).hash_code();
+		}
+	};
+
+	template<stamp::reflect::concepts::reflect_traits_c T, typename P, typename To_String, template<typename> typename View_Base_Gen>
+	class basic_member_view : view_base {
+	public:
+		using value_type = T;
+		using ptr_type = P;
+
+		const view_base* view;
+		std::string_view name;
+		ptr_type ptr;
+		basic_member_view(const std::string_view& name, ptr_type ptr) : ptr(ptr) {
+			view = &View_Base_Gen::view<T>;
+			name = name;
+		}
+	protected:
+		virtual view do_fetch(const this_type& self, key_type key) const override {
+			auto self = static_pointer_cast<T>(_self);
+			return view->do_fetch(std::shared_ptr(self, &(self.get()->*ptr)), key);
+		}
+		virtual view do_call(const this_type& self, iterator begin, iterator end) const override {
+			auto self = static_pointer_cast<T>(_self);
+			return view->do_call(std::shared_ptr(self, &(self.get()->*ptr)), key);
+		}
+
+		virtual std::string do_name() const override {
+			return name;
+		}
+		virtual std::string do_to_string(const this_type& _self) const override {
+			auto self = static_pointer_cast<T>(_self);
+			To_String to_string_v{};
+			if constexpr (requires (T t, To_String s) { s(t); }) {
+				return to_string_v(*self);
+			}
+			else {
+				return "no to string available.";
+			}
+		}
+		virtual std::size_t do_type_hash() const override {
+			return typeid(T).hash_code();
+		}
+	};
 }
 
 #endif // STAMP_REFLECT_VTABLE_H
