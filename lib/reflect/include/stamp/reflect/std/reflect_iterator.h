@@ -12,16 +12,16 @@ namespace stamp::reflect {
 		using type = T;
 		using value_type = typename std::iterator_traits<T>::value_type;
 		static constexpr string_literal space = "std::";
-		static constexpr string_literal name = concat_cstring_v<"forward_iterator<", reflect_name_v<value_type>, ">">;
-		static constexpr string_literal full_name = concat_cstring_v<"std::forward_iterator<", reflect_full_name_v<value_type>, ">">;
+		static constexpr string_literal name = concat_cstring_v<"forward_iterator<", traits::name_v<value_type>, ">">;
+		static constexpr string_literal full_name = concat_cstring_v<"std::forward_iterator<", traits::full_name_v<value_type>, ">">;
 	};
 	template<std::contiguous_iterator T>
 	struct reflect_traits<T> { 
 		using type = T;
 		using value_type = typename std::iterator_traits<T>::value_type;
 		static constexpr string_literal space = "std::";
-		static constexpr string_literal name = concat_cstring_v<"contiguous_iterator<", reflect_name_v<value_type>, ">">;
-		static constexpr string_literal full_name = concat_cstring_v<"std::contiguous_iterator<", reflect_full_name_v<value_type>, ">">;
+		static constexpr string_literal name = concat_cstring_v<"contiguous_iterator<", traits::name_v<value_type>, ">">;
+		static constexpr string_literal full_name = concat_cstring_v<"std::contiguous_iterator<", traits::full_name_v<value_type>, ">">;
 	};
 }
 

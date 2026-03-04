@@ -11,7 +11,7 @@ using namespace stamp::reflect;
 // Helper to make compile-time testing clean
 template<typename T>
 constexpr std::string_view get_name() {
-	return std::string_view(reflect_name_v<T>);
+	return std::string_view(traits::name_v<T>);
 }
 
 // 1. Primitive Tests
@@ -55,33 +55,33 @@ static_assert(get_name<CrazyPtr>() == "void (Dummy::*)(int, int (Dummy::*)(short
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
-	auto& tuple = stamp::reflect::reflect_functions_v<std::array<int, 10>>;
+	auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
 	stamp::reflect::for_each(tuple, [](auto member) {
 		using type = decltype(member);
 		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::reflect_name_v<ptr_type> << std::endl;
+		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
 		
 		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
 			std::cout << "attribute: " << attrib.name << std::endl;
 		});
 	});
 	std::cout << std::endl;
-	auto& t3 = stamp::reflect::reflect_constructors_v<std::array<int, 10>>;
+	auto& t3 = stamp::reflect::traits::constructors_v<std::array<int, 10>>;
 	stamp::reflect::for_each(t3, [](auto member) {
 		using type = decltype(member);
 		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::reflect_name_v<ptr_type> << std::endl;
+		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
 
 		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
 			std::cout << "attribute: " << attrib.name << std::endl;
 			});
 		});
 	std::cout << std::endl;
-	auto& t2 = stamp::reflect::reflect_properties_v<Dummy>;
+	auto& t2 = stamp::reflect::traits::properties_v<Dummy>;
 	stamp::reflect::for_each(t2, [](auto member) {
 		using type = decltype(member);
 		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::reflect_name_v<ptr_type> << std::endl;
+		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
 
 		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
 			std::cout << "attribute: " << attrib.operator_name << std::endl;

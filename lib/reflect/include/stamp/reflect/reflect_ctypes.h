@@ -90,70 +90,71 @@ namespace stamp::reflect {
 	template<typename T>
 	struct reflect_traits<T const> {
 		using type = const T;
-		static constexpr string_literal space = reflect_space_v<T>;
-		static constexpr string_literal name = concat_cstring_v<reflect_full_name_v<T>, " const">;
-		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<T>, " const">;
+		static constexpr string_literal space = traits::space_v<T>;
+		static constexpr string_literal name = concat_cstring_v<traits::full_name_v<T>, " const">;
+		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<T>, " const">;
 	};
 
 	template<typename T>
 	struct reflect_traits<T&> {
 		using type = T&;
-		static constexpr string_literal space = reflect_space_v<T>;
-		static constexpr string_literal name = concat_cstring_v<reflect_name_v<T>, "&">;
-		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<T>, "&">;
-		static constexpr auto properties = reflect_properties_v<T>;
-		static constexpr auto functions = reflect_functions_v<T>;
-		static constexpr auto constructors = reflect_constructors_v<T>;
-		static constexpr auto static_functions = reflect_static_functions_v<T>;
-		static constexpr auto static_properties = reflect_static_properties_v<T>;
+		static constexpr string_literal space = traits::space_v<T>;
+		static constexpr string_literal name = concat_cstring_v<traits::name_v<T>, "&">;
+		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<T>, "&">;
+		static constexpr auto properties = traits::properties_v<T>;
+		static constexpr auto functions = traits::functions_v<T>;
+		static constexpr auto constructors = traits::constructors_v<T>;
+		static constexpr auto static_functions = traits::static_functions_v<T>;
+		static constexpr auto static_properties = traits::static_properties_v<T>;
 	};
 	template<typename T>
 	struct reflect_traits<T&&> {
 		using type = T&&;
-		static constexpr string_literal space = reflect_space_v<T>;
-		static constexpr string_literal name = concat_cstring_v<reflect_name_v<T>, "&&">;
-		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<T>, "&&">;
-		static constexpr auto properties = reflect_properties_v<T>;
-		static constexpr auto functions = reflect_functions_v<T>;
-		static constexpr auto constructors = reflect_constructors_v<T>;
-		static constexpr auto static_functions = reflect_static_functions_v<T>;
-		static constexpr auto static_properties = reflect_static_properties_v<T>;
+		static constexpr string_literal space = traits::space_v<T>;
+		static constexpr string_literal name = concat_cstring_v<traits::name_v<T>, "&&">;
+		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<T>, "&&">;
+		static constexpr auto properties = traits::properties_v<T>;
+		static constexpr auto functions = traits::functions_v<T>;
+		static constexpr auto constructors = traits::constructors_v<T>;
+		static constexpr auto static_functions = traits::static_functions_v<T>;
+		static constexpr auto static_properties = traits::static_properties_v<T>;
 	};
 
 	template<typename T>
 	struct reflect_traits<T*> {
 		using type = T*;
-		static constexpr string_literal space = reflect_space_v<T>;
-		static constexpr string_literal name = concat_cstring_v<reflect_name_v<T>, "*">;
-		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<T>, "*">;
+		static constexpr string_literal space = traits::space_v<T>;
+		static constexpr string_literal name = concat_cstring_v<traits::name_v<T>, "*">;
+		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<T>, "*">;
 	};
 	template<typename R, typename B>
 	struct reflect_traits<R B::*> {
 		using type = R B::*;
 		static constexpr bool is_member_type = true;
-		static constexpr string_literal space = reflect_space_v<B>;
-		static constexpr string_literal name = concat_cstring_v<reflect_name_v<R>, " ", reflect_name_v<B>, "::*">;
-		static constexpr string_literal full_name = concat_cstring_v<reflect_full_name_v<R>, " ", reflect_full_name_v<B>, "::*">;
+		static constexpr string_literal space = traits::space_v<B>;
+		static constexpr string_literal name = concat_cstring_v<traits::name_v<R>, " ", traits::name_v<B>, "::*">;
+		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<R>, " ", traits::full_name_v<B>, "::*">;
 	};
 	template<typename R, typename B, typename... Arg>
 	struct reflect_traits<R(B::*)(Arg...) const> {
 		using type = R(B::*)(Arg...) const;
 		static constexpr bool is_member_type = true;
-		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr bool is_function_type = true;
+		static constexpr string_literal space = traits::space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
-			reflect_name_v<R>,
+			traits::name_v<R>,
 			" (",
-			reflect_name_v<B>,
+			traits::name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			") const"
 		>;
 		static constexpr auto full_name = concat_cstring_v<
-			reflect_full_name_v<R>,
+			traits::full_name_v<R>,
 			" (",
-			reflect_full_name_v<B>,
+			traits::full_name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			") const"
 		>;
 	};
@@ -161,21 +162,22 @@ namespace stamp::reflect {
 	struct reflect_traits<R (B::*)(Arg...)> {
 		using type = R (B::*)(Arg...);
 		static constexpr bool is_member_type = true;
-		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr bool is_function_type = true;
+		static constexpr string_literal space = traits::space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
-			reflect_name_v<R>,
+			traits::name_v<R>,
 			" (",
-			reflect_name_v<B>,
+			traits::name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			")"
 		>;
 		static constexpr string_literal full_name = concat_cstring_v<
-			reflect_full_name_v<R>,
+			traits::full_name_v<R>,
 			" (",
-			reflect_full_name_v<B>,
+			traits::full_name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			")"
 		>;
 	};
@@ -183,21 +185,22 @@ namespace stamp::reflect {
 	struct reflect_traits<R(B::*)(Arg...) const noexcept> {
 		using type = R(B::*)(Arg...) const noexcept;
 		static constexpr bool is_member_type = true;
-		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr bool is_function_type = true;
+		static constexpr string_literal space = traits::space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
-			reflect_name_v<R>,
+			traits::name_v<R>,
 			" (",
-			reflect_name_v<B>,
+			traits::name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			") const noexcept"
 		>;
 		static constexpr auto full_name = concat_cstring_v<
-			reflect_full_name_v<R>,
+			traits::full_name_v<R>,
 			" (",
-			reflect_full_name_v<B>,
+			traits::full_name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			") const noexcept"
 		>;
 	};
@@ -205,50 +208,52 @@ namespace stamp::reflect {
 	struct reflect_traits<R(B::*)(Arg...) noexcept> {
 		using type = R(B::*)(Arg...);
 		static constexpr bool is_member_type = true;
-		static constexpr string_literal space = reflect_space_v<B>;
+		static constexpr bool is_function_type = true;
+		static constexpr string_literal space = traits::space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<
-			reflect_name_v<R>,
+			traits::name_v<R>,
 			" (",
-			reflect_name_v<B>,
+			traits::name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			") noexcept"
 		>;
 		static constexpr string_literal full_name = concat_cstring_v<
-			reflect_full_name_v<R>,
+			traits::full_name_v<R>,
 			" (",
-			reflect_full_name_v<B>,
+			traits::full_name_v<B>,
 			"::*)(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			") noexcept"
 		>;
 	};
 	template<typename R, typename... Arg>
 	struct reflect_traits<R (*)(Arg...)> {
 		using type = R(*)(Arg...);
+		static constexpr bool is_function_type = true;
 		static constexpr string_literal name = concat_cstring_v<
-			reflect_name_v<R>,
+			traits::name_v<R>,
 			" (*)(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			")"
 		>;
 		static constexpr string_literal full_name = concat_cstring_v<
-			reflect_full_name_v<R>,
+			traits::full_name_v<R>,
 			" (*)(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			")"
 		>;
 
-		static constexpr string_literal c_prefix = reflect_name_v<R>;
+		static constexpr string_literal c_prefix = traits::name_v<R>;
 		static constexpr string_literal c_suffix = concat_cstring_v<
 			"(",
-			comma_list_string_literals_v<reflect_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::name_v<Arg>...>,
 			")"
 		>;
-		static constexpr string_literal c_full_prefix = reflect_full_name_v<R>;
+		static constexpr string_literal c_full_prefix = traits::full_name_v<R>;
 		static constexpr string_literal c_full_suffix = concat_cstring_v<
 			"(",
-			comma_list_string_literals_v<reflect_full_name_v<Arg>...>,
+			comma_list_string_literals_v<traits::full_name_v<Arg>...>,
 			")"
 		>;
 	};

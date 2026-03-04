@@ -103,16 +103,16 @@ namespace stamp::reflect {
 	// member_function_generic 
 
 	template<typename T>
-	constexpr bool is_member_function_v = false;
+	constexpr bool is_reflect_member_function_v = false;
 	template<typename T, std::size_t N, typename... Arg>
-	constexpr bool is_member_function_v<member_function_t<T, N, Arg...>> = true;
+	constexpr bool is_reflect_member_function_v<member_function_t<T, N, Arg...>> = true;
 
 	template<typename T>
-	struct is_member_function : std::bool_constant<is_member_function_v<T>> {};
+	struct is_reflect_member_function : std::bool_constant<is_reflect_member_function_v<T>> {};
 
 	namespace concepts {
 		template<typename T>
-		concept member_function_c = is_member_function_v<T>;
+		concept member_function_c = is_reflect_member_function_v<T>;
 	}
 
 	// tags

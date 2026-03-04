@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <memory>
 #include <iterator>
+#include <stamp/reflect/meber_function_traits.h>
 
 // unified way to access class member attributes and methods and interact with them.
 
@@ -20,11 +21,10 @@ namespace stamp::reflect {
 	public:
 		using key_type = std::size_t;
 		using this_type = std::shared_ptr<void>;
-		using call_iterator = std::vector<view>::iterator;
 		using const_iterator = std::vector<key_type>::const_iterator;
 	protected:
 		virtual view do_fetch(const this_type&, key_type) const = 0;
-		virtual view do_call(const this_type&, call_iterator begin, call_iterator end) const = 0;
+		virtual view do_call(const this_type&, const std::vector<view>&) const = 0;
 
 		virtual std::string do_name() const = 0;
 		virtual std::string do_to_string(const this_type&) const = 0;
@@ -34,7 +34,7 @@ namespace stamp::reflect {
 		// virtual const_iterator do_end() const = 0;
 	public:
 		view fetch(const this_type& t, key_type k) const;
-		view call(const this_type& t, call_iterator begin, call_iterator end) const;
+		view call(const this_type& t, const std::vector<view>&) const;
 
 		std::string name() const { return do_name(); }
 		std::string to_string(const this_type&) const;
@@ -112,7 +112,7 @@ namespace stamp::reflect {
 	inline view view::operator()(T... t) const {
 		std::vector<view> v{};
 		(v.push_back(make_view_copy(std::forward(t))), ...);
-		return this->vtable->call(lock(), v.begin(), v.end());
+		return this->vtable->call(lock(), v);
 	}
 	inline std::shared_ptr<void> view::lock() const {
 		return ptr;
@@ -194,13 +194,13 @@ namespace stamp::reflect {
 			// manage getting subobjects
 			return {};
 		}
-		virtual view do_call(const this_type& self, call_iterator begin, call_iterator end) const override {
+		virtual view do_call(const this_type& self, const std::vector<view>&) const override {
 			//manage calls
 			return {};
 		}
 
 		virtual std::string do_name() const override {
-			return reflect_full_name_v<T>;
+			return traits::full_name_v<T>;
 		}
 		virtual std::string do_to_string(const this_type& _self) const override {
 			auto self = static_pointer_cast<T>(_self);
@@ -233,11 +233,11 @@ namespace stamp::reflect {
 	protected:
 		virtual view do_fetch(const this_type& self, key_type key) const override {
 			auto self = static_pointer_cast<T>(_self);
-			return view->do_fetch(std::shared_ptr(self, &(self.get()->*ptr)), key);
+			return view->do_fetch(std::shared_ptr(&(self.get()->*ptr)), key);
 		}
-		virtual view do_call(const this_type& self, iterator begin, iterator end) const override {
+		virtual view do_call(const this_type& self, const std::vector<view>& param) const override {
 			auto self = static_pointer_cast<T>(_self);
-			return view->do_call(std::shared_ptr(self, &(self.get()->*ptr)), key);
+			return view->do_call(std::shared_ptr(& (self.get()->*ptr)), param);
 		}
 
 		virtual std::string do_name() const override {

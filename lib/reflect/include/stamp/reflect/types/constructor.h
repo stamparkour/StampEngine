@@ -36,7 +36,7 @@ namespace stamp::reflect {
 		}
 
 		constexpr auto name() const noexcept {
-			return reflect_name_v<B>;
+			return traits::name_v<B>;
 		}
 		constexpr ptr_type member_ptr() const noexcept {
 			return detail::expand_tuple_to_constructor_ptr_v<B, arg_type>;
