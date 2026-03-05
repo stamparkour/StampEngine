@@ -8,7 +8,7 @@
 #include<type_traits>
 #include<stamp/reflect/reflect_helpers.h>
 #include <stamp/reflect/string_literal.h>
-#include <stamp/reflect/member_funtion_traits.h>
+#include <stamp/reflect/member_function_traits.h>
 #include "tag.h"
 #include <string>
 
