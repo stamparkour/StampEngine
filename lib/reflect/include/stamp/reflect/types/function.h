@@ -48,7 +48,8 @@ namespace stamp::reflect {
 		}
 	};
 
-
+	template<typename T> 
+	constexpr bool is_member_function_v
 
 	// member function variations
 	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>

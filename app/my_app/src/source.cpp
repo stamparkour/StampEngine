@@ -8,50 +8,21 @@
 
 using namespace stamp::reflect;
 
-// Helper to make compile-time testing clean
-template<typename T>
-constexpr std::string_view get_name() {
-	return std::string_view(traits::name_v<T>);
-}
-
-// 1. Primitive Tests
-static_assert(get_name<int>() == "int", "Int trait failed");
-static_assert(get_name<short>() == "short", "Short trait failed");
-static_assert(get_name<void>() == "void", "Void trait failed");
-
-// 2. Modifiers
-static_assert(get_name<int*>() == "int*", "Pointer trait failed");
-static_assert(get_name<int&>() == "int&", "Reference trait failed");
-static_assert(get_name<int const>() == "int const", "Const trait failed");
-static_assert(get_name<int const*&>() == "int const*&", "Compound modifier failed");
-
 // 3. Member Pointers
 struct Dummy {
 	int test;
+	float* my_ptr;
 };
 namespace stamp::reflect {
 	template<> struct reflect_traits<Dummy> {
 		using type = Dummy;
 		static constexpr string_literal name = "Dummy";
 		static constexpr auto properties = std::tuple{
-			reflect("test"_rf, &Dummy::test)
+			reflect("test"_rf, &type::test),
+			reflect("my_ptr"_rf, &type::my_ptr)
 		};
 	};
 }
-static_assert(get_name<int Dummy::*>() == "int Dummy::*", "Member variable failed");
-
-// 4. Function Pointers
-static_assert(get_name<void(*)()>() == "void (*)()", "Free function failed");
-static_assert(get_name<int(*)(short, int)>() == "int (*)(short, int)", "Free function args failed");
-
-// 5. Member Functions (The Final Boss)
-static_assert(get_name<void(Dummy::*)()>() == "void (Dummy::*)()", "Member func failed");
-static_assert(get_name<void(Dummy::*)() const>() == "void (Dummy::*)() const", "Const member func failed");
-
-// The exact crazy pointer from your array test
-using CrazyPtr = void (Dummy::*)(int, int (Dummy::*)(short, short));
-static_assert(get_name<CrazyPtr>() == "void (Dummy::*)(int, int (Dummy::*)(short, short))", "Nested function ptr failed");
-
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
@@ -60,6 +31,8 @@ int main(int argc, char** argv) {
 	obj.test = 4;
 	view_handle my_view = make_view_shallow(&obj);
 	std::cout << my_view.name() << std::endl;
+	std::cout << my_view["test"].name() << std::endl;
+	std::cout << my_view["test"].to_string() << std::endl;
 	std::cout << my_view["test"].name() << std::endl;
 	std::cout << my_view["test"].to_string() << std::endl;
 

@@ -2,6 +2,9 @@
 #ifndef STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H
 #define STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H
 
+#include <concepts>
+#include <tuple>
+
 namespace stamp::reflect {
 	namespace tag {
 		struct overload_tag_generic_t {};
@@ -121,14 +124,14 @@ namespace stamp::reflect {
 		template<typename T, typename... Arg>
 		concept member_function_with_param_c = std::same_as<typename member_function_traits<T>::arg_type, std::tuple<Arg...>>;
 		template<typename T>
-		concept is_member_function_c = requires {
+		concept is_member_function_traits_c = requires {
 			member_function_traits<T>{};
 		};
 		template<typename T, typename Tag>
 		concept member_function_with_tag_c = member_function_check_tag_v<T, Tag>;
 	}
 	template<typename T>
-	constexpr bool is_member_function_v = concepts::is_member_function_c<T>;
+	constexpr bool is_member_function_traits_v = concepts::is_member_function_traits_c<T>;
 }
 
 #endif // STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H
