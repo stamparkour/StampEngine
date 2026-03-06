@@ -130,6 +130,8 @@ namespace stamp::reflect {
 	template<typename R, typename B>
 	struct reflect_traits<R B::*> {
 		using type = R B::*;
+		using class_type = B;
+		using value_type = R;
 		static constexpr bool is_member_type = true;
 		static constexpr string_literal space = traits::space_v<B>;
 		static constexpr string_literal name = concat_cstring_v<traits::name_v<R>, " ", traits::name_v<B>, "::*">;

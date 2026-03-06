@@ -25,11 +25,10 @@ namespace stamp::reflect {
 		using attrib_type = std::tuple<Arg...>;
 		using name_type = decltype(S);
 		static constexpr std::size_t name_size = S.size();
-	private:
+
 		static constexpr name_type _name = S;
 		ptr_type _ptr;
 		attrib_type _attributes;
-	public:
 
 		constexpr member_property_t(ptr_type ptr, Arg... attributes) :
 			_ptr(ptr),
@@ -52,7 +51,7 @@ namespace stamp::reflect {
 		return { member_ptr, attr... };
 	}
 
-	template<std::derived_from<tag::generic_tag_t> O, typename B, typename T, typename... Attr>
+	template<concepts::is_tag_c O, typename B, typename T, typename... Attr>
 	constexpr auto reflect(O, T B::* member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;

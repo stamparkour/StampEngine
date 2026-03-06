@@ -32,7 +32,7 @@ struct Dummy {
 namespace stamp::reflect {
 	template<> struct reflect_traits<Dummy> {
 		using type = Dummy;
-		static constexpr auto name = string_literal<6>{ "Dummy" };
+		static constexpr string_literal name = "Dummy";
 		static constexpr auto properties = std::tuple{
 			reflect("test"_rf, &Dummy::test)
 		};
@@ -56,7 +56,12 @@ static_assert(get_name<CrazyPtr>() == "void (Dummy::*)(int, int (Dummy::*)(short
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
 
-
+	Dummy obj = {};
+	obj.test = 4;
+	view_handle my_view = make_view_shallow(&obj);
+	std::cout << my_view.name() << std::endl;
+	std::cout << my_view["test"].name() << std::endl;
+	std::cout << my_view["test"].to_string() << std::endl;
 
 	/*auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
 	stamp::reflect::for_each(tuple, [](auto member) {

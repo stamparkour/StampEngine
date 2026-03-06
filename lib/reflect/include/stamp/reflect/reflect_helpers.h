@@ -63,12 +63,12 @@ namespace stamp::reflect {
 	// runs the Func on all member functions of T’s reflect traits
 	template<typename T, typename Func>
 	constexpr void for_each_reflect_member_functions(Func func) {
-		for_each(reflect_traits<T>::member_functions, func);
+		for_each(traits::functions_v<T>, func);
 	}
 	// runs the Func on all member properties of T’s reflect traits
 	template<typename T, typename Func>
 	constexpr void for_each_reflect_member_properties(Func func) {
-		for_each(reflect_traits<T>::member_functions, func);
+		for_each(traits::properties_v<T>, func);
 	}
 
 	template<string_literal... Other>

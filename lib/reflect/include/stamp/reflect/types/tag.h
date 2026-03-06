@@ -3,6 +3,7 @@
 #define STAMP_REFLECT_TAG_H
 
 #include <stamp/reflect/string_literal.h>
+#include <concepts>
 
 namespace stamp::reflect {
 	namespace tag {
@@ -21,6 +22,11 @@ namespace stamp::reflect {
 	template<string_literal S>
 	constexpr tag::named_tag_t<S> operator ""_rf() {
 		return {};
+	}
+
+	namespace concepts {
+		template<typename T>
+		concept is_tag_c = std::derived_from<T, stamp::reflect::tag::generic_tag_t>;
 	}
 }
 

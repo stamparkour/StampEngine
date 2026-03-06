@@ -16,16 +16,16 @@
 // unified way to access class member attributes and methods and interact with them.
 
 namespace stamp::reflect {
-	class view;
+	class view_handle;
 
-	class view_base {
+	class view_vtable_base {
 	public:
 		using key_type = std::size_t;
 		using this_type = std::shared_ptr<void>;
 		using const_iterator = std::vector<key_type>::const_iterator;
 	protected:
-		virtual view do_fetch(const this_type&, key_type) const = 0;
-		virtual view do_call(const this_type&, const std::vector<view>&) const = 0;
+		virtual view_handle do_fetch(const this_type&, key_type) const = 0;
+		virtual view_handle do_call(const this_type&, const std::vector<view_handle>&) const = 0;
 
 		virtual std::string do_name() const = 0;
 		virtual std::string do_to_string(const this_type&) const = 0;
@@ -34,8 +34,8 @@ namespace stamp::reflect {
 		// virtual const_iterator do_begin() const = 0;
 		// virtual const_iterator do_end() const = 0;
 	public:
-		view fetch(const this_type& t, key_type k) const;
-		view call(const this_type& t, const std::vector<view>&) const;
+		view_handle fetch(const this_type& t, key_type k) const;
+		view_handle call(const this_type& t, const std::vector<view_handle>&) const;
 
 		std::string name() const { return do_name(); }
 		std::string to_string(const this_type&) const;
@@ -47,173 +47,189 @@ namespace stamp::reflect {
 	};
 
 
-	class view {
+	class view_handle {
 	public:
-		using key_type = typename view_base::key_type;
-		using const_iterator = typename view_base::const_iterator;
+		using key_type = typename view_vtable_base::key_type;
+		using const_iterator = typename view_vtable_base::const_iterator;
 	private:
 		std::shared_ptr<void> ptr = {};
-		const view_base* vtable = nullptr;
+		const view_vtable_base* vtable_v = nullptr;
 
 	public:
 		template<std::forward_iterator T>
 		constexpr static key_type to_key(T begin, T end);
 		constexpr static key_type to_key(const std::string_view&);
 
-		constexpr view() = default;
-		view(const std::shared_ptr<void>& ptr, const view_base* vtable) : ptr(ptr), vtable(vtable) {}
+		constexpr view_handle() = default;
+		view_handle(const std::shared_ptr<void>& ptr, const view_vtable_base* vtable) : ptr(ptr), vtable_v(vtable) {}
 
 		// access members
-		view operator[] (key_type) const;
-		view operator[] (const std::string_view&) const;
+		view_handle at(key_type) const;
+		view_handle at(const std::string_view&) const;
+		view_handle operator[](key_type v) const { return at(v); }
+		view_handle operator[](const std::string_view& v) const { return at(v); }
 		// call self
 		template<typename... T>
-		view operator() (T&&...) const;
+		view_handle call(T&&...) const;
+		template<typename... T>
+		view_handle operator()(T&&... t) const { return call(std::forward<T>(t)...); }
+
 
 		// access base type
 		std::shared_ptr<void> lock() const;
 		bool expired() const;
 
+		// access vtable
+		const view_vtable_base* vtable() const;
+
 		std::string name() const;
+		std::string to_string() const;
 		std::size_t type_hash() const;
 
 		// iterate through child members
 		// const_iterator begin() const;
 		// const_iterator end() const;
 	};
-	inline const view view_none = view{};
+	inline const view_handle view_none_v = view_handle{};
 
 	// view definitions
 
 	template<std::forward_iterator T>
-	inline constexpr view::key_type view::to_key(T begin, T end) {
+	inline constexpr view_handle::key_type view_handle::to_key(T begin, T end) {
 		//FNV-1 64bit
-		view::key_type FNV_offset_basis = 14695981039346656037;
-		view::key_type FNV_prime = 1099511628211;
+		view_handle::key_type FNV_offset_basis = 14695981039346656037;
+		view_handle::key_type FNV_prime = 1099511628211;
 		// add 32 bit variant possibly
 
-		view::key_type hash = FNV_offset_basis;
+		view_handle::key_type hash = FNV_offset_basis;
 		for (auto p = begin; p != end; ++p) {
-			view::key_type data = *p;
+			view_handle::key_type data = *p;
 			hash *= FNV_prime;
 			hash ^= data;
 		}
 		return hash;
 	}
-	inline constexpr view::key_type view::to_key(const std::string_view& s) {
-		return view::to_key(s.cbegin(), s.cend());
+	inline constexpr view_handle::key_type view_handle::to_key(const std::string_view& s) {
+		return view_handle::to_key(s.cbegin(), s.cend());
 	}
-	inline view view::operator[](key_type k) const {
-		return this->vtable->fetch(lock(),k);
+	inline view_handle view_handle::at(key_type k) const {
+		return this->vtable_v->fetch(lock(),k);
 	}
-	inline view view::operator[](const std::string_view& s) const {
-		return this->vtable->fetch(lock(), view::to_key(s));
+	inline view_handle view_handle::at(const std::string_view& s) const {
+		return this->vtable_v->fetch(lock(), view_handle::to_key(s));
 	}
 	template<typename... T>
-	inline view view::operator()(T&&... t) const {
-		std::vector<view> v{};
+	inline view_handle view_handle::call(T&&... t) const {
+		std::vector<view_handle> v{};
 		(v.push_back(make_view_copy(std::forward<T>(t))), ...);
-		return this->vtable->call(lock(), v);
+		return this->vtable_v->call(lock(), v);
 	}
-	inline std::shared_ptr<void> view::lock() const {
+	inline std::shared_ptr<void> view_handle::lock() const {
 		return ptr;
 	}
-	inline bool view::expired() const {
+	inline bool view_handle::expired() const {
 		return false;
 	}
-	inline std::string view::name() const {
-		return vtable->name();
+	inline const view_vtable_base* view_handle::vtable() const {
+		return vtable_v;
 	}
-	inline std::size_t view::type_hash() const {
-		return vtable->type_hash();
+	inline std::string view_handle::name() const {
+		return vtable_v->name();
+	}
+	inline std::string view_handle::to_string() const {
+		return vtable_v->to_string(ptr);
+	}
+	inline std::size_t view_handle::type_hash() const {
+		return vtable_v->type_hash();
 	}
 
 	// view base definitions
 
-	view view_base::fetch(const this_type& t, key_type k) const {
+	view_handle view_vtable_base::fetch(const this_type& t, key_type k) const {
 		return do_fetch(t, k);
 	}
-	view view_base::call(const this_type& t, const std::vector<view>& array) const {
+	view_handle view_vtable_base::call(const this_type& t, const std::vector<view_handle>& array) const {
 		return do_call(t, array);
 	}
-	std::string view_base::to_string(const this_type& t) const {
+	std::string view_vtable_base::to_string(const this_type& t) const {
 		return do_to_string(t);
 	}
 
 	// basic view types
 
-	template<typename T>
 	struct default_to_string {
-		template<typename Q>
+		template<typename Q> requires requires(Q q) { std::to_string(std::forward<Q>(q));  }
 		std::string operator()(Q&& q) {
 			return std::to_string(std::forward<Q>(q));
 		}
 	};
 
-	template<typename T>
-	struct basic_view_generator;
-	template<concepts::reflect_traits_c T, typename To_String = default_to_string<T>, template<typename> typename View_Base_Gen = basic_view_generator>
-	class basic_view;
-	template<concepts::reflect_traits_c T, typename P, typename To_String = default_to_string<T>, template<typename>  typename View_Base_Gen = basic_view_generator>
-	class basic_member_view;
+	struct generic_view_generator;
+	template<concepts::reflect_traits_c T, typename To_String = default_to_string, typename View_Base_Gen = generic_view_generator>
+	class generic_view_vtable;
+	template<typename P, typename To_String = default_to_string, typename View_Base_Gen = generic_view_generator>
+	class generic_member_property_view_vtable;
+	template<typename T, typename To_String = default_to_string, typename View_Base_Gen = generic_view_generator>
+	class generic_member_function_view_vtable;
 
-	template<typename T>
-	struct basic_view_generator {
-		static const auto view = basic_view<T, default_to_string<T>, basic_view_generator>{};
+	struct generic_view_generator {
+		template<typename T>
+		inline static generic_view_vtable<T, default_to_string, generic_view_generator> view_v{};
 		template<typename P>
-		using member_view_type = basic_member_view<T, P, default_to_string<T>, basic_view_generator>;
+		using member_property_view_type = generic_member_property_view_vtable<P, default_to_string, generic_view_generator>;
+		template<typename T>
+		using member_function_view_type = generic_member_function_view_vtable<T, default_to_string, generic_view_generator>;
 	};
 
-	template<template<typename> typename View_Base_Gen = basic_view_generator, typename T>
-	view make_view_shared(const std::shared_ptr<T>& t) {
-		auto p = View_Base_Gen<T>::view;
-		return view(t, p);
+	template<typename View_Base_Gen = generic_view_generator, typename T>
+	view_handle make_view_shared(const std::shared_ptr<T>& t) {
+		return view_handle(t, &(View_Base_Gen::template view_v<T>));
 	}
-	template<template<typename> typename View_Base_Gen = basic_view_generator, typename T>
-	view make_view_copy(const T& t) {
+	template<typename View_Base_Gen = generic_view_generator, typename T>
+	view_handle make_view_copy(const T& t) {
 		return make_view_shared<View_Base_Gen>(std::make_shared<T>(t));
 	}
-	template<template<typename> typename View_Base_Gen = basic_view_generator, typename T>
-	view make_view_shallow(T* t) {
+	template<typename View_Base_Gen = generic_view_generator, typename T>
+	view_handle make_view_shallow(T* t) {
 		return make_view_shared<View_Base_Gen>(std::shared_ptr<T>(t, [](T*) {}));
 	}
 
-	template<concepts::reflect_traits_c T, typename To_String, template<typename>  typename View_Base_Gen>
-	class basic_view : view_base {
+	template<concepts::reflect_traits_c T, typename To_String, typename View_Base_Gen>
+	class generic_view_vtable : public view_vtable_base {
 	public:
 		using value_type = T;
-		std::unordered_map <std::size_t, const std::unique_ptr<view_base>> member_properties_map{};
-		basic_view() {
-			for_each_reflect_member_properties([&]<typename T>(T prop) {
-				using type = T;
+		std::unordered_map <std::size_t, std::unique_ptr<view_vtable_base>> member_properties_map{};
+		generic_view_vtable() {
+			for_each_reflect_member_properties<value_type>([&]<typename Q>(Q prop) {
+				using type = Q;
 				using ptr_type = typename type::ptr_type;
+
 				member_properties_map.emplace(
-					view::to_key(prop.name()),
-					std::make_unique<View_Base_Gen<type>::member_view_type<ptr_type>>(prop.name(), prop.member_ptr())
+					view_handle::to_key(prop.name()),
+					std::make_unique<View_Base_Gen::template member_view_type<ptr_type>>(prop._name, prop.member_ptr())
 				);
 			});
-			for_each_reflect_member_functions([&]<typename T>(T prop) {
-				using type = T;
+			for_each_reflect_member_functions<value_type>([&]<typename Q>(Q prop) {
+				using type = Q;
 				using ptr_type = typename type::ptr_type;
 				member_properties_map.emplace(
-					view::to_key(prop.name()),
-					std::make_unique<View_Base_Gen<type>::member_view_type<ptr_type>>(prop.name(), prop.member_ptr())
+					view_handle::to_key(prop.name()),
+					std::make_unique<View_Base_Gen::template member_view_type<ptr_type>>(prop.name(), prop.member_ptr())
 				);
 			});
 		}
-	protected:
-		virtual view do_fetch(const this_type& self, key_type key) const override {
+		virtual view_handle do_fetch(const this_type& self, key_type key) const override {
 			auto itter = member_properties_map.find(key);
 			if (itter != member_properties_map.end()) {
-				auto value = itter->second;
-				return make_view_shared(self);
+				auto& vtable = itter->second;
+				return view_handle(self, vtable.get());
 			}
 			// manage getting subobjects
-			return view_none;
+			return view_none_v;
 		}
-		virtual view do_call(const this_type& self, const std::vector<view>&) const override {
+		virtual view_handle do_call(const this_type& self, const std::vector<view_handle>&) const override {
 			//manage calls
-			return view_none;
+			return view_none_v;
 		}
 
 		virtual std::string do_name() const override {
@@ -226,7 +242,7 @@ namespace stamp::reflect {
 				return to_string_v(*self);
 			}
 			else {
-				return "no to string available.";
+				return "";
 			}
 		}
 		virtual std::size_t do_type_hash() const override {
@@ -234,44 +250,92 @@ namespace stamp::reflect {
 		}
 	};
 
-	template<concepts::reflect_traits_c T, typename P, typename To_String, template<typename>  typename View_Base_Gen>
-	class basic_member_view : view_base {
+	template<typename P, typename To_String, typename View_Base_Gen>
+	class generic_member_property_view_vtable : public view_vtable_base {
 	public:
-		using value_type = T;
 		using ptr_type = P;
+		using ptr_reflect_type = reflect_traits<P>;
+		using class_type = ptr_reflect_type::class_type;
+		using value_type = ptr_reflect_type::value_type;
 
-		const view_base* view;
+		const view_vtable_base* view_ptr;
 		std::string_view name;
 		ptr_type ptr;
-		basic_member_view(const std::string_view& name, ptr_type ptr) : ptr(ptr) {
-			view = &View_Base_Gen::view<T>;
-			name = name;
+		generic_member_property_view_vtable(const std::string_view& name, ptr_type ptr) : ptr(ptr) {
+			this->view_ptr = &View_Base_Gen::template view_v<value_type>;
+			this->name = name;
 		}
-	protected:
-		virtual view do_fetch(const this_type& self, key_type key) const override {
-			auto self = static_pointer_cast<T>(_self);
-			return view->do_fetch(std::shared_ptr(self, &(self.get()->*ptr)), key);
+		virtual view_handle do_fetch(const this_type& _self, key_type key) const override {
+			auto self = static_pointer_cast<class_type>(_self);
+			return view_ptr->fetch(std::shared_ptr<value_type>(self, &(self.get()->*ptr)), key);
 		}
-		virtual view do_call(const this_type& self, const std::vector<view>& param) const override {
-			auto self = static_pointer_cast<T>(_self);
-			return view->do_call(std::shared_ptr(self, &(self.get()->*ptr)), param);
+		virtual view_handle do_call(const this_type& _self, const std::vector<view_handle>& param) const override {
+			auto self = static_pointer_cast<class_type>(_self);
+			return view_ptr->call(std::shared_ptr<value_type>(self, &(self.get()->*ptr)), param);
 		}
 
 		virtual std::string do_name() const override {
-			return name;
+			return std::string{ name };
 		}
 		virtual std::string do_to_string(const this_type& _self) const override {
-			auto self = static_pointer_cast<T>(_self);
+			auto self = static_pointer_cast<class_type>(_self);
+			auto& val = self.get()->*ptr;
 			To_String to_string_v{};
-			if constexpr (requires (T t, To_String s) { s(t); }) {
-				return to_string_v(*self);
+			if constexpr (requires (value_type t, To_String s) { s(t); }) {
+				return to_string_v(val);
 			}
 			else {
-				return "no to string available.";
+				return "";
 			}
 		}
 		virtual std::size_t do_type_hash() const override {
-			return typeid(T).hash_code();
+			return typeid(ptr_type).hash_code();
+		}
+	};
+
+	// view reference type
+
+	class view {
+	public:
+		using key_type = typename view_vtable_base::key_type;
+	private:
+		view_handle handle;
+	public:
+		view() : handle(view_none_v) {}
+		view(const view_handle& h) : handle(h) {}
+
+		// access members
+		view_handle at(key_type key) const {
+			return handle.at(key);
+		}
+		view_handle at(const std::string_view& str) const {
+			return handle.at(str);
+		}
+		// call self
+		template<typename... T>
+		view_handle call(T&&... t) const {
+			return handle.call(std::forward<T>(t)...);
+		}
+
+		// access base type
+		std::shared_ptr<void> lock() const { 
+			return handle.lock();
+		}
+		bool expired() const { 
+			return handle.expired();
+		}
+		const view_vtable_base* vtable() const {
+			return handle.vtable();
+		}
+
+		std::string name() const { 
+			return handle.name();
+		}
+		std::string to_string() const {
+			return handle.to_string();
+		}
+		std::size_t type_hash() const {
+			return handle.type_hash();
 		}
 	};
 }
