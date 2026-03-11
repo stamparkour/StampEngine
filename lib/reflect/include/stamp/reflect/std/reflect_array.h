@@ -18,47 +18,47 @@ namespace stamp::reflect {
 		static constexpr auto functions = std::tuple{
 			// Element Access
 			reflect(tag::none_rf, "at"_rf, &type::at),
-			reflect(tag::const_rf, "at"_rf, &type::at),
+			//reflect(tag::const_rf, "at"_rf, &type::at),
 
-			reflect(tag::none_rf,tag::subscript_rf, &type::operator[]),
-			reflect(tag::const_rf,tag::subscript_rf, &type::operator[]),
+			//reflect(tag::none_rf,tag::subscript_rf, &type::operator[]),
+			//reflect(tag::const_rf,tag::subscript_rf, &type::operator[]),
 
-			reflect(tag::none_rf, "front"_rf, &type::front),
-			reflect(tag::const_rf, "front"_rf, &type::front),
+			//reflect(tag::none_rf, "front"_rf, &type::front),
+			//reflect(tag::const_rf, "front"_rf, &type::front),
 
-			reflect(tag::none_rf, "back"_rf, &type::back),
-			reflect(tag::const_rf, "back"_rf, &type::back),
+			//reflect(tag::none_rf, "back"_rf, &type::back),
+			//reflect(tag::const_rf, "back"_rf, &type::back),
 
-			reflect(tag::none_rf, "data"_rf, &type::data),
-			reflect(tag::const_rf, "data"_rf, &type::data),
+			//reflect(tag::none_rf, "data"_rf, &type::data),
+			//reflect(tag::const_rf, "data"_rf, &type::data),
 
-			// Capacity
-			reflect("empty"_rf, &type::empty),
-			reflect("size"_rf, &type::size),
-			reflect("max_size"_rf, &type::max_size),
+			//// Capacity
+			//reflect("empty"_rf, &type::empty),
+			//reflect("size"_rf, &type::size),
+			//reflect("max_size"_rf, &type::max_size),
 
-			// Operations
-			reflect("fill"_rf, &type::fill),
-			reflect("swap"_rf, &type::swap),
+			//// Operations
+			//reflect("fill"_rf, &type::fill),
+			//reflect("swap"_rf, &type::swap),
 
-			// Iterators
-			reflect(tag::none_rf, tag::begin_rf, &type::begin),
-			reflect(tag::const_rf, tag::begin_rf, &type::begin),
+			//// Iterators
+			//reflect(tag::none_rf, tag::begin_rf, &type::begin),
+			//reflect(tag::const_rf, tag::begin_rf, &type::begin),
 
-			reflect(tag::none_rf, tag::end_rf, &type::end),
-			reflect(tag::const_rf, tag::end_rf, &type::end),
+			//reflect(tag::none_rf, tag::end_rf, &type::end),
+			//reflect(tag::const_rf, tag::end_rf, &type::end),
 
-			reflect(tag::cbegin_rf, &type::cbegin),
-			reflect(tag::cend_rf, &type::cend),
+			//reflect(tag::cbegin_rf, &type::cbegin),
+			//reflect(tag::cend_rf, &type::cend),
 
-			reflect(tag::none_rf, tag::rbegin_rf, &type::rbegin),
-			reflect(tag::const_rf, tag::rbegin_rf, &type::rbegin),
+			//reflect(tag::none_rf, tag::rbegin_rf, &type::rbegin),
+			//reflect(tag::const_rf, tag::rbegin_rf, &type::rbegin),
 
-			reflect(tag::none_rf, tag::rend_rf, &type::rend),
-			reflect(tag::const_rf, tag::rend_rf, &type::rend),
+			//reflect(tag::none_rf, tag::rend_rf, &type::rend),
+			//reflect(tag::const_rf, tag::rend_rf, &type::rend),
 
-			reflect(tag::crbegin_rf, &type::crbegin),
-			reflect(tag::crend_rf, &type::crend),
+			//reflect(tag::crbegin_rf, &type::crbegin),
+			//reflect(tag::crend_rf, &type::crend),
 		};
 
 		static constexpr auto constructors = std::tuple{

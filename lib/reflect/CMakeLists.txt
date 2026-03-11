@@ -11,7 +11,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/string_literal.h"
 	"include/stamp/reflect/meta_tuple.h"
 	"include/stamp/reflect/view.h"
-	"include/stamp/reflect/member_function_traits.h" 
+	 
 
 	"include/stamp/reflect/std/reflect_std.h" 
 	"include/stamp/reflect/std/reflect_vector.h" 

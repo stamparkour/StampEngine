@@ -7,24 +7,23 @@
 #include<tuple>
 #include<type_traits>
 #include<stamp/reflect/reflect_helpers.h>
+#include<stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/string_literal.h>
-#include <stamp/reflect/member_function_traits.h>
 #include "tag.h"
 #include <string>
 
 namespace stamp::reflect {
 
-	template<typename T, string_literal S, typename... Arg>
+
+	template<typename T, string_literal S, typename... Attr> requires reflect_traits<T>::is_function_type
 	struct member_function_t {
-		using class_type = member_function_traits<T>::class_type;
-		using result_type = member_function_traits<T>::result_type;
+		using base_type = reflect_traits<T>::base_type;
+		using return_type = reflect_traits<T>::return_type;
 		using ptr_type = T;
-		using arg_type = member_function_traits<T>::arg_type;
-		static constexpr bool is_const = member_function_traits<T>::is_const;
-		static constexpr bool is_noexcept = member_function_traits<T>::is_noexcept;
-		static constexpr bool is_ref_qual_lvalue = member_function_traits<T>::is_ref_qual_lvalue;
-		static constexpr bool is_ref_qual_rvalue = member_function_traits<T>::is_ref_qual_rvalue;
-		using attrib_type = std::tuple<Arg...>;
+		using arg_type = reflect_traits<T>::arg_type;
+
+		using attrib_type = std::tuple<Attr...>;
+
 		static constexpr std::size_t name_size = S.size();
 		using name_type = decltype(S);
 
@@ -32,7 +31,7 @@ namespace stamp::reflect {
 		ptr_type _member_ptr;
 		attrib_type _attributes;
 
-		constexpr member_function_t(ptr_type member_ptr, Arg... attributes) :
+		constexpr member_function_t(ptr_type member_ptr, Attr... attributes) :
 			_member_ptr(member_ptr),
 			_attributes(attributes...) {
 		}
@@ -48,60 +47,6 @@ namespace stamp::reflect {
 		}
 	};
 
-	template<typename T> 
-	constexpr bool is_member_function_v
-
-	// member function variations
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...), S, Attr...> reflect(tag::none_overload_tag_t, R(B::* member_ptr)(Arg...), Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const, S, Attr...> reflect(tag::const_overload_tag_t, R(B::* member_ptr)(Arg...) const, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) noexcept, S, Attr...> reflect(tag::none_overload_tag_t, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const noexcept, S, Attr...> reflect(tag::const_overload_tag_t, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...), S, Attr...> reflect(tag::lvalue_overload_tag_t, R(B::* member_ptr)(Arg...)&, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const, S, Attr...> reflect(tag::const_lvalue_overload_tag_t, R(B::* member_ptr)(Arg...) const&, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...), S, Attr...> reflect(tag::rvalue_overload_tag_t, R(B::* member_ptr)(Arg...)&&, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, typename... Arg, typename B, typename R, typename... Attr>
-	constexpr member_function_t<R(B::*)(Arg...) const, S, Attr...> reflect(tag::const_rvalue_overload_tag_t, R(B::* member_ptr)(Arg...) const&&, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-
-	template<string_literal S, typename Arg1, typename... Arg, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
-	constexpr member_function_t<T, S, Attr...> reflect(T member_ptr, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, std::same_as<void> V, concepts::member_function_with_param_c<> T, typename... Attr>
-	constexpr member_function_t<T, S, Attr...> reflect(T member_ptr, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-	template<string_literal S, concepts::is_member_function_c T, typename... Attr>
-	constexpr member_function_t<T, S, Attr...> reflect(T member_ptr, Attr... attr) {
-		return { member_ptr, attr... };
-	}
-
-	// member_function_generic 
-
 	template<typename T>
 	constexpr bool is_reflect_member_function_v = false;
 	template<typename T, std::size_t N, typename... Arg>
@@ -112,115 +57,73 @@ namespace stamp::reflect {
 
 	namespace concepts {
 		template<typename T>
-		concept member_function_c = is_reflect_member_function_v<T>;
+		concept reflect_member_function_c = is_reflect_member_function_v<T>;
 	}
 
-	// tags
+	// T,void -> T is a function with no parameters
+	// T -> T is a function
+	// T, Arg... -> T is a function with parameters Arg...
+	template<typename T, typename... Arg>
+	constexpr bool is_member_function_with_param_v = false;
+	template<typename R, typename B, typename Arg0, typename... Arg>
+	constexpr bool is_member_function_with_param_v<R(B::*)(Arg0, Arg...), Arg0, Arg...> = true;
+	template<typename R, typename B>
+	constexpr bool is_member_function_with_param_v<R(B::*)(), void> = true;
+	template<typename R, typename B, typename... Arg>
+	constexpr bool is_member_function_with_param_v<R(B::*)(Arg...)> = true;
 
-	namespace tag {
-		struct function_generic_tag_t : generic_tag_t {};
+	template<typename T, typename Tag>
+	constexpr bool is_member_function_with_overload_tag_v = false;
+	template<typename T, typename Tag> requires std::same_as<typename reflect_traits<T>::function_overload_tag, Tag>
+	constexpr bool is_member_function_with_overload_tag_v<T, Tag> = true;
+
+	namespace concepts {
+		template<typename T>
+		concept is_member_function_c = stamp::reflect::traits::is_member_type_v<T> && stamp::reflect::traits::is_function_type_v<T>;
 	}
 
-	// tag reflects
+	// string literal reflect
+	template<string_literal S, concepts::is_member_function_c T, typename... Attr>
+	constexpr member_function_t<T, S, Attr...> reflect(T member_ptr, Attr... attr) {
+		return { member_ptr, attr... };
+	}
 
-	template<typename... Arg, concepts::is_tag_c O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...), Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
+	// generic reflect member function
+	template<concepts::is_tag_c Tag, concepts::is_member_function_c T, typename... Attr>
+	constexpr auto reflect(Tag, T member_ptr, Attr... attr) {
+		if constexpr (requires { typename Tag::attrib_type; }) {
+			using attrib = typename Tag::attrib_type;
+			return reflect<tag::to_string_v<Tag>>(member_ptr, attrib{}, attr...);
 		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
-	}
-	template<typename... Arg, concepts::is_tag_c O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
+		else if constexpr (requires { typename Tag::template attrib_type<Tag>; }) {
+			using attrib = typename Tag::template attrib_type<Tag>;
+			return reflect<tag::to_string_v<Tag>>(member_ptr, attrib{}, attr...);
 		}
 		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
-	}
-	template<typename... Arg, concepts::is_tag_c O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::none_overload_tag_t, O, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
-	}
-	template<typename... Arg, concepts::is_tag_c O, typename B, typename R, typename... Attr>
-	constexpr auto reflect(tag::const_overload_tag_t, O, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
+			return reflect<tag::to_string_v<Tag>>(member_ptr, attr...);
 		}
 	}
 
-	template<typename Arg1, typename... Arg, concepts::is_tag_c O, concepts::member_function_with_param_c<Arg1, Arg...> T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
+
+	// overload none
+	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	constexpr auto reflect(tag::none_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...), Attr... attr) {
+		return reflect(t, member_ptr, attr...);
 	}
-	template<std::same_as<void> Arg, concepts::is_tag_c O, concepts::member_function_with_param_c<> T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
+	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	constexpr auto reflect(tag::none_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
+		return reflect(t, member_ptr, attr...);
 	}
-	template<concepts::is_tag_c O, concepts::is_member_function_c T, typename... Attr>
-	constexpr auto reflect(O, T member_ptr, Attr... attr) {
-		if constexpr (requires { typename O::attrib_type; }) {
-			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else if constexpr (requires { typename O::template attrib_type<O>; }) {
-			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
-		}
-		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
-		}
+
+
+	// overload const
+	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	constexpr auto reflect(tag::const_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) const, Attr... attr) {
+		return reflect(t, member_ptr, attr...);
+	}
+	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	constexpr auto reflect(tag::const_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
+		return reflect(t, member_ptr, attr...);
 	}
 }
 

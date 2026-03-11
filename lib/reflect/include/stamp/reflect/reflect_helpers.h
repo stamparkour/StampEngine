@@ -50,14 +50,6 @@ namespace stamp::reflect {
 		constexpr auto static_properties_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_properties; }
 		constexpr auto static_properties_v<T> = reflect_traits<T>::static_properties;
-		template<typename T>
-		constexpr auto is_member_type_v = false;
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::is_member_type; }
-		constexpr auto is_member_type_v<T> = reflect_traits<T>::is_member_type;
-		template<typename T>
-		constexpr auto is_function_type_v = false;
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::is_function_type; }
-		constexpr auto is_function_type_v<T> = reflect_traits<T>::is_function_type;
 	}
 
 	// runs the Func on all member functions of T’s reflect traits
@@ -84,6 +76,18 @@ namespace stamp::reflect {
 	template<string_literal... Arg>
 	constexpr auto comma_list_string_literals_v = comma_list_string_literals< Arg...>::value;
 
+	template<typename... T>
+	struct first_argument;
+	template<typename T0, typename... T>
+	struct first_argument<T0, T...> {
+		using type = T0;
+	};
+	template<>
+	struct first_argument<> {
+		using type = void;
+	};
+	template<typename... T>
+	using first_argument_v = first_argument<T...>;
 }
 
 #endif // STAMP_REFLECT_REFLECT_HELPERS_H
