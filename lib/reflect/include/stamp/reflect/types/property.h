@@ -47,7 +47,7 @@ namespace stamp::reflect {
 	};
 
 	template<string_literal S, typename B, typename T, typename... Attr>
-	constexpr member_property_t<B, T, S, Attr...> reflect(T B::* member_ptr, Attr... attr) {
+	constexpr member_property_t<B, T, S, Attr...> reflect_property(T B::* member_ptr, Attr... attr) {
 		return { member_ptr, attr... };
 	}
 
@@ -55,14 +55,14 @@ namespace stamp::reflect {
 	constexpr auto reflect(O, T B::* member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
+			return reflect_property<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
 		}
 		else if constexpr (requires { typename O::template attrib_type<O>; }) {
 			using attrib = typename O::template attrib_type<O>;
-			return reflect<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
+			return reflect_property<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
 		}
 		else {
-			return reflect<tag::to_string_v<O>>(member_ptr, attr...);
+			return reflect_property<tag::to_string_v<O>>(member_ptr, attr...);
 		}
 	}
 }

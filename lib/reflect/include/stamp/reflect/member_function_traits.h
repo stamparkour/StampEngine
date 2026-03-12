@@ -4,24 +4,32 @@
 
 #include <concepts>
 #include <tuple>
+#include <stamp/reflect/types/tag.h>
 
 namespace stamp::reflect {
 	namespace tag {
-		struct overload_tag_generic_t {};
+		struct overload_generic_tag_t : generic_tag_t {};
+		struct member_function_generic_tag_t : generic_tag_t {};
 
-		struct none_overload_tag_t : overload_tag_generic_t {} none_rf;
-		struct const_overload_tag_t : overload_tag_generic_t {} const_rf;
-		struct lvalue_overload_tag_t : overload_tag_generic_t {} lvalue_rf;
-		struct const_lvalue_overload_tag_t : overload_tag_generic_t {} const_lvalue_rf;
-		struct rvalue_overload_tag_t : overload_tag_generic_t {} rvalue_rf;
-		struct const_rvalue_overload_tag_t : overload_tag_generic_t {} const_rvalue_rf;
+		struct none_overload_tag_t : overload_generic_tag_t {} none_rf;
+		struct const_overload_tag_t : overload_generic_tag_t {} const_rf;
+		struct lvalue_overload_tag_t : overload_generic_tag_t {} lvalue_rf;
+		struct const_lvalue_overload_tag_t : overload_generic_tag_t {} const_lvalue_rf;
+		struct rvalue_overload_tag_t : overload_generic_tag_t {} rvalue_rf;
+		struct const_rvalue_overload_tag_t : overload_generic_tag_t {} const_rvalue_rf;
+	}
+	namespace concepts {
+		template<typename T>
+		concept is_overload_tag_c = std::derived_from<T, stamp::reflect::tag::overload_generic_tag_t>;
+		template<typename T>
+		concept is_member_function_generic_tag_c = std::derived_from<T, stamp::reflect::tag::member_function_generic_tag_t>;
 	}
 
 	template<typename T>
 	struct member_function_traits;
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...)> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...);
 		using arg_type = std::tuple<Arg...>;
@@ -33,7 +41,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...) const> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const;
 		using arg_type = std::tuple<Arg...>;
@@ -45,7 +53,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...) noexcept> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) noexcept;
 		using arg_type = std::tuple<Arg...>;
@@ -57,7 +65,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...) const noexcept> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const noexcept;
 		using arg_type = std::tuple<Arg...>;
@@ -69,7 +77,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...)&> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...)&;
 		using arg_type = std::tuple<Arg...>;
@@ -81,7 +89,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...) const&> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const&;
 		using arg_type = std::tuple<Arg...>;
@@ -93,7 +101,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...)&&> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...)&&;
 		using arg_type = std::tuple<Arg...>;
@@ -105,7 +113,7 @@ namespace stamp::reflect {
 	};
 	template<typename B, typename R, typename... Arg>
 	struct member_function_traits<R(B::*)(Arg...) const&&> {
-		using class_type = B;
+		using base_type = B;
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const&&;
 		using arg_type = std::tuple<Arg...>;

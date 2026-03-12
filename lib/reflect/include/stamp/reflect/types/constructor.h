@@ -10,16 +10,15 @@ namespace stamp::reflect {
 
 	namespace detail {
 		template<typename R, typename... Arg>
-		consteval auto expand_tuple_to_constructor_ptr_f(std::tuple<Arg...>) {
-			return [](Arg... arg) -> R {
-				return R{ arg ... };
-			};
+		consteval R constructor_ptr_f(Arg&&... arg) {
+			return R{std::forward<Arg>(arg)...};
 		}
-
+		template<typename R, typename... Arg>
+		consteval auto expand_tuple_to_constructor_ptr_f(std::tuple<Arg...>) -> R(*)(Arg...) {
+			return constructor_ptr_f<R,Arg...>;
+		}
 		template<typename R, typename Tuple>
-		constexpr auto expand_tuple_to_constructor_ptr_v = expand_tuple_to_constructor_ptr_f<R>(Tuple{});
-		template<typename R, typename Tuple>
-		using expand_tuple_to_constructor_ptr_type_v = decltype(expand_tuple_to_constructor_ptr_v<R, Tuple>);
+		using expand_tuple_to_constructor_ptr_type_v = decltype(expand_tuple_to_constructor_ptr_f<R>(Tuple{}));
 	}
 	template<typename B, typename Arg, typename... Attr>
 	struct member_constructor_t {
@@ -39,7 +38,7 @@ namespace stamp::reflect {
 			return traits::name_v<B>;
 		}
 		constexpr ptr_type member_ptr() const noexcept {
-			return detail::expand_tuple_to_constructor_ptr_v<B, arg_type>;
+			return detail::expand_tuple_to_constructor_ptr_f<B>(arg_type{});
 		}
 		const attrib_type& attributes() const noexcept {
 			return _attributes;

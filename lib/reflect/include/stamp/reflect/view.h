@@ -209,14 +209,16 @@ namespace stamp::reflect {
 					std::make_unique<View_Base_Gen::template member_property_view_type<ptr_type>>(prop._name, prop.member_ptr())
 				);
 			});
-			/*for_each_reflect_member_functions<value_type>([&]<typename Q>(Q prop) {
+			for_each_reflect_member_functions<value_type>([&]<typename Q>(Q prop) {
 				using type = Q;
 				using ptr_type = typename type::ptr_type;
-				member_properties_map.emplace(
+				auto [iter, inserted] = member_properties_map.emplace(
 					view_handle::to_key(prop.name()),
-					std::make_unique<View_Base_Gen::template member_view_type<ptr_type>>(prop.name(), prop.member_ptr())
+					std::make_unique<View_Base_Gen::template member_function_view_type<ptr_type>>(prop.name())
 				);
-			});*/
+				auto& val = *iter;
+				val.push_back(prop.member_ptr());
+			});
 		}
 		virtual view_handle do_fetch(const this_type& self, key_type key) const override {
 			auto itter = member_properties_map.find(key);
