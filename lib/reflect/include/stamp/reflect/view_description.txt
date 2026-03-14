@@ -1,0 +1,62 @@
+
+
+int my_obj = 2;
+
+view v{my_obj}; // a view represents a type errased reference
+v.handle(); // returns a view_handle, which contains all the reflections and object information
+
+
+v = 4;
+// internally:
+// view_handle$int$["operator ="](view_handle$int$move${4});
+
+struct my_obj {
+	int var = 7;
+
+	void test_func() {
+		std::cout << "Hello!" << std::endl;
+	}
+};	
+
+namespace stamp::reflect {
+	template<>
+	struct reflect_traits<my_obj> {
+		using type = my_obj;
+		constexpr string_literal name = "my_obj";
+		constexpr properties = std::tuple{
+			reflect("var", &my_obj::var)
+		};
+		constexpr functions = std::tuple{
+			reflect("test_func", &my_obj::test_func)
+		};
+	}
+}
+
+view v2{my_obj{}};
+
+v2.member("var") += 6;
+// internally:
+// view_handle$my_obj$["var"]["operator +="](view_handle$int$move${6});
+
+v2.member("test_func").call();
+// internally:
+// view_handle$my_obj$["test_func"]["operator ()"]();
+
+v2.members(); // returns a string array of all members
+
+v2.name(); // returns a string to the name of the original member. this case it returns nothing; this view does not point to a member.
+
+v2.type_hash(); // returns a type hash for the original type
+
+v2.type_name(); // returns a string for the original type's name
+
+int t = 2;
+int* p = &t;
+
+view v3{p}; // view to a pointer
+
+(*v3) -= (*v3) * 3;
+//(*v3) internals:
+//view_handle$int*$["operator *"];
+// -= internals
+//view_handle$int*$["operator *"]["operator -="](/* variadic list of view_handles */);

@@ -158,9 +158,17 @@ namespace stamp::reflect {
 	// basic view types
 
 	struct default_to_string {
-		template<typename Q> requires requires(Q q) { std::to_string(std::forward<Q>(q));  }
-		std::string operator()(Q&& q) {
-			return std::to_string(std::forward<Q>(q));
+		template<typename Q> 
+		std::string operator()(Q q) {
+			if constexpr (requires (Q q) { q.to_string(); }) {
+				return q.to_string();
+			}
+			else if constexpr (requires (Q q) { std::to_string(std::forward<Q>(q)); }) {
+				return std::to_string(std::forward<Q>(q));
+			}
+			else {
+				return "no to string for type";
+			}
 		}
 	};
 
@@ -214,10 +222,10 @@ namespace stamp::reflect {
 				using ptr_type = typename type::ptr_type;
 				auto [iter, inserted] = member_properties_map.emplace(
 					view_handle::to_key(prop.name()),
-					std::make_unique<View_Base_Gen::template member_function_view_type<ptr_type>>(prop.name())
+					std::make_unique<View_Base_Gen::template member_function_view_type<value_type>>(prop.name())
 				);
 				auto& val = *iter;
-				val.push_back(prop.member_ptr());
+				val.add_overload(prop.member_ptr());
 			});
 		}
 		virtual view_handle do_fetch(const this_type& self, key_type key) const override {
@@ -263,6 +271,7 @@ namespace stamp::reflect {
 		const view_vtable_base* view_ptr;
 		std::string_view name;
 		ptr_type ptr;
+
 		generic_member_property_view_vtable(const std::string_view& name, ptr_type ptr) : ptr(ptr) {
 			this->view_ptr = &View_Base_Gen::template view_v<value_type>;
 			this->name = name;
@@ -289,6 +298,45 @@ namespace stamp::reflect {
 			else {
 				return "";
 			}
+		}
+		virtual std::size_t do_type_hash() const override {
+			return typeid(ptr_type).hash_code();
+		}
+	};
+
+	template<typename T, typename To_String, typename View_Base_Gen>
+	class generic_member_function_view_vtable : public view_vtable_base {
+	public:
+		using base_type = T; // type of base/containing class
+		using base_ptr_type = std::shared_ptr<base_type>:
+		using func_type = view_handle(*)(const base_ptr_type&, const std::vector<view_handle>&);
+
+		std::string_view name;
+		std::vector<
+
+		template<typename T>
+		void add_overload(T overload) {
+
+		}
+
+		generic_member_function_view_vtable(const std::string_view& name) {
+			this->view_ptr = &View_Base_Gen::template view_v<value_type>;
+			this->name = name;
+		}
+		virtual view_handle do_fetch(const this_type& _self, key_type key) const override {
+			auto self = static_pointer_cast<class_type>(_self);
+			return view_ptr->fetch(std::shared_ptr<value_type>(self, &(self.get()->*ptr)), key);
+		}
+		virtual view_handle do_call(const this_type& _self, const std::vector<view_handle>& param) const override {
+			auto self = static_pointer_cast<class_type>(_self);
+			return view_ptr->call(std::shared_ptr<value_type>(self, &(self.get()->*ptr)), param);
+		}
+
+		virtual std::string do_name() const override {
+			return std::string{name};
+		}
+		virtual std::string do_to_string(const this_type& _self) const override {
+			return "";
 		}
 		virtual std::size_t do_type_hash() const override {
 			return typeid(ptr_type).hash_code();
