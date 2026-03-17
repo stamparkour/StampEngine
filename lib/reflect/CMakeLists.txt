@@ -25,7 +25,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/types/constructor.h"
 	"include/stamp/reflect/types/iterator.h"
 	"include/stamp/reflect/types/tag.h"
-)
+ "include/stamp/reflect/view_handle.h")
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})

@@ -6,8 +6,8 @@ namespace stamp::reflect {
 	template<typename T>
 	struct reflect_traits;
 	// using type = T;
-	// constexpr static auto space = "";
-	// constexpr static auto name = "";
+	// constexpr static string_literal space = "";
+	// constexpr static string_literal name = "";
 	// constexpr static auto base = std::tuple{};
 	// constexpr static auto properties = std::tuple{};
 	// constexpr static auto functions = std::tuple{};
