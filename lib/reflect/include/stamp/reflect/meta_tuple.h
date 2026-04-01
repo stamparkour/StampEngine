@@ -20,6 +20,11 @@ namespace stamp::reflect {
 		std::apply([&](const Arg&... arg) { (func(arg), ...); }, tuple);
 	}
 
+	template<typename Func, typename... Arg>
+	constexpr void for_each(std::tuple<Arg...>& tuple, Func func) {
+		std::apply([&](Arg&... arg) { (func(arg), ...); }, tuple);
+	}
+
 	// runs the Func on all the types of the tuple<Arg...> that match Pred. passes a std::tuple_element to the func
 	template<template<typename> typename Pred, typename Tuple, typename Func>
 	constexpr void for_each_of(Func func) {
@@ -35,17 +40,19 @@ namespace stamp::reflect {
 	// runs the Func on all members of the tuple<Arg...> that match Pred
 	template<template<typename> typename Pred, typename Func, typename... Arg>
 	constexpr void for_each_of(const std::tuple<Arg...>& tuple, Func func) {
-		for_each(tuple, [&](auto& arg) {
+		for_each(tuple, [&]<typename Arg>(Arg&& arg) {
 			using type = std::decay_t<decltype(arg)>;
 			if constexpr (Pred<type>::value) {
-				func(arg);
+				func(std::forward<Arg>(arg));
 			}
 		});
 	}
 
-	template<template<typename> typename Pred, typename... Arg>
-	constexpr auto tuple_fetch(const std::tuple<Arg...>& tuple) {
-
+	template<typename... Arg, typename Func>
+	constexpr std::tuple<Arg...> for_each_construct(Func func) {
+		return[&] <std::size_t... Is>(std::index_sequence<Is...>) {
+			return std::tuple<Arg...>{func(std::tuple_element<Is, std::tuple<Arg...>>{})...};
+		}(std::make_index_sequence<std::tuple_size_v<std::tuple<Arg...>>>{});
 	}
 
 	/*

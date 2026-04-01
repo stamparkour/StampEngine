@@ -3,7 +3,7 @@
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
-//#include <stamp/reflect/view.h>
+#include <stamp/reflect/view.h>
 #include <concepts>
 
 using namespace stamp::reflect;
@@ -26,17 +26,16 @@ namespace stamp::reflect {
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
-
-	/*Dummy obj = {};
+	Dummy obj = {};
 	obj.test = 4;
-	view_handle my_view = make_view_shallow(&obj);
+	view my_view = view(obj);
 	std::cout << my_view.name() << std::endl;
-	std::cout << my_view["test"].name() << std::endl;
-	std::cout << my_view["test"].to_string() << std::endl;
-	std::cout << my_view["test"].name() << std::endl;
-	std::cout << my_view["test"].to_string() << std::endl;*/
+	std::cout << my_view.fetch("test").name() << std::endl;
+	std::cout << my_view.fetch("test").to_string() << std::endl;
+	std::cout << my_view.fetch("test").reflect_info().name << std::endl;
+	std::cout << my_view.fetch("test").to_string() << std::endl;
 
-	auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
+	/*auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
 	stamp::reflect::for_each(tuple, [](auto member) {
 		using type = decltype(member);
 		using ptr_type = typename decltype(member)::ptr_type;
@@ -67,7 +66,7 @@ int main(int argc, char** argv) {
 		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
 			std::cout << "attribute: " << attrib.operator_name << std::endl;
 			});
-		});
+		});*/
 
 	return 0;
 }

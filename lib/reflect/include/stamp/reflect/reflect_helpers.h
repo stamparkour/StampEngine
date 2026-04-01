@@ -6,6 +6,7 @@
 #include"meta_tuple.h"
 #include"string_literal.h"
 #include<tuple>
+#include<string_view>
 
 namespace stamp::reflect {
 
@@ -19,9 +20,11 @@ namespace stamp::reflect {
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::name; }
 		constexpr string_literal name_v<T> = reflect_traits<T>::name;
 		template<typename T>
-		constexpr string_literal full_name_v = concat_cstring_v<space_v<T>, name_v<T>>;
+		constexpr string_literal full_name_v = name_v<T>;
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::full_name; }
 		constexpr string_literal full_name_v<T> = reflect_traits<T>::full_name;
+		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::space; } && !requires { reflect_traits<T>::full_name; }
+		constexpr string_literal full_name_v<T> = concat_cstring_v<space_v<T>, "::", name_v<T>>;
 		template<typename T>
 		constexpr string_literal basic_name_v = name_v<T>;
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::basic_name; }
@@ -88,6 +91,18 @@ namespace stamp::reflect {
 	};
 	template<typename... T>
 	using first_argument_v = first_argument<T...>;
+
+
+	struct reflect_info_t {
+		std::string_view name;
+		std::size_t hash_code;
+	};
+
+	template<typename T>
+	inline const reflect_info_t reflect_info_v = {
+		.name = traits::name_v<T>,
+		.hash_code = typeid(T).hash_code()
+	};
 }
 
 #endif // STAMP_REFLECT_REFLECT_HELPERS_H
