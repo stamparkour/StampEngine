@@ -90,7 +90,7 @@ namespace stamp::reflect {
 		using type = void;
 	};
 	template<typename... T>
-	using first_argument_v = first_argument<T...>;
+	using first_argument_v = typename first_argument<T...>::type;
 
 
 	struct reflect_info_t {

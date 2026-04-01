@@ -10,6 +10,7 @@
 #include <concepts>
 #include <unordered_map>
 #include <vector>
+#include <functional>
 #include <stdexcept>
 
 #include "reflect_traits.h"
@@ -181,6 +182,56 @@ namespace stamp::reflect {
 		}
 	};
 
+	template<typename BaseT, typename ToString, typename ViewGen>
+	class default_function_view : public view_desc_base {
+	public:
+		using self_type = view_desc_base::self_type;
+		using base_type = BaseT;
+	private:
+		using function_type = std::function<view_handle(base_type*, const std::vector<view_handle>&)>;
+		std::string_view name;
+		struct function_entry_t {
+			std::vector<std::size_t> param_hashes;
+			function_type function;
+		};
+		std::vector<function_entry_t> overloads{};
+
+		virtual view_handle do_fetch(const self_type& void_self, const std::string_view& target) const override {
+			throw std::runtime_error("cannot fetch a function view: " + std::string{ traits::full_name_v<ValT> });
+		}
+		virtual view_handle do_invoke(const self_type& void_self, const std::vector<view_handle>& handles) const override {
+			auto self = static_cast<base_type*>(void_self.get());
+
+			std::vector<std::size_t> param_hashes{};
+			param_hashes.reserve(handles.size());
+			for (cost auto& h : handles) {
+				param_hashes.push_back(h.reflect_info().hash_code);
+			}
+
+
+		}
+		virtual std::string do_to_string(const self_type& void_self) const override {
+			auto self = static_cast<base_type*>(void_self.get());
+			ToString to_string_f{};
+
+			return to_string_f(self->*member_ptr);
+		}
+		virtual std::string do_name(const self_type&) const override {
+			return std::string{ name };
+		}
+		virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
+			return reflect_info_v<value_type>;
+		}
+	public:
+		default_property_view(const std::string_view& name) {
+			this->name = name;
+		}
+		template<typename T>
+		void push(T func) {
+
+		}
+	};
+
 	struct default_to_string {
 		template<typename T>
 		std::string operator()(const T& value) const {
@@ -211,9 +262,10 @@ namespace stamp::reflect {
 		};
 		template<typename ValT, typename BaseT>
 		using property_view_desc = default_property_view<ValT, BaseT, default_to_string, default_view_generator>;
-		template<typename T>
-		using function_view_desc = nullptr_t;
+		template<typename BaseT>
+		using function_view_desc = default_function_view<BaseT, default_to_string, default_view_generator>;
 	};
 }
+
 
 #endif // STAMP_REFLECT_VIEW_HANDLE_H
