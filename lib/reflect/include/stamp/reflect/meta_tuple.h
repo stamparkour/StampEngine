@@ -27,11 +27,6 @@ namespace stamp::reflect {
 		std::apply([&](Arg&... arg) { (func(arg), ...); }, tuple);
 	}
 
-	template<typename Func, typename... Arg>
-	constexpr void for_each(std::tuple<Arg...>& tuple, Func func) {
-		std::apply([&](Arg&... arg) { (func(arg), ...); }, tuple);
-	}
-
 	// runs the Func on all the types of the tuple<Arg...> that match Pred. passes a std::tuple_element to the func
 	template<template<typename> typename Pred, typename Tuple, typename Func>
 	constexpr void for_each_of(Func func) {

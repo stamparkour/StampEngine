@@ -15,6 +15,7 @@
 
 #include "reflect_traits.h"
 #include "reflect_helpers.h"
+#include "member_function_traits.h"
 
 namespace stamp::reflect {
 	class view_handle;
@@ -48,37 +49,19 @@ namespace stamp::reflect {
 	};
 
 	class view_handle {
-		std::shared_ptr<void> ptr;
-		const view_desc_base* desc;
+		std::shared_ptr<void> ptr = nullptr;
+		const view_desc_base* desc = nullptr;
 	public:
-		view_handle() {}
+		constexpr view_handle() {}
 		template<typename T>
 		std::shared_ptr<T> static_view_cast() const {
 			return std::static_pointer_cast<T>(ptr);
 		}
-		view_handle(const std::shared_ptr<T>& ptr, const view_desc_base* desc) {
+		template<typename T>
+		constexpr view_handle(const std::shared_ptr<T>& ptr, const view_desc_base* desc) {
 			this->ptr = std::static_pointer_cast<void>(ptr);
 			this->desc = desc;
 		}
-
-		template<typename T>
-		void insert(T func_ptr) {
-			using result_type = member_function_traits<T>::result_type;
-			using arg_type = member_function_traits<T>::arg_type;
-			using arg_ref_type = member_function_traits<T>::arg_type;
-
-			std::vector<size_t> hashs{};
-
-			for_each<arg_type>([&]<typename TupleElement>(TupleElement) {
-				using type = TupleElement::type;
-				hashs.emplace_back(type_hash_v<type>);
-			});
-
-			insert_base(hashs, [func_ptr](BaseT* self, const std::vector<view_handle>& vec) -> view_handle {
-
-				if (vec.size() != std::tuple_size_v<arg_ref_type>) {
-					throw std::runtime_error("must have equal size for runtime function execution");
-				}
 
 		view_handle fetch(const std::string_view& str) {
 			return desc->fetch(ptr, str);
@@ -89,7 +72,7 @@ namespace stamp::reflect {
 		template<typename... Arg>
 		view_handle invoke(Arg&&... args) {
 			std::vector<view_handle> param{};
-			((param.emplace_back(std::shared_ptr(&args, [](auto p) {}))), ...);
+			((param.emplace_back(std::shared_ptr<Arg>(&args, [](auto p) {}))), ...);
 			return desc->invoke(ptr, param);
 		}
 		std::string to_string() const {
@@ -101,6 +84,16 @@ namespace stamp::reflect {
 		const reflect_info_t& reflect_info() const {
 			return desc->reflect_info(ptr);
 		}
+
+		bool operator ==(const view_handle& other) const {
+			return ptr == other.ptr && desc == other.desc;
+		}
+		bool operator ==(nullptr_t) const {
+			return ptr == nullptr && desc == nullptr;;
+		}
+		bool is_void() {
+			return desc->reflect_info(ptr).hash_code == reflect_info_v<void>.hash_code;
+		}
 	};
 
 	view_handle view_desc_base::fetch(const self_type& self, const std::string_view& name) const {
@@ -109,11 +102,36 @@ namespace stamp::reflect {
 	view_handle view_desc_base::invoke(const self_type& self, const std::vector<view_handle>& param) const {
 		return do_invoke(self, param);
 	}
-
 	template<typename T, typename ViewGen = default_view_generator>
 	inline view_handle make_view_handle(const std::shared_ptr<T>& ptr) {
 		return view_handle(ptr, ViewGen::template view_desc_f<T>());
 	}
+
+	namespace detail {
+		class view_handle_void : public view_desc_base {
+			virtual view_handle do_fetch(const self_type&, const std::string_view&) const override {
+				throw std::runtime_error("cannot fetch from void view");
+			}
+			virtual view_handle do_invoke(const self_type&, const std::vector<view_handle>&) const override {
+				throw std::runtime_error("cannot invoke void view");
+			}
+			virtual std::string do_to_string(const self_type&) const override {
+				return "void";
+			}
+			virtual std::string do_name(const self_type&) const override {
+				return "void";
+			}
+			virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
+				return reflect_info_v<void>;
+			}
+		public:
+			view_handle_void() = default;
+		};
+
+		constexpr view_handle_void view_handle_void_v{};
+	}
+
+	inline const view_handle view_handle_void_v = view_handle(std::shared_ptr<void>(nullptr), &detail::view_handle_void_v);
 
 	template<typename ValT, typename ToString, typename ViewGen>
 	class default_view_desc : public view_desc_base {
@@ -215,96 +233,52 @@ namespace stamp::reflect {
 		struct function_entry_t {
 			std::vector<std::size_t> param_hashes;
 			function_type function;
-		};
-		std::vector<function_entry_t> overloads{};
-
-		virtual view_handle do_fetch(const self_type& void_self, const std::string_view& target) const override {
-			throw std::runtime_error("cannot fetch a function view: " + std::string{ traits::full_name_v<ValT> });
-		}
-		virtual view_handle do_invoke(const self_type& void_self, const std::vector<view_handle>& handles) const override {
-			auto self = static_cast<base_type*>(void_self.get());
-
-			std::vector<std::size_t> param_hashes{};
-			param_hashes.reserve(handles.size());
-			for (cost auto& h : handles) {
-				param_hashes.push_back(h.reflect_info().hash_code);
-			}
-
-
-		}
-		virtual std::string do_to_string(const self_type& void_self) const override {
-			auto self = static_cast<base_type*>(void_self.get());
-			ToString to_string_f{};
-
-			return to_string_f(self->*member_ptr);
-		}
-		virtual std::string do_name(const self_type&) const override {
-			return std::string{ name };
-		}
-		virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
-			return reflect_info_v<value_type>;
-		}
-	public:
-		default_property_view(const std::string_view& name) {
-			this->name = name;
-		}
-		template<typename T>
-		void push(T func) {
-
-		}
-
-		using base_type = std::remove_cvref_t<BaseT>;
-		using function_type = std::function<view_handle(base_type*, const std::vector<view_handle>&)>;
-	private:
-		struct function_desc_t {
-			std::vector<size_t> args_hash;
-			function_type ptr;
 
 			bool match(const std::vector<view_handle>& vec) const {
-				if (args_hash.size() != vec.size()) return false;
+				if (param_hashes.size() != vec.size()) return false;
 
 				auto vec_i = vec.begin();
-				auto args_i = args_hash.begin();
-				for (; vec_i != vec.end() && args_i != args_hash.end(); (void)(++vec_i), (void)(++args_i)) {
-					if (vec_i->type_hash() != *args_i) return false;
+				auto args_i = param_hashes.begin();
+				for (; vec_i != vec.end() && args_i != param_hashes.end(); (void)(++vec_i), (void)(++args_i)) {
+					if (vec_i->reflect_info()->hash_code != *args_i) return false;
 				}
 				return true;
 			}
 		};
+		std::vector<function_entry_t> overloads{};
 
-		std::string_view name_v;
-		std::vector<function_desc_t> functions{};
-	protected:
-		virtual view_handle do_fetch(const std::shared_ptr<void>& void_self, const std::string_view& key) const override {
-			return nullptr;
+		virtual view_handle do_fetch(const self_type& void_self, const std::string_view& target) const override {
+			throw std::runtime_error("cannot fetch a function view: " + std::string{ traits::full_name_v<base_type> });
 		}
 		virtual view_handle do_invoke(const std::shared_ptr<void>& void_self, const std::vector<view_handle>& vec) const override {
 			auto self = static_cast<base_type*>(void_self.get());
 
-			for (const auto& i : functions) {
+			for (const auto& i : overloads) {
 				if (i.match(vec)) {
 					return i.ptr(self, vec);
 				}
 			}
 			throw std::runtime_error("failed to invoke view_handle");
 		}
-		virtual std::string do_name(const std::shared_ptr<void>& self) const override {
-			return std::string{name_v};
-		}
-		virtual std::string do_type_name(const std::shared_ptr<void>& self) const override {
-			return stamp::reflect::traits::full_name_v<base_type>;
-		}
-		virtual std::string do_to_string(const std::shared_ptr<void>& void_self) const override {
+		virtual std::string do_to_string(const self_type& void_self) const override {
 			auto self = static_cast<base_type*>(void_self.get());
+			ToString to_string_f{};
+
 			return {};
 		}
-		virtual type_hash_t do_type_hash(const std::shared_ptr<void>& void_self) const override {
-			return type_hash_v<function_type>;
+		virtual std::string do_name(const self_type&) const override {
+			return std::string{ name };
+		}
+		virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
+			return reflect_info_v<base_type>;
 		}
 	public:
-		default_function_desc_t(const std::string_view& name) : name_v(name) {}
+		default_function_view(const std::string_view& name) {
+			this->name = name;
+		}
+
 		void insert_base(const std::vector<size_t>& args_hash, function_type ptr) {
-			functions.emplace_back(args_hash, ptr);
+			overloads.emplace_back(args_hash, ptr);
 		}
 
 		template<typename T>
@@ -317,10 +291,10 @@ namespace stamp::reflect {
 
 			for_each<arg_type>([&]<typename TupleElement>(TupleElement) {
 				using type = TupleElement::type;
-				hashs.emplace_back(type_hash_v<type>);
+				hashs.emplace_back(reflect_info_v<type>.hash_code);
 			});
 
-			insert_base(hashs, [func_ptr](BaseT* self, const std::vector<view_handle>& vec) -> view_handle {
+			insert_base(hashs, [func_ptr](base_type* self, const std::vector<view_handle>& vec) -> view_handle {
 
 				if (vec.size() != std::tuple_size_v<arg_ref_type>) {
 					throw std::runtime_error("must have equal size for runtime function execution");
@@ -338,7 +312,7 @@ namespace stamp::reflect {
 					std::apply([&]<typename... Args>(Args&&... args) {
 						+(self->*func_ptr)(args...);
 					}, args);
-					return view_handle_void_f();
+					return view_handle_void_v;
 				}
 				else {
 					std::shared_ptr<result_type> t = std::make_shared(std::apply([&]<typename... Args>(Args&&... args) {
