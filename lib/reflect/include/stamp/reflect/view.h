@@ -18,16 +18,12 @@ namespace stamp::reflect {
 		//creates a reference view
 		template<typename T>
 		view(T& t) {
-			handle_v = make_view_handle(std::shared_ptr<T>(&t, [](T*) {}));
+			handle_v = make_view_handle( std::shared_ptr<T>(&t, [](T*) {}) );
 		}
 		//creates a copy view
 		template<typename T>
 		view(const T& t) {
-			handle_v = view_handle{ std::make_shared<T>(t) };
-		}
-		template<typename T>
-		view(T&& t) {
-			handle_v = view_handle{ std::make_shared<T>(t) };
+			handle_v = make_view_handle(std::make_shared<T>(t) );
 		}
 		//create from handle
 		view(const view_handle& handle) {
@@ -44,11 +40,11 @@ namespace stamp::reflect {
 		std::string name() const {
 			return handle_v.name();
 		}
-		std::string type_name() const {
-			return handle_v.type_name();
-		}
 		std::string to_string() const {
 			return handle_v.to_string();
+		}
+		reflect_info_t reflect_info() const {
+			return handle_v.reflect_info();
 		}
 		view_handle& handle() {
 			return handle_v;

@@ -35,7 +35,7 @@ namespace stamp::reflect {
 			_attributes(attributes...) {
 		}
 
-		consteval static const name_type& name() noexcept {
+		constexpr static const name_type& name() noexcept {
 			return _name;
 		}
 		const ptr_type& member_ptr() const noexcept {
