@@ -33,6 +33,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...);
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -45,6 +46,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -57,6 +59,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) noexcept;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = true;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -69,6 +72,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const noexcept;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = true;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -81,6 +85,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...)&;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = true;
@@ -105,6 +110,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...)&&;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;
@@ -117,6 +123,7 @@ namespace stamp::reflect {
 		using result_type = R;
 		using ptr_type = R(B::*)(Arg...) const&&;
 		using arg_type = std::tuple<Arg...>;
+		using arg_ref_type = std::tuple<Arg&...>;
 		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = false;
 		static constexpr bool is_ref_qual_lvalue = false;

@@ -19,7 +19,9 @@ namespace stamp::reflect {
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::name; }
 		constexpr string_literal name_v<T> = reflect_traits<T>::name;
 		template<typename T>
-		constexpr string_literal full_name_v = concat_cstring_v<space_v<T>, name_v<T>>;
+		constexpr string_literal full_name_v = name_v<T>;
+		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::space; }
+		constexpr string_literal full_name_v<T> = concat_cstring_v<space_v<T>, "::", name_v<T>>;
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::full_name; }
 		constexpr string_literal full_name_v<T> = reflect_traits<T>::full_name;
 		template<typename T>

@@ -14,19 +14,25 @@ namespace stamp::reflect {
 		}(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
 	}
 
+	//for_each(args, [&]<typename P>(P p) {
+	//	using type = P::type;
+
 	// runs the Func on all members of the tuple<Arg...>
 	template<typename Func, typename... Arg>
 	constexpr void for_each(const std::tuple<Arg...>& tuple, Func func) {
 		std::apply([&](const Arg&... arg) { (func(arg), ...); }, tuple);
 	}
+	template<typename Func, typename... Arg>
+	constexpr void for_each(std::tuple<Arg...>& tuple, Func func) {
+		std::apply([&](Arg&... arg) { (func(arg), ...); }, tuple);
+	}
 
 	// runs the Func on all the types of the tuple<Arg...> that match Pred. passes a std::tuple_element to the func
 	template<template<typename> typename Pred, typename Tuple, typename Func>
 	constexpr void for_each_of(Func func) {
-		for_each<Tuple>([&](auto arg) {
-			using type = decltype(arg)::type;
+		for_each<Tuple>([&]<typename type>(type&& arg) {
 			if constexpr (Pred<type>::value) {
-				func(arg);
+				func(std::forward<type>(arg));
 			}
 		});
 	}
@@ -35,17 +41,27 @@ namespace stamp::reflect {
 	// runs the Func on all members of the tuple<Arg...> that match Pred
 	template<template<typename> typename Pred, typename Func, typename... Arg>
 	constexpr void for_each_of(const std::tuple<Arg...>& tuple, Func func) {
-		for_each(tuple, [&](auto& arg) {
-			using type = std::decay_t<decltype(arg)>;
+		for_each(tuple, [&]<typename type>(type&& arg) {
 			if constexpr (Pred<type>::value) {
-				func(arg);
+				func(std::forward<type>(arg));
+			}
+		});
+	}
+	template<template<typename> typename Pred, typename Func, typename... Arg>
+	constexpr void for_each_of(std::tuple<Arg...>& tuple, Func func) {
+		for_each(tuple, [&]<typename type>(type && arg) {
+			if constexpr (Pred<type>::value) {
+				func(std::forward<type>(arg));
 			}
 		});
 	}
 
-	template<template<typename> typename Pred, typename... Arg>
-	constexpr auto tuple_fetch(const std::tuple<Arg...>& tuple) {
 
+	template<typename Tuple, typename Func>
+	constexpr Tuple for_each_construct(Func func) {
+		return [&] <std::size_t... Is>(std::index_sequence<Is...>) ->Tuple {
+			return Tuple{func(std::tuple_element<Is, Tuple>{})...};
+		}(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
 	}
 
 	/*
