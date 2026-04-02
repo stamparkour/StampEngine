@@ -1,144 +1,27 @@
-#pragma once
-#ifndef STAMP_REFLECT_VIEW_HANDLE_H
-#define STAMP_REFLECT_VIEW_HANDLE_H
+#ifndef STAMP_REFLECT_VIEW_DEFAULT_VIEW_DESC_H
+#define STAMP_REFLECT_VIEW_DEFAULT_VIEW_DESC_H
 
-#include <memory>
-#include <utility>
-#include <string>
-#include <string_view>
-#include <memory>
-#include <concepts>
 #include <unordered_map>
 #include <vector>
+#include <string>
+#include <string_view>
 #include <functional>
 #include <stdexcept>
 
-#include "reflect_traits.h"
-#include "reflect_helpers.h"
-#include "member_function_traits.h"
+#include "../member_function_traits.h"
+#include "view_handle_impl.h"
+#include "../reflect_helpers.h"
+#include "../reflect_types.h"
 
 namespace stamp::reflect {
-	class view_handle;
-	struct default_view_generator;
 
-
-	class view_desc_base {
-	public:
-		using self_type = std::shared_ptr<void>;
-	private:
-		virtual view_handle do_fetch(const self_type&, const std::string_view&) const = 0;
-		virtual view_handle do_invoke(const self_type&, const std::vector<view_handle>&) const = 0;
-		virtual std::string do_to_string(const self_type&) const = 0;
-		virtual std::string do_name(const self_type&) const = 0;
-		virtual const reflect_info_t& do_reflect_info(const self_type&) const = 0;
-	public:
-		view_desc_base() = default;
-		~view_desc_base() = default;
-
-		view_handle fetch(const self_type& self, const std::string_view& name) const;
-		view_handle invoke(const self_type& self, const std::vector<view_handle>& param) const;
-		std::string to_string(const self_type& self) const {
-			return do_to_string(self);
-		}
-		std::string name(const self_type& self) const {
-			return do_name(self);
-		}
-		const reflect_info_t& reflect_info(const self_type& self) const {
-			return do_reflect_info(self);
-		}
-	};
-
-	class view_handle {
-		std::shared_ptr<void> ptr = nullptr;
-		const view_desc_base* desc = nullptr;
-	public:
-		constexpr view_handle() {}
-		template<typename T>
-		std::shared_ptr<T> static_view_cast() const {
-			return std::static_pointer_cast<T>(ptr);
-		}
-		template<typename T>
-		constexpr view_handle(const std::shared_ptr<T>& ptr, const view_desc_base* desc) {
-			this->ptr = std::static_pointer_cast<void>(ptr);
-			this->desc = desc;
-		}
-
-		view_handle fetch(const std::string_view& str) {
-			return desc->fetch(ptr, str);
-		}
-		const view_handle fetch(const std::string_view& str) const {
-			return desc->fetch(ptr, str);
-		}
-		template<typename... Arg>
-		view_handle invoke(Arg&&... args) {
-			std::vector<view_handle> param{};
-			((param.emplace_back(std::shared_ptr<Arg>(&args, [](auto p) {}))), ...);
-			return desc->invoke(ptr, param);
-		}
-		std::string to_string() const {
-			return desc->to_string(ptr);
-		}
-		std::string name() const {
-			return desc->name(ptr);
-		}
-		const reflect_info_t& reflect_info() const {
-			return desc->reflect_info(ptr);
-		}
-
-		bool operator ==(const view_handle& other) const {
-			return ptr == other.ptr && desc == other.desc;
-		}
-		bool operator ==(nullptr_t) const {
-			return ptr == nullptr && desc == nullptr;;
-		}
-		bool is_void() {
-			return desc->reflect_info(ptr).hash_code == reflect_info_v<void>.hash_code;
-		}
-	};
-
-	view_handle view_desc_base::fetch(const self_type& self, const std::string_view& name) const {
-		return do_fetch(self, name);
-	}
-	view_handle view_desc_base::invoke(const self_type& self, const std::vector<view_handle>& param) const {
-		return do_invoke(self, param);
-	}
-	template<typename T, typename ViewGen = default_view_generator>
-	inline view_handle make_view_handle(const std::shared_ptr<T>& ptr) {
-		return view_handle(ptr, ViewGen::template view_desc_f<T>());
-	}
-
-	namespace detail {
-		class view_handle_void : public view_desc_base {
-			virtual view_handle do_fetch(const self_type&, const std::string_view&) const override {
-				throw std::runtime_error("cannot fetch from void view");
-			}
-			virtual view_handle do_invoke(const self_type&, const std::vector<view_handle>&) const override {
-				throw std::runtime_error("cannot invoke void view");
-			}
-			virtual std::string do_to_string(const self_type&) const override {
-				return "void";
-			}
-			virtual std::string do_name(const self_type&) const override {
-				return "void";
-			}
-			virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
-				return reflect_info_v<void>;
-			}
-		public:
-			view_handle_void() = default;
-		};
-
-		constexpr view_handle_void view_handle_void_v{};
-	}
-
-	inline const view_handle view_handle_void_v = view_handle(std::shared_ptr<void>(nullptr), &detail::view_handle_void_v);
-
+namespace detail {
 	template<typename ValT, typename ToString, typename ViewGen>
-	class default_view_desc : public view_desc_base {
+	class basic_default_view_desc : public view_desc_base {
 	public:
 		using type = ValT;
 		using self_type = view_desc_base::self_type;
-	private:
+	protected:
 		std::unordered_map<std::string_view, view_desc_base*> members{};
 
 		virtual view_handle do_fetch(const self_type& void_self, const std::string_view& target) const override {
@@ -167,8 +50,8 @@ namespace stamp::reflect {
 			return reflect_info_v<type>;
 		}
 	public:
-		default_view_desc() {
-			for_each_reflect_member_properties<type>([&]<typename T>(const T& property) {
+		basic_default_view_desc() {
+			for_each_reflect_member_properties<type>([&]<typename T>(const T & property) {
 				using ptr_type = typename T::ptr_type;
 				using value_type = typename T::value_type;
 				using class_type = typename T::class_type;
@@ -177,11 +60,43 @@ namespace stamp::reflect {
 				std::string_view name = property.name();
 				auto ptr = property.member_ptr();
 
-				members.emplace(name, new view_desc_base_t{name, ptr});
+				members.emplace(name, new view_desc_base_t{ name, ptr });
+			});
+			for_each_reflect_member_functions<type>([&]<typename T>(const T & property) {
+				using ptr_type = typename T::ptr_type;
+				using value_type = typename T::value_type;
+				using class_type = typename T::class_type;
+				using view_desc_base_t = typename ViewGen::template function_view_desc<class_type>;
+
+				std::string_view name = property.name();
+				auto ptr = property.member_ptr();
+
+				view_desc_base_t* view_desc = nullptr;
+				if (auto p = members.find(name); p != members.end()) {
+					view_desc = static_cast<view_desc_base_t*>(p->second);
+				}
+				else {
+					view_desc = new view_desc_base_t{ name };
+					members.emplace(name, view_desc);
+				}
+				view_desc->insert(ptr);
 			});
 		}
 	};
 
+	template<typename ValT, typename ToString, typename ViewGen>
+	class basic_default_view_desc_integral : public basic_default_view_desc<ValT, ToString, ViewGen> {
+	public:
+		basic_default_view_desc_integral() {
+			// members.emplace("")
+		}
+	};
+}
+
+	template<typename ValT, typename ToString, typename ViewGen>
+	class default_view_desc : public detail::basic_default_view_desc<ValT, ToString, ViewGen> {};
+	template<typename ToString, typename ViewGen>
+	class default_view_desc<void,ToString,ViewGen> : public detail::view_handle_void {};
 
 	template<typename ValT, typename BaseT, typename ToString, typename ViewGen>
 	class default_property_view : public view_desc_base {
@@ -240,7 +155,7 @@ namespace stamp::reflect {
 				auto vec_i = vec.begin();
 				auto args_i = param_hashes.begin();
 				for (; vec_i != vec.end() && args_i != param_hashes.end(); (void)(++vec_i), (void)(++args_i)) {
-					if (vec_i->reflect_info()->hash_code != *args_i) return false;
+					if (vec_i->reflect_info().hash_code != *args_i) return false;
 				}
 				return true;
 			}
@@ -255,7 +170,7 @@ namespace stamp::reflect {
 
 			for (const auto& i : overloads) {
 				if (i.match(vec)) {
-					return i.ptr(self, vec);
+					return i.function(self, vec);
 				}
 			}
 			throw std::runtime_error("failed to invoke view_handle");
@@ -270,7 +185,7 @@ namespace stamp::reflect {
 			return std::string{ name };
 		}
 		virtual const reflect_info_t& do_reflect_info(const self_type&) const override {
-			return reflect_info_v<base_type>;
+			return reflect_info_v<void (base_type::*)()>;
 		}
 	public:
 		default_function_view(const std::string_view& name) {
@@ -301,16 +216,16 @@ namespace stamp::reflect {
 				}
 
 				auto vec_i = vec.begin();
-				arg_type args{for_each_construct<arg_type>([&]<typename P>(P p) -> P::type {
+				arg_type args{ for_each_construct<arg_type>([&]<typename P>(P p) -> P::type {
 					using type = P::type;
 					auto vec_pointer = vec_i->static_view_cast<std::remove_cvref_t<type>>();
 					++vec_i;
 					return *vec_pointer;
-				})};
+				}) };
 
 				if constexpr (std::same_as<result_type, void>) {
 					std::apply([&]<typename... Args>(Args&&... args) {
-						+(self->*func_ptr)(args...);
+						(self->*func_ptr)(args...);
 					}, args);
 					return view_handle_void_v;
 				}
@@ -320,7 +235,7 @@ namespace stamp::reflect {
 					}, args));
 					return make_view_handle(t);
 				}
-			});
+				});
 		}
 	};
 
@@ -359,5 +274,4 @@ namespace stamp::reflect {
 	};
 }
 
-
-#endif // STAMP_REFLECT_VIEW_HANDLE_H
+#endif // STAMP_REFLECT_VIEW_DEFAULT_VIEW_DESC_H

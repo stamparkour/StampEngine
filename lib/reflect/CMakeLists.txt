@@ -10,7 +10,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/reflect_ctypes.h"
 	"include/stamp/reflect/string_literal.h"
 	"include/stamp/reflect/meta_tuple.h"
-	"include/stamp/reflect/view.h"
+	"include/stamp/reflect/view/view.h"
 	 
 
 	"include/stamp/reflect/std/reflect_std.h" 
@@ -25,12 +25,16 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/types/constructor.h"
 	"include/stamp/reflect/types/iterator.h"
 	"include/stamp/reflect/types/tag.h"
- "include/stamp/reflect/view_handle.h")
+
+	"include/stamp/reflect/view/view_handle.h" 
+	"include/stamp/reflect/view/default_view_desc.h"
+	"include/stamp/reflect/view/view_handle_impl.h"
+)
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})
 add_library(stamp::reflect ALIAS stamp_reflect)
-target_link_libraries(stamp_reflect INTERFACE stamp::core)
+target_link_libraries(stamp_reflect)
 target_compile_features(stamp_reflect INTERFACE cxx_std_20)
 
 

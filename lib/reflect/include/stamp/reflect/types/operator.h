@@ -8,6 +8,7 @@
 #include<type_traits>
 #include<stamp/reflect/string_literal.h>
 #include "function.h"
+#include "../reflect_helpers.h"
 
 namespace stamp::reflect {
 	template<typename T>
@@ -18,6 +19,7 @@ namespace stamp::reflect {
 			using attrib_type = function_operator_attrib<T>;
 		};
 
+		struct assign_operator_tag_t : operator_generic_tag_t {} assign_rf;
 		struct addition_operator_tag_t : operator_generic_tag_t {} addition_rf;
 		struct subtraction_operator_tag_t : operator_generic_tag_t {} subtraction_rf;
 		struct multiplication_operator_tag_t : operator_generic_tag_t {} multiplication_rf;
@@ -39,7 +41,12 @@ namespace stamp::reflect {
 		struct comma_operator_tag_t : operator_generic_tag_t {} comma_rf;
 		struct new_operator_operator_tag_t : operator_generic_tag_t {} new_operator_rf;
 		struct delete_operator_operator_tag_t : operator_generic_tag_t {} delete_operator_rf;
+		template<typename To>
+		struct cast_operator_generic_tag_t : operator_generic_tag_t {};
+		template<typename To>
+		constexpr auto cast_operator_rf = tag::cast_operator_generic_tag_t<To>{};
 
+		template<> constexpr string_literal to_string_v<assign_operator_tag_t> = "operator =";
 		template<> constexpr string_literal to_string_v<addition_operator_tag_t> = "operator +";
 		template<> constexpr string_literal to_string_v<subtraction_operator_tag_t> = "operator -";
 		template<> constexpr string_literal to_string_v<multiplication_operator_tag_t> = "operator *";
@@ -61,6 +68,7 @@ namespace stamp::reflect {
 		template<> constexpr string_literal to_string_v<comma_operator_tag_t> = "operator ,";
 		template<> constexpr string_literal to_string_v<new_operator_operator_tag_t> = "operator new";
 		template<> constexpr string_literal to_string_v<delete_operator_operator_tag_t> = "operator delete";
+		template<typename To> constexpr string_literal to_string_v<cast_operator_generic_tag_t<To>> = concat_cstring_v<"operator ", traits::full_name_v<To>>;
 
 		//template<typename T, typename Tag>
 		//constexpr auto to_member_ptr_v = nullptr;

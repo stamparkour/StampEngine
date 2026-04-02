@@ -34,6 +34,23 @@ namespace stamp::reflect {
 		explicit constexpr operator const char* () const { return chars; }
 		constexpr operator std::string_view() const { return { chars }; }
 		constexpr operator std::string() const { return { chars }; }
+
+		template<size_t N2>
+		bool constexpr operator ==(const string_literal<N2>& o) const noexcept {
+			if (N != N2) return false;
+			for (size_t i = 0; i < N; ++i) {
+				if (chars[i] != o.chars[i]) return false;
+			}
+			return true;
+		}
+		template<size_t N2>
+		bool constexpr operator ==(const char(&str)[N2]) const noexcept {
+			if (N != N2) return false;
+			for (size_t i = 0; i < N; ++i) {
+				if (chars[i] != str[i]) return false;
+			}
+			return true;
+		}
 	};
 
 	template<string_literal... Arg>

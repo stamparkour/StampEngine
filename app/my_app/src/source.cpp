@@ -3,7 +3,7 @@
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
-#include <stamp/reflect/view.h>
+#include <stamp/reflect/view/view.h>
 #include <concepts>
 
 using namespace stamp::reflect;
@@ -14,8 +14,9 @@ struct Dummy {
 	float* my_ptr;
 	Dummy* next;
 
-	void my_func(int i) {
+	void my_func(int& i) {
 		std::cout << i << std::endl;
+		i = 13;
 	}
 };
 namespace stamp::reflect {
@@ -38,6 +39,8 @@ namespace stamp::reflect {
 	};
 }
 
+static_assert(concat_cstring_v<"Hello, ", "World!"> == "Hello, World!");
+
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
@@ -48,11 +51,9 @@ int main(int argc, char** argv) {
 		view my_view{obj};
 		std::cout << my_view.reflect_info().name << std::endl;
 		std::cout << my_view.fetch("test").name() << std::endl;
-		std::cout << my_view.fetch("test").to_string() << std::endl;
 		std::cout << my_view.fetch("test").reflect_info().name << std::endl;
-		std::cout << my_view.fetch("my_func").name() << std::endl;
-		std::cout << my_view.fetch("my_func").to_string() << std::endl;
 		std::cout << my_view.fetch("my_func").reflect_info().name << std::endl;
+
 		int i = 17;
 		my_view.fetch("my_func").invoke(i);
 		my_view.fetch("my_func").invoke(i);

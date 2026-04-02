@@ -7,23 +7,31 @@
 #include"string_literal.h"
 #include<tuple>
 #include<string_view>
+#include <type_traits>
 
 namespace stamp::reflect {
 
 	namespace traits {
+		namespace detail {
+			template<typename T>
+			concept has_full_name_c = requires { reflect_traits<T>::full_name; };
+			template<typename T>
+			concept has_space_c = requires { reflect_traits<T>::space; };
+		}
+
 		template<typename T>
 		constexpr string_literal space_v = "";
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::space; }
+		template<stamp::reflect::concepts::reflect_traits_c T> requires detail::has_space_c<T>
 		constexpr string_literal space_v<T> = reflect_traits<T>::space;
 		template<typename T>
-		constexpr string_literal name_v = "unknown";
+		constexpr string_literal name_v = "@unknown";
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::name; }
 		constexpr string_literal name_v<T> = reflect_traits<T>::name;
 		template<typename T>
 		constexpr string_literal full_name_v = name_v<T>;
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::full_name; }
+		template<stamp::reflect::concepts::reflect_traits_c T> requires detail::has_full_name_c<T>
 		constexpr string_literal full_name_v<T> = reflect_traits<T>::full_name;
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::space; } && !requires { reflect_traits<T>::full_name; }
+		template<stamp::reflect::concepts::reflect_traits_c T> requires (!detail::has_full_name_c<T>) && detail::has_space_c<T>
 		constexpr string_literal full_name_v<T> = concat_cstring_v<space_v<T>, "::", name_v<T>>;
 		template<typename T>
 		constexpr string_literal basic_name_v = name_v<T>;
@@ -93,15 +101,27 @@ namespace stamp::reflect {
 	using first_argument_v = typename first_argument<T...>::type;
 
 
+	//type erasure of type for reflect info
 	struct reflect_info_t {
 		std::string_view name;
 		std::size_t hash_code;
+		struct {
+			bool
+				is_void,
+				is_integral,
+				is_floating_point;
+		} type_traits;
 	};
 
 	template<typename T>
 	inline const reflect_info_t reflect_info_v = {
 		.name = traits::name_v<T>,
-		.hash_code = typeid(T).hash_code()
+		.hash_code = typeid(T).hash_code(),
+		.type_traits = {
+			.is_void = std::is_void_v<T>,
+			.is_integral = std::is_integral_v<T>,
+			.is_floating_point = std::is_floating_point_v<T>
+		}
 	};
 }
 
