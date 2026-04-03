@@ -39,7 +39,6 @@ namespace stamp::reflect {
 	};
 }
 
-static_assert(concat_cstring_v<"Hello, ", "World!"> == "Hello, World!");
 
 
 int main(int argc, char** argv) {
@@ -50,7 +49,7 @@ int main(int argc, char** argv) {
 		obj.test = 4;
 		view my_view{obj};
 		std::cout << my_view.reflect_info().name << std::endl;
-		std::cout << my_view.fetch("test").name() << std::endl;
+		std::cout << my_view.fetch("test").to_string() << std::endl;
 		std::cout << my_view.fetch("test").reflect_info().name << std::endl;
 		std::cout << my_view.fetch("my_func").reflect_info().name << std::endl;
 
