@@ -79,7 +79,18 @@ stamp::reflect::for_each_reflect_member_properties<my_type>([&]<typename T>(cons
 the `string_literal` type represents a compile-time string. 
 It is used to store the name of the reflected type and properties.
 
+The `string_literal` acts as a wrapper for compile time strings and can be used in template parameters.
 
+```cpp
+template<string_literal S>
+struct my_struct {
+	static constexpr string_literal name = S;
+};
+```
+
+
+
+### Concatenate string_literal
 
 The helper function `concat_cstring_v<str1, str2>` can be used to concatenate two `string_literal` types at compile time.
 

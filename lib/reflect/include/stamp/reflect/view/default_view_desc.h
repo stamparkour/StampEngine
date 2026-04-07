@@ -112,7 +112,7 @@ namespace detail {
 		virtual view_handle do_fetch(const self_type& void_self, const std::string_view& target) const override {
 			auto self = static_cast<base_type*>(void_self.get());
 
-			auto next_ptr = std::shared_ptr<void>{ void_self, (void*)(self->*member_ptr) };
+			auto next_ptr = std::shared_ptr<void>{ void_self, (void*)(&(self->*member_ptr)) };
 			return ViewGen::template view_desc_f<value_type>()->fetch(next_ptr, target);
 		}
 		virtual view_handle do_invoke(const self_type&, const std::vector<view_handle>&) const override {

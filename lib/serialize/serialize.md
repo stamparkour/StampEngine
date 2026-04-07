@@ -20,11 +20,11 @@ my_cin >> stamp::serialize::ordered_binary( my_struct { 1, 4.0f, "hello" } );
 ```
 
 
-| field | offset | output              | value     |
-|-------|--------|---------------------|-----------|
-| `a`   | 0      | `01 00 00 00`       | `1`       |
-| `b`   | 4      | `40 80 00 00`       | `4.0f`    |
-| `c`   | 8      | `05 00 00 00 00 00 00 00 68 65 6C 6C 6F` | `"hello"` |
+| field | offset | output                                     | value         |
+|-------|--------|--------------------------------------------|---------------|
+| `a`   | 0      | `01 00 00 00`                              | `1`           |
+| `b`   | 4      | `40 80 00 00`                              | `4.0f`        |
+| `c`   | 8      | `05 00 00 00 00 00 00 00` `68 65 6C 6C 6F` | `5` `"hello"` |
 
 
 The serializer function recursively calls `stamp::serialize::ordered_binary<T>()` for each member of the struct.
@@ -127,7 +127,9 @@ The operators `<<` and `>>` are overloaded for the `ordered_binary_serializer` o
 
 #### Ordered Binary Serializer Object
 
-`ordered_binary_serializer` contains:
+`ordered_binary_serializer<T>` is an object that holds the information to serialize the target object.
+
+`ordered_binary_serializer<T>` contains:
 - `serialize` — serializes data to a type that matches an iostream.
 - `deserialize` — deserializes data from a type that matches an iostream.
 - `format` — the format used for serialization and deserialization.
