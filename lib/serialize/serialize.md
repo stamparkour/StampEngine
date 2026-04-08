@@ -35,21 +35,13 @@ Full syntax for `ordered_binary`:
 ```
 ordered_binary_serializer ordered_binary(
 	const T& data,
-	const format& fmt = format {}
-);
-ordered_binary_serializer ordered_binary(
-	const T& data,
-	const formatter& fmt,
-	pointer_track_registry& overriden_pointer_tracker
+	const format& fmt = format {},
+	pointer_track_registry& overriden_pointer_tracker = /* local registry */
 );
 ordered_binary_serializer ordered_binary(
 	T& data,
-	const format& fmt = format {}
-);
-ordered_binary_serializer ordered_binary(
-	T& data,
-	const formatter& fmt,
-	pointer_track_registry& overriden_pointer_tracker
+	const format& fmt = format {},
+	pointer_track_registry& overriden_pointer_tracker = /* local registry */
 );
 ```
 
@@ -59,12 +51,16 @@ an optional format can be passed to the `ordered_binary` function.
 
 
 formatter flags:
-- `big_endian` — data uses big endian
-- `little_endian` — data uses little endian (default)
-- `no_align` — data is packed with no padding (default)
-- `align` — data is aligned with padding 
-- `smart_align` — data is aligned to the next power of two based on its size with max padding defined by `padding` value.
+- **`big_endian`** — data uses big endian
+- **`little_endian`** — data uses little endian (default)
+- **`no_align`** — data is packed with no padding (default)
+- **`align`** — data is aligned with padding 
+- **`smart_align`** — data is aligned to the next power of two based on its size with max padding defined by `padding` value.
+- **`size_with_varint`** — sized data (length of array and pointers) is encoded as a varint instead of a fixed size integer.
 
+formatter attributes:
+- **`padding`** — the padding value used for alignment. must be a power of 2. default is 8. disabled when `smart_align` is not used.
+- **`size`** — the length of the size fields. must be a power of 2. default is 8. disabled when `size_with_varint` is used.
 
 ```cpp
 using namespace stamp::serialize;

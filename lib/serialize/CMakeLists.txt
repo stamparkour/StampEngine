@@ -2,6 +2,7 @@ include(FetchContent)
 
 #source files
 set(STAMP_SERIALIZE_SOURCES
+	"src/source.cpp"
 )
 set(STAMP_SERIALIZE_HEADERS
 	"include/stamp/serialize/serialize.h"
@@ -10,7 +11,7 @@ set(STAMP_SERIALIZE_HEADERS
 # add the library
 add_library(stamp_serialize INTERFACE ${STAMP_SERIALIZE_SOURCES} ${STAMP_SERIALIZE_HEADERS})
 add_library(stamp::serialize ALIAS stamp_serialize)
-target_link_libraries(stamp_serialize INTERFACE stamp::core stamp::reflect)
+target_link_libraries(stamp_serialize INTERFACE stamp::reflect)
 target_compile_features(stamp_serialize INTERFACE cxx_std_20)
 
 
