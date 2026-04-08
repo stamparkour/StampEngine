@@ -2,6 +2,11 @@
 
 The reflect library is a header-only library that provides noninvasive compile-time reflections.
 
+## Todo
+
+- Implement reflections for static members
+- Implement views for methods
+
 ## Usage Guide
 
 include  `stamp/reflect/reflect.h` header file in your code to access reflections.

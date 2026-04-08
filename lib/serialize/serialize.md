@@ -71,7 +71,7 @@ using namespace stamp::serialize;
 namespace obp = ordered_binary_serializer::format::flags;
 my_cout << ordered_binary( 
 	my_struct { 1, 4.0f, "hello" }, 
-	ordered_binary::format { 
+	ordered_binary_serializer::format { 
 		.flags = obp::big_endian | obp::aligned,
 		.padding = 8 // aligns all fields to 8 bytes or higher. must be power of 2.
 	}
