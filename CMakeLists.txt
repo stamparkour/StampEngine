@@ -27,7 +27,7 @@ add_subdirectory(test)
 
 add_library(stamp_stamp INTERFACE)
 add_library(stamp::stamp ALIAS stamp_stamp)
-target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::math stamp::reflect)
+target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::reflect)
 
 
 #project warnings

@@ -7,6 +7,18 @@ The reflect library is a header-only library that provides noninvasive compile-t
 - Implement reflections for static members
 - Implement views for methods
 
+## CMake
+
+To use the reflect library, add the following to your `CMakeLists.txt`:
+```cmake
+# import the stamp package
+find_package(stamp REQUIRED)
+
+#include the reflect library
+target_link_libraries(your_target PRIVATE stamp::reflect)
+```
+
+
 ## Usage Guide
 
 include  `stamp/reflect/reflect.h` header file in your code to access reflections.
@@ -17,21 +29,21 @@ To implement reflections for any class, create a template specialization of the 
 Make sure you are in the `stamp::reflect` namespace when creating the specialization.
 ```cpp
 template<>
-struct reflect_traits_<your_class> {
+struct reflect_traits<your_class> {
 };
 ```
 
 Next, add the class name to the reflect struct.
 ```cpp
 template<>
-struct reflect_traits_<your_class> {
+struct reflect_traits<your_class> {
 	static constexpr string_literal name = "your_class";
 };
 ```
 Finally, construct a tuple of members you want to reflect. 
 ```cpp
 template<>
-struct reflect_traits_<your_class> {
+struct reflect_traits<your_class> {
 	static constexpr string_literal name = "your_class";
 	static constexpr auto properties = std::tuple{
 		reflect("prop_1", your_class::prop_1),
@@ -45,7 +57,7 @@ Once your done, you can use any of the `stamp::reflect::traits` accessors on the
 ### Using Reflections
 
 To use your reflections, simply access the `stamp::reflect::traits::properties_v<T>`.
-This accessor will return a tuple of the reflected properties.
+This accessor will return a constexpr tuple of the reflected properties.
 Each reflected property will contain the following members:
 
 ```cpp
@@ -68,12 +80,16 @@ This function will iterate over each reflected property and call the function yo
 Here is a common use case example:
 
 ```cpp
+my_type obj;
+
 stamp::reflect::for_each_reflect_member_properties<my_type>([&]<typename T>(const T& property) {
 	using ptr_type = typename T::ptr_type;
 	using value_type = typename T::value_type;
 	using class_type = typename T::class_type;
 
 	std::cout << "Property Name: " << property.name() << std::endl;
+
+	obj.*property.member_ptr() = /* assign value to property */;
 });
 ```
 
