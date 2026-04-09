@@ -126,10 +126,8 @@ The operators `<<` and `>>` are overloaded for the `ordered_binary_serializer` o
 `ordered_binary_serializer<T>` is an object that holds the information to serialize the target object.
 
 `ordered_binary_serializer<T>` contains:
-- `serialize` — serializes data to a type that matches an iostream.
-- `deserialize` — deserializes data from a type that matches an iostream.
-- `format` — the format used for serialization and deserialization.
-- `overriden_pointer_track` — the pointer track registry used for serialization and deserialization when tracking pointers. If not set, a default pointer track registry is used.
+- `out` — serializes data to a type that matches an ostream.
+- `in` — deserializes data from a type that matches an istream.
 - `data` — the data to be serialized or deserialized.
-
-## 
+- `format` — the format used for serialization and deserialization.
+- `pointer_tracker` — the pointer track registry used for serialization and deserialization when tracking pointers. If not set, a default pointer track registry is used.
