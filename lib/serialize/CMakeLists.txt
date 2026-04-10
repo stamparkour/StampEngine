@@ -7,6 +7,7 @@ set(STAMP_SERIALIZE_SOURCES
 set(STAMP_SERIALIZE_HEADERS
 	"include/stamp/serialize/serialize.h"
 	"include/stamp/serialize/ordered_binary.h"
+	"include/stamp/serialize/serialize_helpers.h"
 )
 
 # add the library
