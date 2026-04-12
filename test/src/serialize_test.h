@@ -39,12 +39,14 @@ struct my_struct {
 namespace stamp::reflect {
 	template<>
 	struct reflect_traits<my_struct> {
+		using type = my_struct;
+		static constexpr string_literal name = "my_struct";
 
 	};
 }
 
 TEST(stamp_serialize, ordered_binary) {
-	static_assert(std::endian::native == std::endian::little);
+	if (std::endian::native != std::endian::little) return; // test not made for big endian machine
 
 	int val = 0x12345678;
 	std::stringstream out{};

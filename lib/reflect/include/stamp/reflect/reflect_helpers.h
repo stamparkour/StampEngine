@@ -54,13 +54,13 @@ namespace stamp::reflect {
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::constructors; }
 		constexpr auto constructors_v<T> = reflect_traits<T>::constructors;
 		template<typename T>
-		constexpr auto static_functions_v = std::tuple{};
-		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_functions; }
-		constexpr auto static_functions_v<T> = reflect_traits<T>::static_functions;
-		template<typename T>
 		constexpr auto static_properties_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_properties; }
 		constexpr auto static_properties_v<T> = reflect_traits<T>::static_properties;
+		template<typename T>
+		constexpr auto static_functions_v = std::tuple{};
+		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_functions; }
+		constexpr auto static_functions_v<T> = reflect_traits<T>::static_functions;
 	}
 
 	// runs the Func on all member functions of T’s reflect traits

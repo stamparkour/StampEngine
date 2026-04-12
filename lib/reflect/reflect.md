@@ -29,34 +29,63 @@ To implement reflections for any class, create a template specialization of the 
 Make sure you are in the `stamp::reflect` namespace when creating the specialization.
 ```cpp
 template<>
-struct reflect_traits<your_class> {
+struct reflect_traits<my_class> {
+	using type = my_class;
 };
 ```
+
+*Note* that you must add the `using type = my_type` to the reflections to make a valid reflection.
 
 Next, add the class name to the reflect struct.
 ```cpp
 template<>
-struct reflect_traits<your_class> {
-	static constexpr string_literal name = "your_class";
+struct reflect_traits<my_class> {
+	using type = my_class;
+	static constexpr string_literal name = "my_class";
 };
 ```
 Finally, construct a tuple of members you want to reflect. 
 ```cpp
 template<>
-struct reflect_traits<your_class> {
-	static constexpr string_literal name = "your_class";
+struct reflect_traits<my_class> {
+	using type = my_class;
+	static constexpr string_literal name = "my_class";
 	static constexpr auto properties = std::tuple{
-		reflect("prop_1", your_class::prop_1),
-		reflect("prop_2", your_class::prop_2)
+		reflect("prop_1", my_class::prop_1),
+		reflect("prop_2", my_class::prop_2)
 		// etc.
 	};
 };
 ```
 Once your done, you can use any of the `stamp::reflect::traits` accessors on the new type.
 
+The full declaration of a reflection is:
+
+```cpp
+template<typename T>
+struct reflect_traits<my_class<T>> {
+	using type = my_class;
+	static constexpr string_literal space = "my_namespace";
+	static constexpr string_literal name = concat_cstring_v<"my_class<", traits::name_v<T>,">">;
+	static constexpr string_literal basic_name = "my_class";
+	static constexpr string_literal full_name = concat_cstring_v<"my_namespace::my_class<", traits::full_name_v<T>,">">;
+	
+	static constexpr auto properties = std::tuple{
+		reflect("prop_1", my_class::prop_1),
+		reflect("prop_2", my_class::prop_2)
+		// etc.
+	};
+};
+```
+
+`full_name` and `basic_name` are optional members. 
+They are defaulted to:
+ - `full_name` = `space` + `"::"` + `name`.
+ - `basic_name` = `name`
+
 ### Using Reflections
 
-To use your reflections, simply access the `stamp::reflect::traits::properties_v<T>`.
+To use your reflections, use `stamp::reflect::traits::properties_v<T>`.
 This accessor will return a constexpr tuple of the reflected properties.
 Each reflected property will contain the following members:
 
@@ -75,9 +104,9 @@ const attrib_type& attributes() const noexcept;
 
 Note, that trait accessors return an empty tuple or string when the type does not have reflection. 
 
-An alternative way to access the properties is to use the `stamp::reflect::for_each_reflect_member_properties` function.
+To iterate through all members, use the `stamp::reflect::for_each_reflect_member_properties` function.
 This function will iterate over each reflected property and call the function you provide.
-Here is a common use case example:
+an example use:
 
 ```cpp
 my_type obj;
@@ -92,6 +121,23 @@ stamp::reflect::for_each_reflect_member_properties<my_type>([&]<typename T>(cons
 	obj.*property.member_ptr() = /* assign value to property */;
 });
 ```
+
+### Traits Accessors
+
+The `stamp::reflect::traits` namespace contains a set of static helper variables.
+The accessors compile when no reflection are provided and are defaulted to empty strings for `string_literal` members, and empty `std::tuple` for member values.
+
+Complete list of all `stamp::reflect::traits`:
+- `space_v<T>`
+- `name_v<T>`
+- `full_name_v<T>`
+- `basic_name_v<T>`
+- `base_v<T>`
+- `properties_v<T>`
+- `functions_v<T>` - Unimplemented
+- `constructors_v<T>` - Unimplemented
+- `static_properties_v<T>` - Unimplemented
+- `static_functions_v<T>` - Unimplemented
 
 ## Helper Functions and Types
 
@@ -110,11 +156,19 @@ struct my_struct {
 ```
 
 
-
 ### Concatenate string_literal
 
-The helper function `concat_cstring_v<str1, str2>` can be used to concatenate two `string_literal` types at compile time.
+The helper function `concat_cstring_v<str...>` can be used to concatenate two `string_literal` types at compile time.
 
 ```cpp
 static_assert(concat_cstring_v<"Hello", " ", "World!"> == "Hello World!");
 ```
+
+### Comma Seperated Concatenate string_literal
+
+The helper value `comma_list_string_literals_v<str...>` concats all strings with commas between each string.
+
+```cpp
+static_assert(concat_cstring_v<"A", "B", "C"> == "A,B,C");
+```
+
