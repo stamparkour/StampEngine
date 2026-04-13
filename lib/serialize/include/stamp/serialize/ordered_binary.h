@@ -21,11 +21,17 @@ namespace stamp::serialize {
 
 	class pointer_track_registry {
 		std::unordered_map<const void*, std::size_t> track_out;
+		std::size_t offset_v = 0;
 	public:
-		bool insert_out(const void* ptr, std::size_t cur, std::size_t target) {
-			return track_out.insert({ ptr, sizeof(ptr) }).second;
+		bool contains(const void* ptr) const {
+			return track_out.contains(ptr);
 		}
-
+		std::size_t& offset() {
+			return offset_v;
+		}
+		std::size_t offset() const {
+			return offset_v;
+		}
 	};
 
 	struct ordered_binary_formatter {
@@ -47,13 +53,11 @@ namespace stamp::serialize {
 
 	template<typename T>
 	inline ordered_binary_serializer<T> ordered_binary(T& val, const ordered_binary_formatter& format = {}) {
-		pointer_track_registry track{};
-		return { &val, &format, &track };
+		return { &val, &format, nullptr };
 	}
 	template<typename T>
 	inline ordered_binary_serializer<const T> ordered_binary(const T& val, const ordered_binary_formatter& format = {}) {
-		pointer_track_registry track{};
-		return { &val, &format, &track };
+		return { &val, &format, nullptr };
 	}
 
 	template<typename OS, typename T>
@@ -63,7 +67,7 @@ namespace stamp::serialize {
 			using value_type = typename T::value_type;
 
 			auto& val = (serializer.data->*property.member_ptr());
-			auto obs = ordered_binary_serializer<std::remove_reference_t<value_type>>{ val, serializer.format, serializer.pointer_tracker };
+			auto obs = ordered_binary(val, serializer.format); // , serializer.pointer_tracker);
 
 			ordered_binary_out(ostream, obs);
 		});
@@ -71,19 +75,29 @@ namespace stamp::serialize {
 	template<typename OS, std::integral T>
 	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
 		auto out = to_little_endian_arr(*(serializer.data));
-		ostream.write(reinterpret_cast<const char*>(&out), static_cast<std::size_t>(out.size()));
+		ostream.write(out.data(), out.size());
+		serializer.pointer_tracker.offset() += out.size();
 	}
 	// might need to be altered for non IEEE754 floating point types
 	template<typename OS, std::floating_point T>
 	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
-		auto out = to_little_endian_arr(serializer.data);
-		ostream.write(reinterpret_cast<const char*>(&out), static_cast<std::size_t>(out.size()));
+		auto out = to_little_endian_arr(*(serializer.data));
+		ostream.write(out.data(), out.size());
+		serializer.pointer_tracker.offset() += out.size();
 	}
-	/*template<typename OS, typename T>
+	template<typename OS, typename T>
 	void ordered_binary_out(OS& ostream, ordered_binary_serializer<T*>& serializer) {
-		auto out = to_little_endian_arr(reinterpret_cast<std::size_t>(serializer.data));
-		ostream.write(reinterpret_cast<const char*>(&out), static_cast<std::size_t>(out.size()));
-	}*/
+		if (serializer.pointer_tracker->contains(*(serializer.data))) {
+			// should not happen, pointer tracker not implemeneted.
+		}
+		else {
+			auto out = to_little_endian_arr((std::size_t)8);
+			ostream.write(out.data(), out.size());
+			serializer.pointer_tracker->offset() += out.size();
+
+
+		}
+	}
 
 	template<typename OS, typename T>
 	inline OS& operator <<(OS& os, const ordered_binary_serializer<T>& serializer) {

@@ -8,3 +8,6 @@ out/
 
 #gtest
 Testing/
+
+# obsidian
+.obsidian
