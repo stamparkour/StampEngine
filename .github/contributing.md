@@ -2,9 +2,9 @@
 
 If you wish to contribute to this project, please follow the guidelines below.
 
-<!-- Note that this document primarily focuses on source code. For documentation, see [Documentation Contributing](my-link-here)-->
+<!-- Note that this document primarily focuses on source code. For wiki contribution guide, see [Wiki Contributing](my-link-here)-->
 
-Reminder: by contributing, you agree that your code will be licensed under the project’s license.
+**Reminder** by contributing, you agree that your code will be licensed under the project’s license.
 
 ## Table of Contents
 
@@ -26,6 +26,8 @@ All contributions to the project's main branch should be submitted through a pul
 Once in a pull request, the contribution will be reviewed and tested. 
 Once both steps are completed, the contribution can be added to the project.
 
+AI usage is permitted; code attributed to AI will be reviewed as if the contributor wrote the code. 
+
 ### Code Review Expectations
 
 - Reviewers should focus on correctness first.
@@ -37,28 +39,28 @@ Once both steps are completed, the contribution can be added to the project.
 All pull requests and commits should contain a title describing what is changed.
 The description should list and provide reasoning for each change.
 
-All pull requests should strictly follow this guideline, but commits can be more lax depending on branch.
+All pull requests should strictly follow this guideline; commits can be more lax depending on branch.
 
 ### Testing
 
 Testing should be completed by an online automated workflow with github. 
 Additional testing may be completed during review.
 
-All features added should have a test added to the "test" sub-project. 
-Tests are written in Google Test framework.
-
+All new features should have a unit test added to the "test" sub-project. 
+C and C++ tests shall be written in Google Test framework.
 
 ### Branches
 
 Branches should be created for development, archiving older stable releases, and experimental features.
 
-- Development Branches should be named "dev-username"
-- Stable release branches should be named "rel-major.minor"
-- Experimental branches should be named "exp-feature-major.minor"
+- Main Branch should be named "main" or "master"
+- Development Branches should be named "dev/username"
+- Stable release branches should be named "rel/major.minor"
+- Experimental branches should be named "*exp-feature*" or "*exp-feature*/major.minor" when derived from an archived version.
 
-Stable release branches should coincide with releases on github. All Stable release branches should be assumed as archived, but can receive critical fixes. All Stable release branches should never be deleted.
+Stable release branches should coincide with release tags on github. All Stable release branches should be assumed as archived, but can receive critical fixes. All Stable release branches shall not be deleted unless fully depricated.
 
-All other branches are mostly free to be modified and deleted. Consult owner of the branch if there is an issue. Good practice is to report a branch being modified or deleted as an issue.
+All other branches are mostly free to be modified and deleted. Consult owner of the branch if there is an issue with their branch.
 
 ## Code Style Guide
 
@@ -76,8 +78,6 @@ For every release, a new doxygen will be generated.
 
 All classes, variables, methods, constants, namespaces, and header files should use snake_casing.
 
-*Example*
-
 	my_type_t my_function(int my_variable);
 
 snake_case matches the naming convention used throughout ISO C++ standard library. 
@@ -86,8 +86,6 @@ Using a unified naming style avoids any mismatch between standard types and user
 The only exception to this rule is template parameters. 
 All template parameters should be in CamelCase abbreviations (ValT, DefT).
 
-*Example*
-
 	template<typename ValT, typename... ParT>
 
 Any nested templates should have distinct names from any other template in the same scope.
@@ -95,10 +93,8 @@ Within a templated class, try to add all template parameters in typedefs or cons
 
 ### Braces
 
-For all code blocks (function body, if body, etc), the opening curly brace should be on the same line as the keyword. 
+For all code blocks (function body, if body, etc), the opening curly brace should be on the same line as the keyword/declaration. 
 The closing curly brace should always be on its own line or merged with other closing curly braces.
-
-*Example*
 
 	if( a == b ) {
 		// code block
@@ -112,15 +108,11 @@ The closing curly brace should always be on its own line or merged with other cl
 
 For C-style object declarations, you may keep everything on the same line or adhere to the code block standard.
 
-*Example*
-
 	my_type_t val { .data = 1 };
 
 ### If statements
 
 Single-line if statements are permitted only has early terminators in functions, similar to asserts.
-
-*Example*
 
 	bool my_func(int x) {
 		if(x < 5) return false;
@@ -135,8 +127,6 @@ Single-line if statements are permitted only has early terminators in functions,
 All enums should be enclosed in a namespace. The enum block should be anonymous. 
 A typedef that shares the name should be present similar to the example.
 
-*Example*
-
 	using my_enum_t = unsigned;
 	namespace my_enum {
 		enum : my_enum_t {
@@ -147,8 +137,6 @@ A typedef that shares the name should be present similar to the example.
 	}
 
 Bitmasks should follow the same format as above, but assign each enum to a bit.
-
-*Example*
 
 	using my_bitmask_t = unsigned;
 	namespace my_bitmask {
@@ -161,11 +149,11 @@ Bitmasks should follow the same format as above, but assign each enum to a bit.
 	}
 
 These requrements for enums are to ensure maximum flexibility. 
-Such as, stating a "using namespace" clause for the enums; prevent the need to type-cast enums to integers; and to allow for bitmasks.
+Such as, stating a `using namespace` clause for the enums, preventing the need to type-cast enums to integers, and to allow for consistent styling to bitmasks.
 
 ### Structs and Classes
 
-A struct should be used when declaring a type, if it is comparable in use to trivial types (int, float, etc). 
+A struct should be used when declaring a that is comparable in functionality to trivial types (int, float, etc). 
 An example of a trivial type is vectors when developing math libraries.
 
 A class should be used when declaring a type in all other cases not described by struct.
