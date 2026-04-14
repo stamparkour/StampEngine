@@ -2,7 +2,9 @@
 
 If you wish to contribute to this project, please follow the guidelines below.
 
-Reminder: by contributing, you agree that your code will be licensed under the project’s license.
+<!-- Note that this document primarily focuses on source code. For documentation, see [Documentation Contributing](my-link-here)-->
+
+Reminder: by contributing, you agree that your code will be licensed under the projectâ€™s license.
 
 ## Table of Contents
 
