@@ -10,5 +10,18 @@ static_assert(concepts::reflect_traits_c<int>, "int should satisfy reflect_trait
 
 static_assert(concat_cstring_v<"test", "ing"> == "testing", "concat_cstring_v should concatenate string literals");
 
+class my_class {
+	int my_private_member = 12;
+};
+template struct reflect_private_declare_t<&my_class::my_private_member>;
+
+TEST(stamp_reflect, retrieve_private_member_ptr) {
+	
+
+	auto v = reflect_private_declare_t<&my_class::my_private_member>::ptr;
+
+	my_class my_obj{};
+	EXPECT_EQ(my_obj.*v, 12);
+}
 
 #endif // TEST_REFLECT_TEST_H

@@ -5,6 +5,7 @@
 #include<tuple>
 #include <stamp/reflect/string_literal.h>
 #include "tag.h"
+#include "../reflect_private.h"
 #include<type_traits>
 
 namespace stamp::reflect {
@@ -35,7 +36,7 @@ namespace stamp::reflect {
 			_attributes(attributes...) {
 		}
 
-		constexpr static const name_type& name() noexcept {
+		static constexpr const name_type& name() noexcept {
 			return _name;
 		}
 		const ptr_type& member_ptr() const noexcept {
@@ -50,6 +51,7 @@ namespace stamp::reflect {
 	constexpr member_property_t<B, T, S, Attr...> reflect_property(T B::* member_ptr, Attr... attr) {
 		return { member_ptr, attr... };
 	}
+
 
 	template<concepts::is_tag_c O, typename B, typename T, typename... Attr>
 	constexpr auto reflect(O, T B::* member_ptr, Attr... attr) {
