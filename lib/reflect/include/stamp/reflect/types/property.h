@@ -5,7 +5,6 @@
 #include<tuple>
 #include <stamp/reflect/string_literal.h>
 #include "tag.h"
-#include "../reflect_private.h"
 #include<type_traits>
 
 namespace stamp::reflect {

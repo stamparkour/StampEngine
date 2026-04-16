@@ -11,6 +11,7 @@
 #include <cstring>
 #include <bit>
 #include <unordered_map>
+#include <cstdint>
 
 namespace stamp::serialize {
 	template<typename T>
@@ -60,6 +61,7 @@ namespace stamp::serialize {
 		return { &val, &format, nullptr };
 	}
 
+	// implemented serialize out: integers, floats, pointers(ish)
 	template<typename OS, typename T>
 	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
 		using namespace stamp::reflect;
@@ -68,7 +70,6 @@ namespace stamp::serialize {
 
 			auto& val = (serializer.data->*property.member_ptr());
 			auto obs = ordered_binary(val, serializer.format); // , serializer.pointer_tracker);
-
 			ordered_binary_out(ostream, obs);
 		});
 	}
@@ -91,12 +92,42 @@ namespace stamp::serialize {
 			// should not happen, pointer tracker not implemeneted.
 		}
 		else {
-			auto out = to_little_endian_arr((std::size_t)8);
+			auto out = to_little_endian_arr((std::size_t)sizeof(std::size_t));
 			ostream.write(out.data(), out.size());
 			serializer.pointer_tracker->offset() += out.size();
 
-
+			// deref twice to access value
+			auto& val = **(serializer.data);
+			auto obs = ordered_binary(val, serializer.format); // , serializer.pointer_tracker);
+			ordered_binary_out(ostream, obs);
 		}
+	}
+
+	// implemented serialize in: integers, floats
+	template<typename IS, typename T>
+	inline void ordered_binary_in(IS& istream, const ordered_binary_serializer<T>& serializer) {
+		using namespace stamp::reflect;
+		for_each_reflect_member_properties<T>([&]<typename P>(const P & property) {
+			using value_type = typename T::value_type;
+
+			auto& val = (serializer.data->*property.member_ptr());
+			auto obs = ordered_binary(val, serializer.format); // , serializer.pointer_tracker);
+			ordered_binary_in(istream, obs);
+		});
+	}
+	template<typename IS, std::integral T>
+	inline void ordered_binary_in(IS& istream, const ordered_binary_serializer<T>& serializer) {
+		std::array<char, sizeof(T)> in;
+		istream.read(&in, sizeof(T));
+		*(serializer.data) = from_little_endian_arr<T>(in);
+		serializer.pointer_tracker.offset() += out.size();
+	}
+	template<typename IS, std::floating_point T>
+	inline void ordered_binary_in(IS& istream, const ordered_binary_serializer<T>& serializer) {
+		std::array<char, sizeof(T)> in;
+		istream.read(&in, sizeof(T));
+		*(serializer.data) = from_little_endian_arr<T>(in);
+		serializer.pointer_tracker.offset() += out.size();
 	}
 
 	template<typename OS, typename T>
