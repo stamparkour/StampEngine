@@ -19,25 +19,23 @@ struct Dummy {
 		i = 13;
 	}
 };
-namespace stamp::reflect {
-	template<> struct reflect_traits<Dummy> {
-		using type = Dummy;
-		static constexpr string_literal space = "my";
-		static constexpr string_literal name = "Dummy";
-		static constexpr auto properties = std::tuple{
-			reflect("test"_rf, &type::test),
-			reflect("my_ptr"_rf, &type::my_ptr),
-			reflect("next"_rf, &type::next)
-		};
-		static constexpr auto functions = std::tuple{
-			reflect("my_func"_rf, &type::my_func),
-
-			// for cv overloads, use:
-			// reflect(tag::const_rf, "my_func"_rf, &type::my_func),
-			// reflect(tag::none_rf, "my_func"_rf, &type::my_func),
-		};
+template<> struct stamp::reflect::reflect_traits<Dummy> {
+	using type = Dummy;
+	static constexpr string_literal space = "my";
+	static constexpr string_literal name = "Dummy";
+	static constexpr auto properties = std::tuple{
+		reflect("test"_rf, &type::test),
+		reflect("my_ptr"_rf, &type::my_ptr),
+		reflect("next"_rf, &type::next)
 	};
-}
+	static constexpr auto functions = std::tuple{
+		reflect("my_func"_rf, &type::my_func),
+
+		// for cv overloads, use:
+		// reflect(tag::const_rf, "my_func"_rf, &type::my_func),
+		// reflect(tag::none_rf, "my_func"_rf, &type::my_func),
+	};
+};
 
 
 

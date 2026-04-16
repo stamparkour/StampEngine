@@ -10,15 +10,15 @@
 
 namespace stamp::reflect::type {
 	template<typename T, std::size_t N = T::name_size>
-	inline string_literal<N> name(const T& t) {
+	constexpr inline string_literal<N> name(const T& t) {
 		return t.name();
 	}
 	template<typename T, typename P = typename T::ptr_type>
-	inline P member_ptr(const T& t) {
+	constexpr inline P member_ptr(const T& t) {
 		return t.member_ptr();
 	}
 	template<typename T, typename A = typename T::attrib_type>
-	inline A attributes(const T& t) {
+	constexpr inline A attributes(const T& t) {
 		return t.attributes();
 	}
 }
