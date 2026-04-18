@@ -4,15 +4,17 @@
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
 #include <stamp/reflect/view/view.h>
+#include <stamp/serialize/json.h>
 #include <concepts>
 
 using namespace stamp::reflect;
+using namespace stamp::serialize;
 
 // 3. Member Pointers
 struct Dummy {
 	int test;
-	float* my_ptr;
-	Dummy* next;
+	float my_ptr;
+
 
 	void my_func(int& i) {
 		std::cout << i << std::endl;
@@ -25,8 +27,7 @@ template<> struct stamp::reflect::reflect_traits<Dummy> {
 	static constexpr string_literal name = "Dummy";
 	static constexpr auto properties = std::tuple{
 		reflect("test"_rf, &type::test),
-		reflect("my_ptr"_rf, &type::my_ptr),
-		reflect("next"_rf, &type::next)
+		reflect("my_ptr"_rf, &type::my_ptr)
 	};
 	static constexpr auto functions = std::tuple{
 		reflect("my_func"_rf, &type::my_func),
@@ -55,6 +56,16 @@ int main(int argc, char** argv) {
 		my_view.fetch("my_func").invoke(i);
 		my_view.fetch("my_func").invoke(i);
 	}
+
+	Dummy obj = {};
+	obj.test = 4;
+	obj.my_ptr = 12.9547;
+	
+	for (int i = 0; i < 100; i++) {
+		std::cout << stamp::serialize::json(obj) << std::endl;
+	}
+	
+	std::cout << "done" << std::endl;
 
 	/*auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
 	stamp::reflect::for_each(tuple, [](auto member) {

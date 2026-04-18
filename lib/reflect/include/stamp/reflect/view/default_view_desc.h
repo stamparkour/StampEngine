@@ -198,7 +198,7 @@ namespace detail {
 
 		template<typename T>
 		void insert(T func_ptr) {
-			using result_type = member_function_traits<T>::result_type;
+			using result_type = member_function_traits<T>::return_type;
 			using arg_type = member_function_traits<T>::arg_type;
 			using arg_ref_type = member_function_traits<T>::arg_type;
 

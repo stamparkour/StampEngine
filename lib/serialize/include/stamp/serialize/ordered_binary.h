@@ -62,7 +62,7 @@ namespace stamp::serialize {
 	}
 
 	// implemented serialize out: integers, floats, pointers(ish)
-	template<typename OS, typename T>
+	template<typename OS, stamp::reflect::concepts::reflect_traits_c T>
 	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
 		using namespace stamp::reflect;
 		for_each_reflect_member_properties<T>([&]<typename P>(const P & property) {

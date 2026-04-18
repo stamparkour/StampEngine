@@ -8,7 +8,7 @@ set(STAMP_SERIALIZE_HEADERS
 	"include/stamp/serialize/serialize.h"
 	"include/stamp/serialize/ordered_binary.h"
 	"include/stamp/serialize/serialize_helpers.h"
-)
+ "include/stamp/serialize/json.h")
 
 # add the library
 add_library(stamp_serialize INTERFACE ${STAMP_SERIALIZE_SOURCES} ${STAMP_SERIALIZE_HEADERS})
