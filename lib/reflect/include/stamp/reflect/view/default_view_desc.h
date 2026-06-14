@@ -50,7 +50,7 @@ namespace detail {
 			return reflect_info_v<type>;
 		}
 	public:
-		basic_default_view_desc() {
+		constexpr basic_default_view_desc() {
 			for_each_reflect_member_properties<type>([&]<typename T>(const T & property) {
 				using ptr_type = typename T::ptr_type;
 				using value_type = typename T::value_type;

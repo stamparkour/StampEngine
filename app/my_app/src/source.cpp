@@ -6,6 +6,7 @@
 #include <stamp/reflect/view/view.h>
 #include <stamp/serialize/json.h>
 #include <concepts>
+#include <sstream>
 
 using namespace stamp::reflect;
 using namespace stamp::serialize;
@@ -60,10 +61,13 @@ int main(int argc, char** argv) {
 	Dummy obj = {};
 	obj.test = 4;
 	obj.my_ptr = 12.9547;
-	
+	std::stringstream stream;
 	for (int i = 0; i < 100; i++) {
 		std::cout << stamp::serialize::json(obj) << std::endl;
 	}
+
+	stream << stamp::serialize::json(obj);
+	stream >> stamp::serialize::json(obj);
 	
 	std::cout << "done" << std::endl;
 

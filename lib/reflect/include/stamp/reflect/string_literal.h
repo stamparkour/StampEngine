@@ -6,8 +6,11 @@
 #include <string>
 #include <string_view>
 #include <array>
+#include <ranges>
+#include <algorithm>
 
 namespace stamp::reflect {
+
 
 	template<std::size_t N>
 	struct string_literal {
@@ -100,6 +103,71 @@ namespace stamp::reflect {
 	constexpr std::size_t string_literal_length_v < const char(&)[N]> = N;
 	template<std::size_t N>
 	constexpr std::size_t string_literal_length_v <string_literal<N>> = N;
+
+
+
+	class hash_fnv1a {
+		static constexpr auto FNV_offset_basis = 14695981039346656037;
+		static constexpr auto FNV_prime = 1099511628211;
+		std::size_t hash_v = FNV_offset_basis;
+	public:
+		hash_fnv1a() = default;
+		constexpr hash_fnv1a(const char* str) {
+			(*this) << str;
+		}
+		constexpr hash_fnv1a(const std::string& str) {
+			(*this) << str;
+		}
+		std::size_t hash() const noexcept {
+			return hash_v;
+		}
+		operator std::size_t() const noexcept {
+			return hash_v;
+		}
+
+		constexpr hash_fnv1a& operator << (char c) {
+			hash_v ^= c;
+			hash_v *= FNV_prime;
+			return *this;
+		}
+		constexpr hash_fnv1a& operator << (const char* str) {
+			for (; (*str) != 0; ++str) {
+				(*this) << *str;
+			}
+			return *this;
+		}
+		constexpr hash_fnv1a& operator << (std::string_view str) {
+			for (auto i = std::begin(str); i != std::end(str); ++i) {
+				(*this) << *i;
+			}
+			return *this;
+		}
+		constexpr hash_fnv1a& operator << (std::string str) {
+			for (auto i = std::begin(str); i != std::end(str); ++i) {
+				(*this) << *i;
+			}
+			return *this;
+		}
+		template<std::ranges::range Range>
+		constexpr hash_fnv1a& operator << (Range& range) {
+			std::for_each(std::begin(range), std::end(range), [&](auto& v) {
+				(*this) << v;
+			});
+			return *this;
+		}
+
+		constexpr bool operator ==(const hash_fnv1a& other) const {
+			return hash_v == other.hash_v;
+		}
+	};
 }
+
+template<>
+struct std::hash<stamp::reflect::hash_fnv1a> {
+	std::size_t operator()(const stamp::reflect::hash_fnv1a& v) const {
+		std::hash<std::size_t> hash_f{};
+		return hash_f(v.hash());
+	}
+};
 
 #endif // STAMP_REFLECT_STRING_LITERAL_H

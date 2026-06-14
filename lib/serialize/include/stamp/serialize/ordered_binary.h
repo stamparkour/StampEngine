@@ -73,14 +73,7 @@ namespace stamp::serialize {
 			ordered_binary_out(ostream, obs);
 		});
 	}
-	template<typename OS, std::integral T>
-	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
-		auto out = to_little_endian_arr(*(serializer.data));
-		ostream.write(out.data(), out.size());
-		serializer.pointer_tracker.offset() += out.size();
-	}
-	// might need to be altered for non IEEE754 floating point types
-	template<typename OS, std::floating_point T>
+	template<typename OS, typename T> requires std::integral<T> || std::floating_point<T>
 	inline void ordered_binary_out(OS& ostream, const ordered_binary_serializer<T>& serializer) {
 		auto out = to_little_endian_arr(*(serializer.data));
 		ostream.write(out.data(), out.size());
@@ -115,19 +108,12 @@ namespace stamp::serialize {
 			ordered_binary_in(istream, obs);
 		});
 	}
-	template<typename IS, std::integral T>
+	template<typename IS, typename T> requires std::integral<T> || std::floating_point<T>
 	inline void ordered_binary_in(IS& istream, const ordered_binary_serializer<T>& serializer) {
 		std::array<char, sizeof(T)> in;
 		istream.read(&in, sizeof(T));
 		*(serializer.data) = from_little_endian_arr<T>(in);
-		serializer.pointer_tracker.offset() += out.size();
-	}
-	template<typename IS, std::floating_point T>
-	inline void ordered_binary_in(IS& istream, const ordered_binary_serializer<T>& serializer) {
-		std::array<char, sizeof(T)> in;
-		istream.read(&in, sizeof(T));
-		*(serializer.data) = from_little_endian_arr<T>(in);
-		serializer.pointer_tracker.offset() += out.size();
+		serializer.pointer_tracker.offset() += in.size();
 	}
 
 	template<typename OS, typename T>
@@ -137,7 +123,7 @@ namespace stamp::serialize {
 	}
 	template<typename IS, typename T>
 	inline IS& operator >>(IS& is, const ordered_binary_serializer<T>& serializer) {
-		// serializer.deserialize(is);
+		ordered_binary_in(is, serializer);
 		return is;
 	}
 }
