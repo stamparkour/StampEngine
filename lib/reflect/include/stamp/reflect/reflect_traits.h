@@ -2,6 +2,8 @@
 #ifndef STAMP_REFLECT_REFLECT_TRAITS_H
 #define STAMP_REFLECT_REFLECT_TRAITS_H
 
+#include <type_traits>
+
 namespace stamp::reflect {
 	template<typename T>
 	struct reflect_traits;
