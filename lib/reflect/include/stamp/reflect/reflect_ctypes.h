@@ -94,6 +94,11 @@ namespace stamp::reflect {
 		static constexpr string_literal space = traits::space_v<T>;
 		static constexpr string_literal name = concat_cstring_v<traits::full_name_v<T>, " const">;
 		static constexpr string_literal full_name = concat_cstring_v<traits::full_name_v<T>, " const">;
+		static constexpr auto properties = traits::properties_v<T>;
+		static constexpr auto functions = traits::functions_v<T>;
+		static constexpr auto constructors = traits::constructors_v<T>;
+		static constexpr auto static_functions = traits::static_functions_v<T>;
+		static constexpr auto static_properties = traits::static_properties_v<T>;
 	};
 
 	template<typename T>

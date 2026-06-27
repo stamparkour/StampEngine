@@ -49,13 +49,14 @@ namespace stamp::reflect {
 	public:
 		constexpr view_handle() {}
 		template<typename T>
-		std::shared_ptr<T> static_view_cast() const {
-			return std::static_pointer_cast<T>(ptr);
-		}
-		template<typename T>
 		constexpr view_handle(const std::shared_ptr<T>& ptr, const view_desc_base* desc) {
 			this->ptr = std::static_pointer_cast<void>(ptr);
 			this->desc = desc;
+		}
+				
+		template<typename T>
+		std::shared_ptr<T> static_view_cast() const {
+			return std::static_pointer_cast<T>(ptr);
 		}
 
 		view_handle fetch(const std::string_view& str) {

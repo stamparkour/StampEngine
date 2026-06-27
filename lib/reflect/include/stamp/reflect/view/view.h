@@ -22,7 +22,7 @@ namespace stamp::reflect {
 		}
 		//creates a copy view
 		template<typename T>
-		view(const T& t) {
+		view(T&& t) {
 			handle_v = make_view_handle(std::make_shared<T>(t) );
 		}
 		//create from handle
@@ -59,6 +59,10 @@ namespace stamp::reflect {
 			return fetch(tag::to_string_v<tag::assign_operator_tag_t>).invoke(val);
 		}
 	};
+
+	// view_fetch viewf - view that uses [] for fetching. uses both fetch and array indexing operator inside []
+	// view_invoke viewi - view that uses () for invoking.
+	// viewfi
 }
 
 #endif // STAMP_REFLECT_VIEW_VIEW_H

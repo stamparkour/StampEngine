@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <map>
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/std/reflect_std.h>
@@ -39,10 +40,29 @@ template<> struct stamp::reflect::reflect_traits<Dummy> {
 	};
 };
 
+struct my_obj_t {
+	std::vector<std::pair<std::string, int>> vec;
+	float my_num;
+};
 
+template<> struct stamp::reflect::reflect_traits<my_obj_t> {
+	using type = my_obj_t;
+	static constexpr string_literal name = "Dummy_obj_tmy";
+	static constexpr auto properties = std::tuple{
+		reflect("vec"_rf, &type::vec),
+		reflect("my_num"_rf, &type::my_num)
+	};
+};
 
 int main(int argc, char** argv) {
 	std::array<int, 10> v{1, 2, 3, 4, 5};
+
+	std::cout << (std::string_view)stamp::reflect::traits::name_v<std::pair<int, float> const>;
+	for_each_reflect_member_properties<std::pair<int, float> const>([&]<typename P>(const P & property) {
+		using value_type = typename P::value_type;
+
+		std::cout << (std::string_view)property.name();
+	});
 
 	{
 		Dummy obj = {};
@@ -58,16 +78,29 @@ int main(int argc, char** argv) {
 		my_view.fetch("my_func").invoke(i);
 	}
 
-	Dummy obj = {};
-	obj.test = 4;
-	obj.my_ptr = 12.9547;
+	my_obj_t obj = {};
+	obj.vec.push_back({"hi",2});
+	obj.vec.push_back({"frog",-3});
+	obj.vec.push_back({"dig",1982});
+	obj.my_num = 12.48;
 	std::stringstream stream;
-	for (int i = 0; i < 100; i++) {
-		std::cout << stamp::serialize::json(obj) << std::endl;
-	}
 
-	stream << stamp::serialize::json(obj);
-	stream >> stamp::serialize::json(obj);
+	stamp::serialize::json_formatter format{
+		.nested_str = "",
+		.newline_str = "",
+		.spacing_str = "",
+		.force_object_pairs = false,
+		.force_string_char_array = false
+	};
+
+	std::cout << stamp::serialize::json(obj, format) << std::endl;
+
+	stream << stamp::serialize::json(obj, format);
+
+	my_obj_t oobj = {};
+	stream >> stamp::serialize::json(oobj);
+
+
 	
 	std::cout << "done" << std::endl;
 

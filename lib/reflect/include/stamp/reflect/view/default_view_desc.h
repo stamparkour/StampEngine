@@ -225,7 +225,7 @@ namespace detail {
 
 				if constexpr (std::same_as<result_type, void>) {
 					std::apply([&]<typename... Args>(Args&&... args) {
-						(self->*func_ptr)(args...);
+						(self->*func_ptr)(std::forward<Args>(args)...);
 					}, args);
 					return view_handle_void_v;
 				}
@@ -235,7 +235,7 @@ namespace detail {
 					}, args));
 					return make_view_handle(t);
 				}
-				});
+			});
 		}
 	};
 

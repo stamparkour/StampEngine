@@ -17,6 +17,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/std/reflect_vector.h" 
 	"include/stamp/reflect/std/reflect_array.h"
 	"include/stamp/reflect/std/reflect_iterator.h"
+	"include/stamp/reflect/std/reflect_pair.h"
 
 	"include/stamp/reflect/reflect_types.h"
 	"include/stamp/reflect/types/property.h"

@@ -6,7 +6,7 @@ namespace stamp::reflect {
 		
 	}
 
-	template<auto Ptr>
+	template<typename Ptr>
 	struct reflect_private_declare_t {
 		static constexpr auto ptr = Ptr;
 	};
