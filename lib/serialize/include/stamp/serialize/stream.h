@@ -119,6 +119,9 @@ namespace stamp::serialize {
 		operator bool() {
 			return !(eof);
 		}
+		bool operator !() {
+			return !(bool)(*this);
+		}
 	};
 	using string_stream_wrapper = basic_string_stream_wrapper<std::string>;
 }
