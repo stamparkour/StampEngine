@@ -61,10 +61,13 @@ namespace stamp::serialize {
 			switch (dir) {
 			case std::ios_base::beg:
 				get_index = pos;
+				break;
 			case std::ios_base::cur:
 				get_index += pos;
+				break;
 			case std::ios_base::end:
 				get_index = pos + buffer.size();
+				break;
 			}
 			return *this;
 		}
@@ -92,10 +95,13 @@ namespace stamp::serialize {
 			switch (dir) {
 			case std::ios_base::beg:
 				put_index = pos;
+				break;
 			case std::ios_base::cur:
 				put_index += pos;
+				break;
 			case std::ios_base::end:
 				put_index = pos + buffer.size();
+				break;
 			}
 			return *this;
 		}
