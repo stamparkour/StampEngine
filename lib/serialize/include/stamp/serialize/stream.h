@@ -24,7 +24,7 @@ namespace stamp::serialize {
 		basic_string_stream_wrapper(string_type& buffer) : buffer(buffer) {}
 
 		basic_string_stream_wrapper read(char_type* out, std::streamsize size) {
-			size = std::min(size, buffer.size() - get_index);
+			size = std::min(size, (std::streamsize)(buffer.size() - get_index));
 
 			std::copy_n(buffer.begin() + get_index, size, out);
 
