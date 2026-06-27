@@ -1,5 +1,6 @@
 include(FetchContent)
 
+
 #source files
 set(STAMP_DIAGNOSE_SOURCES
 	"src/diagnose.cpp"

@@ -4,6 +4,7 @@ project(stamp VERSION 0.1.0 LANGUAGES C CXX)
 
 
 #options
+option(STAMP_BUILD_APP OFF)
 
 #config
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -20,20 +21,19 @@ add_subdirectory(lib/diagnose)
 add_subdirectory(lib/math)
 add_subdirectory(lib/signal)
 
-add_subdirectory(app/my_app)
-
-add_subdirectory(test)
-
-
 add_library(stamp_stamp INTERFACE)
 add_library(stamp::stamp ALIAS stamp_stamp)
 target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::reflect)
 
+if(STAMP_BUILD_APP)
+    add_subdirectory(app/my_app)
+    add_subdirectory(test)
 
-#project warnings
-if (MSVC)
-    add_compile_options(/W4 /WX)
-    add_compile_options(/std:c++latest) 
-else()
-    add_compile_options(-Wall -Wextra -pedantic -Werror)
+    #project warnings
+    if (MSVC)
+        add_compile_options(/W4 /WX)
+        add_compile_options(/std:c++latest) 
+    else()
+        add_compile_options(-Wall -Wextra -pedantic -Werror)
+    endif()
 endif()
