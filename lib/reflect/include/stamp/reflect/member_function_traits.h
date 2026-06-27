@@ -18,12 +18,12 @@ namespace stamp::reflect {
 		struct overload_generic_tag_t : generic_tag_t {};
 		struct member_function_generic_tag_t : generic_tag_t {};
 
-		struct none_overload_tag_t : overload_generic_tag_t {} none_rf;
-		struct const_overload_tag_t : overload_generic_tag_t {} const_rf;
-		struct lvalue_overload_tag_t : overload_generic_tag_t {} lvalue_rf;
-		struct const_lvalue_overload_tag_t : overload_generic_tag_t {} const_lvalue_rf;
-		struct rvalue_overload_tag_t : overload_generic_tag_t {} rvalue_rf;
-		struct const_rvalue_overload_tag_t : overload_generic_tag_t {} const_rvalue_rf;
+		inline struct none_overload_tag_t : overload_generic_tag_t {} none_rf;
+		inline struct const_overload_tag_t : overload_generic_tag_t {} const_rf;
+		inline struct lvalue_overload_tag_t : overload_generic_tag_t {} lvalue_rf;
+		inline struct const_lvalue_overload_tag_t : overload_generic_tag_t {} const_lvalue_rf;
+		inline struct rvalue_overload_tag_t : overload_generic_tag_t {} rvalue_rf;
+		inline struct const_rvalue_overload_tag_t : overload_generic_tag_t {} const_rvalue_rf;
 	}
 	namespace concepts {
 		template<typename T>

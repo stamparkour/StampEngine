@@ -80,7 +80,7 @@ namespace stamp::serialize {
 		serializer.pointer_tracker.offset() += out.size();
 	}
 	template<typename OS, typename T>
-	void ordered_binary_out(OS& ostream, ordered_binary_serializer<T*>& serializer) {
+	inline void ordered_binary_out(OS& ostream, ordered_binary_serializer<T*>& serializer) {
 		if (serializer.pointer_tracker->contains(*(serializer.data))) {
 			// should not happen, pointer tracker not implemeneted.
 		}

@@ -3,6 +3,7 @@ include(FetchContent)
 #source files
 set(PROJECT_SOURCES
 	"src/source.cpp"
+	"src/source2.cpp"
 )
 set(PROJECT_HEADERS
 )

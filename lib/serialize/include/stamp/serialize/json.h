@@ -24,7 +24,7 @@
 
 namespace stamp::serialize {
 	namespace detail {
-		bool is_whitespace_ascii(char c) {
+		inline bool is_whitespace_ascii(char c) {
 			switch (c) {
 			case ' ':
 			case '\r':
@@ -35,7 +35,7 @@ namespace stamp::serialize {
 				return false;
 			}
 		}
-		bool is_json_delim_ascii(char c) {
+		inline bool is_json_delim_ascii(char c) {
 			switch (c) {
 			case ',':
 			case '}':
@@ -118,7 +118,7 @@ namespace stamp::serialize {
 
 	namespace detail {
 		template<typename IS>
-		void skip_whitespace(IS& is, const json_formatter*) {
+		inline void skip_whitespace(IS& is, const json_formatter*) {
 			char next_char;
 			while (true) {
 				next_char = (char)is.peek();
@@ -131,19 +131,19 @@ namespace stamp::serialize {
 		}
 
 		template<typename OS>
-		void print_newline(OS& os, const json_formatter* format) {
+		inline void print_newline(OS& os, const json_formatter* format) {
 			if (format == nullptr) return;
 			if (format->newline_str[0] != '0')
 				os << format->newline_str;
 		}
 		template<typename OS>
-		void print_spacing(OS& os, const json_formatter* format) {
+		inline void print_spacing(OS& os, const json_formatter* format) {
 			if (format == nullptr) return;
 			if (format->spacing_str[0] != '0')
 				os << format->spacing_str;
 		}
 		template<typename OS>
-		void print_nested(OS& os, const json_formatter* format, std::size_t call_depth) {
+		inline void print_nested(OS& os, const json_formatter* format, std::size_t call_depth) {
 			if (format == nullptr) return;
 			if (format->nested_str[0] != '0')
 				for (std::size_t i = call_depth; i; --i)
@@ -151,7 +151,7 @@ namespace stamp::serialize {
 		}
 
 		template<typename IS>
-		char32_t parse_hex4(IS& is) {
+		inline char32_t parse_hex4(IS& is) {
 			char buf[4];
 			is.read(buf, sizeof(buf));
 			std::uint32_t out;
@@ -160,7 +160,7 @@ namespace stamp::serialize {
 		}
 
 		template<typename IS>
-		char escape_to_char(IS& is) {
+		inline char escape_to_char(IS& is) {
 			char c = (char)is.peek();
 			if (!is) return 0; // should throw something
 			is.get();
@@ -196,7 +196,7 @@ namespace stamp::serialize {
 	}
 
 	template<typename IS, typename T> requires std::integral<T> || std::floating_point<T>
-	void json_in(IS& istream, const json_serializer<T>& serializer) {
+	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		std::string txt = "";
 		while (true) {
@@ -224,7 +224,7 @@ namespace stamp::serialize {
 	}
 
 	template<typename IS>
-	void json_in(IS & istream, const json_serializer<bool>& serializer) {
+	inline void json_in(IS & istream, const json_serializer<bool>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		std::string txt = "";
 		while (true) {
@@ -252,7 +252,7 @@ namespace stamp::serialize {
 	}
 
 	template<typename IS>
-	void json_in(IS& istream, const json_serializer<std::string>& serializer) {
+	inline void json_in(IS& istream, const json_serializer<std::string>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		std::string txt = "";
 
@@ -286,7 +286,7 @@ namespace stamp::serialize {
 	// iterable. specify with pair iterator to allow for generic dictionaries. std::back_inserter
 
 	template<typename IS, concepts::inserter_iterable T>
-	void json_in(IS& istream, const json_serializer<T>& serializer) {
+	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		char next_char;
 		while (true) {
@@ -386,7 +386,7 @@ namespace stamp::serialize {
 	}
 
 	template<typename IS, typename T>
-	void json_in(IS& istream, const json_serializer<T>& serializer) {
+	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		using namespace stamp::reflect;
 
 		static std::unordered_map<stamp::reflect::hash_fnv1a, std::function<void(IS&, const json_serializer<T>&)>> member_map = []() {
@@ -467,7 +467,7 @@ namespace stamp::serialize {
 	}
 
 	template<typename OS, typename T>
-	void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		static_assert(stamp::reflect::concepts::reflect_traits_c<T>);
 
 		// already pre-indented
@@ -497,24 +497,24 @@ namespace stamp::serialize {
 		ostream << "}";
 	}
 	template<typename OS, std::integral T>
-	void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		// change to use ostream.write with a buffered to_chars
 		ostream << *(serializer.data);
 	}
 	template<typename OS, std::floating_point T>
-	void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		ostream << *(serializer.data);
 	}
 	template<typename OS>
-	void json_out(OS& ostream, const json_serializer<std::string>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<std::string>& serializer, std::size_t call_depth = 0) {
 		ostream << *(serializer.data);
 	}
 	template<typename OS>
-	void json_out(OS& ostream, const json_serializer<std::string_view>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<std::string_view>& serializer, std::size_t call_depth = 0) {
 		ostream << *(serializer.data);
 	}
 	template<typename OS, concepts::inserter_iterable T>
-	void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		if (concepts::inserter_json_pair_iterable<T> && !serializer.format->force_object_pairs) {
 			// already pre-indented
 			ostream << '{';
@@ -554,17 +554,17 @@ namespace stamp::serialize {
 		}
 	}
 	template<typename OS, typename T>
-	void json_out(OS& ostream, const json_serializer<T const>& serializer, std::size_t call_depth = 0) {
+	inline void json_out(OS& ostream, const json_serializer<T const>& serializer, std::size_t call_depth = 0) {
 		json_out(ostream, reinterpret_cast<const json_serializer<T>&>(serializer), call_depth);
 	}
 
 	template<typename OS, typename T>
-	OS& operator <<(OS& ostream, const json_serializer<T>& serializer) {
+	inline OS& operator <<(OS& ostream, const json_serializer<T>& serializer) {
 		json_out(ostream, serializer);
 		return ostream;
 	}
 	template<typename IS, typename T>
-	IS& operator >>(IS& istream, const json_serializer<T>& serializer) {
+	inline IS& operator >>(IS& istream, const json_serializer<T>& serializer) {
 		json_in(istream, serializer);
 		return istream;
 	}

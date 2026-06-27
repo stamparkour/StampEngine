@@ -98,10 +98,10 @@ namespace stamp::reflect {
 		}
 	};
 
-	view_handle view_desc_base::fetch(const self_type& self, const std::string_view& name) const {
+	inline view_handle view_desc_base::fetch(const self_type& self, const std::string_view& name) const {
 		return do_fetch(self, name);
 	}
-	view_handle view_desc_base::invoke(const self_type& self, const std::vector<view_handle>& param) const {
+	inline view_handle view_desc_base::invoke(const self_type& self, const std::vector<view_handle>& param) const {
 		return do_invoke(self, param);
 	}
 	template<typename T, typename ViewGen>
