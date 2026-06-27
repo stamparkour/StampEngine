@@ -422,8 +422,20 @@ namespace stamp::serialize {
 		if constexpr (std::same_as<T, int>) {
 			(*serializer.data) = std::stoi(txt);
 		}
+		else if constexpr (std::same_as<T, unsigned int>) {
+			(*serializer.data) = std::stoui(txt);
+		}
+		else if constexpr (std::same_as<T, short>) {
+			(*serializer.data) = std::stos(txt);
+		}
+		else if constexpr (std::same_as<T, unsigned short>) {
+			(*serializer.data) = std::stous(txt);
+		}
 		else if constexpr (std::same_as<T, float>) {
 			(*serializer.data) = std::stof(txt);
+		}
+		else if constexpr (std::same_as<T, double>) {
+			(*serializer.data) = std::stod(txt);
 		}
 		else {
 			static_assert(false, "no implementation for integral or floating point type");
@@ -459,7 +471,7 @@ namespace stamp::serialize {
 			return; // do some exception
 		}
 
-		detail::skip_whitespace(istream, *serializer.format);
+		detail::skip_whitespace(istream, serializer.format);
 	}
 
 	template<typename IS>
