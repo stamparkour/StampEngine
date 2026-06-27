@@ -433,6 +433,8 @@ namespace stamp::serialize {
 	template<typename IS>
 	inline void json_in(IS & istream, const json_serializer<bool>& serializer) {
 		if (!istream) return; // should throw something (error before call)
+		detail::skip_whitespace(istream, serializer.format);
+
 		std::string txt = "";
 		while (true) {
 			char next_char = (char)istream.peek();
@@ -461,6 +463,8 @@ namespace stamp::serialize {
 	template<typename IS>
 	inline void json_in(IS& istream, const json_serializer<std::string>& serializer) {
 		if (!istream) return; // should throw something (error before call)
+		detail::skip_whitespace(istream, serializer.format);
+
 		std::string txt = "";
 
 		char next_char = (char)istream.peek();
@@ -495,6 +499,8 @@ namespace stamp::serialize {
 	template<typename IS, concepts::array_iterable T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
+		detail::skip_whitespace(istream, serializer.format);
+
 		char next_char;
 		while (true) {
 			next_char = (char)istream.peek();
@@ -542,6 +548,8 @@ namespace stamp::serialize {
 
 		// {
 		if (!istream) return; // should throw something (error before read)
+		detail::skip_whitespace(istream, serializer.format);
+
 		buffer[0] = (char)istream.get();
 		if (!istream) return; // should throw something
 		if (buffer[0] != '{') return;
