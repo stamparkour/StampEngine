@@ -423,13 +423,13 @@ namespace stamp::serialize {
 			(*serializer.data) = std::stoi(txt);
 		}
 		else if constexpr (std::same_as<T, unsigned int>) {
-			(*serializer.data) = std::stoui(txt);
+			(*serializer.data) = (unsigned int)std::stoi(txt);
 		}
 		else if constexpr (std::same_as<T, short>) {
-			(*serializer.data) = std::stos(txt);
+			(*serializer.data) = (short)std::stoi(txt);
 		}
 		else if constexpr (std::same_as<T, unsigned short>) {
-			(*serializer.data) = std::stous(txt);
+			(*serializer.data) = (unsigned short)std::stoi(txt);
 		}
 		else if constexpr (std::same_as<T, float>) {
 			(*serializer.data) = std::stof(txt);
