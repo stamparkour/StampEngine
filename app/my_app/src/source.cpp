@@ -41,7 +41,7 @@ template<> struct stamp::reflect::reflect_traits<Dummy> {
 };
 
 struct my_obj_t {
-	std::vector<std::pair<std::string, int>> vec;
+	std::array<int, 3> vec;
 	float my_num;
 };
 
@@ -79,9 +79,9 @@ int main(int argc, char** argv) {
 	}
 
 	my_obj_t obj = {};
-	obj.vec.push_back({"hi",2});
-	obj.vec.push_back({"frog",-3});
-	obj.vec.push_back({"dig",1982});
+	obj.vec[0] = 1;
+	obj.vec[1] = 5;
+	obj.vec[2] = 13;
 	obj.my_num = 12.48;
 	std::stringstream stream;
 

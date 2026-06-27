@@ -78,11 +78,31 @@ namespace stamp::serialize {
 		concept json_key = std::convertible_to<std::string, T>;
 
 		template<typename Container>
-		concept inserter_iterable = 
+		concept array_iterable =
 			requires {
 				typename Container::iterator;
 				typename Container::value_type;
-			} &&
+			} && 
+			std::forward_iterator<typename Container::iterator> &&
+			requires (Container c, typename Container::iterator i, typename Container::value_type v) {
+				{ std::begin(c) } -> std::same_as<typename Container::iterator>;
+				{ std::end(c) } -> std::same_as<typename Container::iterator>;
+				{ *i } -> std::same_as<typename Container::value_type&>;
+				{ *i = v } -> std::same_as<typename Container::value_type&>;
+			};
+		template<typename Container>
+		concept array_json_pair_iterable =
+			array_iterable<Container> &&
+			requires {
+				typename Container::value_type::first_type;
+				typename Container::value_type::second_type;
+			} && 
+			json_key<typename Container::value_type::first_type>;
+
+
+		template<typename Container>
+		concept inserter_iterable = 
+			array_iterable<Container> &&
 			requires (Container c, typename Container::iterator i, typename Container::value_type v) {
 				c.insert(i, v);
 				{ std::inserter(c, i) } -> std::same_as<std::insert_iterator<Container>>;
@@ -182,6 +202,193 @@ namespace stamp::serialize {
 				return (char)parse_hex4(is); // should be fixed to support unicode 32
 			default:
 				return c;
+			}
+		}
+
+		template<typename IS, concepts::array_iterable T>
+		inline void json_in_impl(IS& istream, const json_serializer<T>& serializer, char next_char) {
+			if (next_char == '[') {
+				istream.get(); // skip [
+				auto iter = std::begin(*serializer.data);
+				while (iter != std::end(*serializer.data)) {
+					auto& inserter = *iter;
+					detail::skip_whitespace(istream, serializer.format);
+					next_char = (char)istream.peek();
+					if (!istream) return; // should throw something
+					if (next_char == ']') {
+						istream.get(); // skip ]
+						break;
+					}
+
+					typename T::value_type instance;
+					auto j = json(instance, *serializer.format);
+					json_in(istream, j);
+					inserter = std::move(instance);
+
+					detail::skip_whitespace(istream, serializer.format);
+
+					next_char = (char)istream.peek();
+					if (!istream) return; // should throw something
+					if (next_char == ',') {
+						istream.get(); // skip ,
+					}
+					else if (next_char == ']') {
+						// ignore ]
+					}
+					else {
+						return; // should throw something
+					}
+
+					detail::skip_whitespace(istream, serializer.format);
+					++iter;
+				}
+			}
+			else if constexpr (concepts::array_json_pair_iterable<T>) {
+				if (next_char == '{') {
+					istream.get(); // skip {
+					auto iter = std::begin(*serializer.data);
+					while (iter != std::end(*serializer.data)) {
+						auto& inserter = *iter;
+						detail::skip_whitespace(istream, serializer.format);
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char == '}') {
+							istream.get(); // skip ]
+							break;
+						}
+
+						typename T::value_type instance;
+						auto j1 = json(instance.first, *serializer.format);
+						json_in(istream, j1);
+
+						detail::skip_whitespace(istream, serializer.format);
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char != ':') {
+							return; // should throw somthing
+						}
+						istream.get(); // skip :
+						detail::skip_whitespace(istream, serializer.format);
+
+						auto j2 = json(instance.second, *serializer.format);
+						json_in(istream, j2);
+						inserter = std::move(instance);
+
+						detail::skip_whitespace(istream, serializer.format);
+
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char == ',') {
+							istream.get(); // skip ,
+						}
+						else if (next_char == '}') {
+							// ignore ]
+						}
+						else {
+							return; // should throw something
+						}
+
+						detail::skip_whitespace(istream, serializer.format);
+						++iter;
+					}
+				}
+				else {
+					return; // should throw something
+				}
+			}
+			else {
+				return; // should throw something
+			}
+		}
+		template<typename IS, concepts::inserter_iterable T>
+		inline void json_in_impl(IS& istream, const json_serializer<T>& serializer, char next_char) {
+			if (next_char == '[') {
+				istream.get(); // skip [
+				auto inserter = std::inserter(*serializer.data, serializer.data->end());
+				while (true) {
+					detail::skip_whitespace(istream, serializer.format);
+					next_char = (char)istream.peek();
+					if (!istream) return; // should throw something
+					if (next_char == ']') {
+						istream.get(); // skip ]
+						break;
+					}
+
+					typename T::value_type instance;
+					auto j = json(instance, *serializer.format);
+					json_in(istream, j);
+					inserter = std::move(instance);
+
+					detail::skip_whitespace(istream, serializer.format);
+
+					next_char = (char)istream.peek();
+					if (!istream) return; // should throw something
+					if (next_char == ',') {
+						istream.get(); // skip ,
+					}
+					else if (next_char == ']') {
+						// ignore ]
+					}
+					else {
+						return; // should throw something
+					}
+
+					detail::skip_whitespace(istream, serializer.format);
+				}
+			}
+			else if constexpr (concepts::inserter_json_pair_iterable<T>) {
+				if (next_char == '{') {
+					istream.get(); // skip {
+					auto inserter = std::inserter(*serializer.data, serializer.data->end());
+					while (true) {
+						detail::skip_whitespace(istream, serializer.format);
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char == '}') {
+							istream.get(); // skip ]
+							break;
+						}
+
+						typename T::value_type instance;
+						auto j1 = json(instance.first, *serializer.format);
+						json_in(istream, j1);
+
+						detail::skip_whitespace(istream, serializer.format);
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char != ':') {
+							return; // should throw somthing
+						}
+						istream.get(); // skip :
+						detail::skip_whitespace(istream, serializer.format);
+
+						auto j2 = json(instance.second, *serializer.format);
+						json_in(istream, j2);
+						inserter = std::move(instance);
+
+						detail::skip_whitespace(istream, serializer.format);
+
+						next_char = (char)istream.peek();
+						if (!istream) return; // should throw something
+						if (next_char == ',') {
+							istream.get(); // skip ,
+						}
+						else if (next_char == '}') {
+							// ignore ]
+						}
+						else {
+							return; // should throw something
+						}
+
+						detail::skip_whitespace(istream, serializer.format);
+					}
+				}
+				else {
+					return; // should throw something
+				}
+			}
+			else {
+				return; // should throw something
 			}
 		}
 	}
@@ -285,7 +492,7 @@ namespace stamp::serialize {
 
 	// iterable. specify with pair iterator to allow for generic dictionaries. std::back_inserter
 
-	template<typename IS, concepts::inserter_iterable T>
+	template<typename IS, concepts::array_iterable T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		char next_char;
@@ -300,90 +507,10 @@ namespace stamp::serialize {
 
 		// the next character is a json delim character
 
-		if (next_char == '[') {
-			istream.get(); // skip [
-			auto inserter = std::inserter(*serializer.data, serializer.data->end());
-			while (true) {
-				detail::skip_whitespace(istream, serializer.format);
-				next_char = (char)istream.peek();
-				if (!istream) return; // should throw something
-				if (next_char == ']') {
-					istream.get(); // skip ]
-					break;
-				}
-
-				typename T::value_type instance;
-				auto j = json(instance, *serializer.format);
-				json_in(istream, j);
-				inserter = std::move(instance);
-
-				detail::skip_whitespace(istream, serializer.format);
-
-				next_char = (char)istream.peek();
-				if (!istream) return; // should throw something
-				if (next_char == ',') {
-					istream.get(); // skip ,
-				}
-				else if (next_char == ']') {
-					// ignore ]
-				}
-				else {
-					return; // should throw something
-				}
-
-				detail::skip_whitespace(istream, serializer.format);
-			}
-		}
-		else if (concepts::inserter_json_pair_iterable<T> && next_char == '{') {
-			istream.get(); // skip {
-			auto inserter = std::inserter(*serializer.data, serializer.data->end());
-			while (true) {
-				detail::skip_whitespace(istream, serializer.format);
-				next_char = (char)istream.peek();
-				if (!istream) return; // should throw something
-				if (next_char == '}') {
-					istream.get(); // skip ]
-					break;
-				}
-
-				typename T::value_type instance;
-				auto j1 = json(instance.first, *serializer.format);
-				json_in(istream, j1);
-
-				detail::skip_whitespace(istream, serializer.format);
-				next_char = (char)istream.peek();
-				if (!istream) return; // should throw something
-				if (next_char != ':') {
-					return; // should throw somthing
-				}
-				istream.get(); // skip :
-				detail::skip_whitespace(istream, serializer.format);
-
-				auto j2 = json(instance.second, *serializer.format);
-				json_in(istream, j2);
-				inserter = std::move(instance);
-
-				detail::skip_whitespace(istream, serializer.format);
-
-				next_char = (char)istream.peek();
-				if (!istream) return; // should throw something
-				if (next_char == ',') {
-					istream.get(); // skip ,
-				}
-				else if (next_char == '}') {
-					// ignore ]
-				}
-				else {
-					return; // should throw something
-				}
-
-				detail::skip_whitespace(istream, serializer.format);
-			}
-		}
-		else {
-			return; // should throw something
-		}
+		detail::json_in_impl(istream, serializer, next_char);
 	}
+
+
 
 	template<typename IS, typename T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
@@ -513,45 +640,47 @@ namespace stamp::serialize {
 	inline void json_out(OS& ostream, const json_serializer<std::string_view>& serializer, std::size_t call_depth = 0) {
 		ostream << *(serializer.data);
 	}
-	template<typename OS, concepts::inserter_iterable T>
+	template<typename OS, concepts::array_iterable T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
-		if (concepts::inserter_json_pair_iterable<T> && !serializer.format->force_object_pairs) {
-			// already pre-indented
-			ostream << '{';
-			int index = 0;
-			for (const auto& v : *serializer.data) {
-				if (index != 0) ostream << ",";
+		if constexpr (concepts::array_json_pair_iterable<T>) {
+			if (serializer.format->force_object_pairs) {
+				// already pre-indented
+				ostream << '{';
+				int index = 0;
+				for (const auto& v : *serializer.data) {
+					if (index != 0) ostream << ",";
+					detail::print_newline(ostream, serializer.format);
+					detail::print_nested(ostream, serializer.format, call_depth + 1);
+
+					ostream << "\"" << v.first << "\":";
+					detail::print_spacing(ostream, serializer.format);
+
+					auto j2 = json(v.second, *serializer.format);
+					json_out(ostream, j2, call_depth + 1);
+
+					index++;
+				}
 				detail::print_newline(ostream, serializer.format);
-				detail::print_nested(ostream, serializer.format, call_depth + 1);
+				detail::print_nested(ostream, serializer.format, call_depth);
+				ostream << '}';
 
-				ostream << "\"" << v.first << "\":";
-				detail::print_spacing(ostream, serializer.format);
-
-				auto j2 = json(v.second, *serializer.format);
-				json_out(ostream, j2, call_depth + 1);
-
-				index++;
+				return;
 			}
-			detail::print_newline(ostream, serializer.format);
-			detail::print_nested(ostream, serializer.format, call_depth);
-			ostream << '}';
 		}
-		else {
-			// already pre-indented
-			ostream << '[';
-			int index = 0;
-			for (const auto& v : *serializer.data) {
-				if (index != 0) ostream << ",";
-				detail::print_newline(ostream, serializer.format);
-				detail::print_nested(ostream, serializer.format, call_depth + 1);
-				auto j = json(v, *serializer.format);
-				json_out(ostream, j, call_depth + 1);
-				index++;
-			}
+
+		ostream << '[';
+		int index = 0;
+		for (const auto& v : *serializer.data) {
+			if (index != 0) ostream << ",";
 			detail::print_newline(ostream, serializer.format);
-			detail::print_nested(ostream, serializer.format, call_depth);
-			ostream << ']';
+			detail::print_nested(ostream, serializer.format, call_depth + 1);
+			auto j = json(v, *serializer.format);
+			json_out(ostream, j, call_depth + 1);
+			index++;
 		}
+		detail::print_newline(ostream, serializer.format);
+		detail::print_nested(ostream, serializer.format, call_depth);
+		ostream << ']';
 	}
 	template<typename OS, typename T>
 	inline void json_out(OS& ostream, const json_serializer<T const>& serializer, std::size_t call_depth = 0) {
