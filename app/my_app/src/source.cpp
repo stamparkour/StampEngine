@@ -8,6 +8,7 @@
 #include <stamp/serialize/json.h>
 #include <concepts>
 #include <sstream>
+#include <stamp/serialize/stream.h>
 
 using namespace stamp::reflect;
 using namespace stamp::serialize;
@@ -83,7 +84,8 @@ int main(int argc, char** argv) {
 	obj.vec[1] = 5;
 	obj.vec[2] = 13;
 	obj.my_num = 12.48;
-	std::stringstream stream;
+	std::string buffer;
+	stamp::serialize::string_stream_wrapper stream{buffer};
 
 	stamp::serialize::json_formatter format{
 		.nested_str = "",
@@ -95,10 +97,16 @@ int main(int argc, char** argv) {
 
 	std::cout << stamp::serialize::json(obj, format) << std::endl;
 
-	stream << stamp::serialize::json(obj, format);
+	my_obj_t oobj;
 
-	my_obj_t oobj = {};
-	stream >> stamp::serialize::json(oobj);
+	for (int i = 0; i < 100000; i++) {
+		stream.str("");
+		stream.clear();
+		stream << stamp::serialize::json(obj, format);
+
+		oobj = {};
+		stream >> stamp::serialize::json(oobj);
+	}
 
 
 	

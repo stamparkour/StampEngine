@@ -61,6 +61,7 @@ namespace stamp::serialize {
 				{ v.read(buffer, size) } -> std::same_as<T&>;
 				{ v.peek() } -> std::same_as<typename T::int_type>;
 				{ v.get() } -> std::same_as<typename T::int_type>;
+				{ (bool)v } -> std::same_as<bool>;
 			};
 
 		template<typename T>
@@ -72,6 +73,7 @@ namespace stamp::serialize {
 				static_cast<bool>(v);
 				{ v.write(buffer, size) } -> std::same_as<T&>;
 				{ v.put(next_char) } -> std::same_as<T&>;
+				{ (bool)v } -> std::same_as<bool>;
 			};
 
 		template<typename T>
@@ -153,21 +155,21 @@ namespace stamp::serialize {
 		template<typename OS>
 		inline void print_newline(OS& os, const json_formatter* format) {
 			if (format == nullptr) return;
-			if (format->newline_str[0] != '0')
-				os << format->newline_str;
+			if (format->newline_str[0] != '\0')
+				os.write(format->newline_str, std::strlen(format->newline_str));
 		}
 		template<typename OS>
 		inline void print_spacing(OS& os, const json_formatter* format) {
 			if (format == nullptr) return;
-			if (format->spacing_str[0] != '0')
-				os << format->spacing_str;
+			if (format->spacing_str[0] != '\0')
+				os.write(format->spacing_str, std::strlen(format->spacing_str));
 		}
 		template<typename OS>
 		inline void print_nested(OS& os, const json_formatter* format, std::size_t call_depth) {
 			if (format == nullptr) return;
-			if (format->nested_str[0] != '0')
+			if (format->nested_str[0] != '\0')
 				for (std::size_t i = call_depth; i; --i)
-					os << format->nested_str;
+					os.write(format->nested_str, std::strlen(format->nested_str));
 		}
 
 		template<typename IS>
@@ -531,7 +533,7 @@ namespace stamp::serialize {
 
 				std::string_view name = property.name();
 				stamp::reflect::hash_fnv1a key;
-				key << name;
+				key << name; 
 				ret.emplace(key, [property](IS& istream, const json_serializer<T>& val) {
 					class_type* target = val.data;
 					ptr_type ptr = property.member_ptr();
@@ -606,19 +608,24 @@ namespace stamp::serialize {
 		static_assert(stamp::reflect::concepts::reflect_traits_c<T>);
 
 		// already pre-indented
-		ostream << "{";
+		const char left_bracket[] = "{";
+		ostream.write(left_bracket, sizeof(left_bracket) - 1);
 
 		using namespace stamp::reflect;
 		bool first = true;
 		for_each_reflect_member_properties<T>([&]<typename P>(const P & property) {
 			using value_type = typename P::value_type;
 
-			if (!first) ostream << ",";
+			if (!first) {
+				const char comma[] = ",";
+				ostream.write(comma, sizeof(comma) - 1);
+			}
 
 			detail::print_newline(ostream, serializer.format);
 			detail::print_nested(ostream, serializer.format, call_depth + 1);
 
-			ostream << (std::string_view)stamp::reflect::concat_cstring_v<"\"", property.name(), "\":">;
+			auto output_text = stamp::reflect::concat_cstring_v<"\"", property.name(), "\":">;
+			ostream.write(output_text.data(), output_text.size());
 			detail::print_spacing(ostream, serializer.format);
 
 			auto& val = (serializer.data->*property.member_ptr());
@@ -629,38 +636,50 @@ namespace stamp::serialize {
 		});
 		detail::print_newline(ostream, serializer.format);
 		detail::print_nested(ostream, serializer.format, call_depth);
-		ostream << "}";
+		const char right_bracket[] = "}";
+		ostream.write(right_bracket, sizeof(right_bracket) - 1);
 	}
 	template<typename OS, std::integral T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		// change to use ostream.write with a buffered to_chars
-		ostream << *(serializer.data);
+		char buffer[64]; // 128b uses 40 digits.
+		auto result = std::to_chars(std::begin(buffer), std::end(buffer), *serializer.data);
+		ostream.write(buffer, result.ptr - buffer);
 	}
 	template<typename OS, std::floating_point T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
-		ostream << *(serializer.data);
+		char buffer[64]; // 64b uses 25 digits.
+		auto result = std::to_chars(std::begin(buffer), std::end(buffer), *serializer.data);
+		ostream.write(buffer, result.ptr - buffer);
 	}
 	template<typename OS>
 	inline void json_out(OS& ostream, const json_serializer<std::string>& serializer, std::size_t call_depth = 0) {
-		ostream << *(serializer.data);
+		ostream.put('"');
+		ostream.write(serializer.data->data(), serializer.data->size());
+		ostream.put('"');
 	}
 	template<typename OS>
 	inline void json_out(OS& ostream, const json_serializer<std::string_view>& serializer, std::size_t call_depth = 0) {
-		ostream << *(serializer.data);
+		ostream.put('"');
+		ostream.write(serializer.data->data(), serializer.data->size());
+		ostream.put('"');
 	}
 	template<typename OS, concepts::array_iterable T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
 		if constexpr (concepts::array_json_pair_iterable<T>) {
 			if (serializer.format->force_object_pairs) {
 				// already pre-indented
-				ostream << '{';
+				ostream.put('{');
 				int index = 0;
 				for (const auto& v : *serializer.data) {
-					if (index != 0) ostream << ",";
+					if (index != 0) ostream.put(',');
 					detail::print_newline(ostream, serializer.format);
 					detail::print_nested(ostream, serializer.format, call_depth + 1);
 
-					ostream << "\"" << v.first << "\":";
+					ostream.put('"');
+					ostream.write(v.first.data(), v.first.size());
+					const char arr1[] = "\":";
+					ostream.write(arr1, sizeof(arr1) - 1);
 					detail::print_spacing(ostream, serializer.format);
 
 					auto j2 = json(v.second, *serializer.format);
@@ -670,16 +689,16 @@ namespace stamp::serialize {
 				}
 				detail::print_newline(ostream, serializer.format);
 				detail::print_nested(ostream, serializer.format, call_depth);
-				ostream << '}';
+				ostream.put('}');
 
 				return;
 			}
 		}
 
-		ostream << '[';
+		ostream.put('[');
 		int index = 0;
 		for (const auto& v : *serializer.data) {
-			if (index != 0) ostream << ",";
+			if (index != 0) ostream.put(',');
 			detail::print_newline(ostream, serializer.format);
 			detail::print_nested(ostream, serializer.format, call_depth + 1);
 			auto j = json(v, *serializer.format);
@@ -688,7 +707,7 @@ namespace stamp::serialize {
 		}
 		detail::print_newline(ostream, serializer.format);
 		detail::print_nested(ostream, serializer.format, call_depth);
-		ostream << ']';
+		ostream.put(']');
 	}
 	template<typename OS, typename T>
 	inline void json_out(OS& ostream, const json_serializer<T const>& serializer, std::size_t call_depth = 0) {
