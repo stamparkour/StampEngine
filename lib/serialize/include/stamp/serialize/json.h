@@ -543,43 +543,39 @@ namespace stamp::serialize {
 			return ret;
 		}();
 
-		typename IS::char_type buffer[256]; // only for debugging purposes
+		IS::char_type next_char; // only for debugging purposes
 
 		// {
 		if (!istream) return; // should throw something (error before read)
 		detail::skip_whitespace(istream, serializer.format);
 
-		buffer[0] = (char)istream.get();
+		next_char = (char)istream.get();
 		if (!istream) return; // should throw something
-		if (buffer[0] != '{') return;
+		if (next_char != '{') return;
 
 		while (true) {
-			buffer[0] = (char)istream.get();
+			next_char = (char)istream.get();
 			if (!istream) return; // should throw something
-			if (buffer[0] == '}') break;
-			if (buffer[0] == '"') {
+			if (next_char == '}') break;
+			if (next_char == '"') {
 				stamp::reflect::hash_fnv1a hash;
-				std::size_t index = 0;
 				//retrieve hash
 				while (true) {
-					buffer[index] = (char)istream.get();
+					next_char = (char)istream.get();
 					if (!istream) return; // should throw something
-					if (buffer[index] == '"') {
-						index++;
+					if (next_char == '"') {
 						break;
 					}
-					hash << buffer[index];
-					index++;
+					hash << next_char;
 				}
 				// go to value body
 				while (true) {
-					buffer[index] = (char)istream.get();
+					next_char = (char)istream.get();
 					if (!istream) return; // should throw something
-					if (buffer[index] == ':') {
+					if (next_char == ':') {
 						index++;
 						break;
 					}
-					index++;
 				}
 				// skip whitespace
 
