@@ -543,7 +543,7 @@ namespace stamp::serialize {
 			return ret;
 		}();
 
-		IS::char_type next_char; // only for debugging purposes
+		typename IS::char_type next_char; // only for debugging purposes
 
 		// {
 		if (!istream) return; // should throw something (error before read)
@@ -573,7 +573,6 @@ namespace stamp::serialize {
 					next_char = (char)istream.get();
 					if (!istream) return; // should throw something
 					if (next_char == ':') {
-						index++;
 						break;
 					}
 				}
