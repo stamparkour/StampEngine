@@ -407,7 +407,9 @@ namespace stamp::serialize {
 	template<typename IS, typename T> requires std::integral<T> || std::floating_point<T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
-		std::string txt = "";
+		static thread_local std::string txt;
+		txt.clear();
+
 		while (true) {
 			char next_char = (char)istream.peek();
 			if (!istream) return; // should throw something
@@ -419,27 +421,7 @@ namespace stamp::serialize {
 			istream.get(); // go to next char
 		}
 
-		if constexpr (std::same_as<T, int>) {
-			(*serializer.data) = std::stoi(txt);
-		}
-		else if constexpr (std::same_as<T, unsigned int>) {
-			(*serializer.data) = (unsigned int)std::stoi(txt);
-		}
-		else if constexpr (std::same_as<T, short>) {
-			(*serializer.data) = (short)std::stoi(txt);
-		}
-		else if constexpr (std::same_as<T, unsigned short>) {
-			(*serializer.data) = (unsigned short)std::stoi(txt);
-		}
-		else if constexpr (std::same_as<T, float>) {
-			(*serializer.data) = std::stof(txt);
-		}
-		else if constexpr (std::same_as<T, double>) {
-			(*serializer.data) = std::stod(txt);
-		}
-		else {
-			static_assert(false, "no implementation for integral or floating point type");
-		}
+		std::from_chars(txt.data(), txt.data() + txt.size(), *serializer.data);
 
 		detail::skip_whitespace(istream, serializer.format);
 	}
@@ -449,7 +431,9 @@ namespace stamp::serialize {
 		if (!istream) return; // should throw something (error before call)
 		detail::skip_whitespace(istream, serializer.format);
 
-		std::string txt = "";
+		static thread_local std::string txt;
+		txt.clear();
+
 		while (true) {
 			char next_char = (char)istream.peek();
 			if (!istream) return; // should throw something
@@ -479,7 +463,8 @@ namespace stamp::serialize {
 		if (!istream) return; // should throw something (error before call)
 		detail::skip_whitespace(istream, serializer.format);
 
-		std::string txt = "";
+		static thread_local std::string txt;
+		txt.clear();
 
 		char next_char = (char)istream.peek();
 		if (!istream) return; // should throw something
@@ -558,7 +543,7 @@ namespace stamp::serialize {
 			return ret;
 		}();
 
-		typename IS::char_type buffer[256];
+		typename IS::char_type buffer[256]; // only for debugging purposes
 
 		// {
 		if (!istream) return; // should throw something (error before read)
@@ -597,16 +582,8 @@ namespace stamp::serialize {
 					index++;
 				}
 				// skip whitespace
-				while (true) {
-					buffer[index] = (char)istream.peek();
-					if (!istream) return; // should throw something
-					if (!detail::is_whitespace_ascii(buffer[index])) {
-						index++;
-						break;
-					}
-					istream.get(); // skip char
-					index++;
-				}
+
+				detail::skip_whitespace(istream, serializer.format);
 
 				if (auto iter = member_map.find(hash); iter != member_map.end()) {
 					iter->second(istream, serializer);

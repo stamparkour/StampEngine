@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 
 	my_obj_t oobj;
 
-	for (int i = 0; i < 100000; i++) {
+	for (int i = 0; i < 1000000; i++) {
 		stream.str("");
 		stream.clear();
 		stream << stamp::serialize::json(obj, format);
