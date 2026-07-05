@@ -1,0 +1,6 @@
+stamp::task will be a library dedicated to a general purpose user-space thread pool
+to allow for efficient handling of long running single-threaded tasks
+provide access to shared resources in an efficient manner.
+
+specifically: provide polymorphic memory resource support for tasks, 
+communication between tasks
