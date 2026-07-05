@@ -10,6 +10,7 @@ set(STAMP_SERIALIZE_HEADERS
 	"include/stamp/serialize/serialize_helpers.h"
 	"include/stamp/serialize/json.h" 
 	"include/stamp/serialize/stream.h"
+	"include/stamp/serialize/concepts.h"
 )
 
 # add the library

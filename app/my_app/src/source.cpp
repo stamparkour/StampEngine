@@ -9,105 +9,45 @@
 #include <concepts>
 #include <sstream>
 #include <stamp/serialize/stream.h>
+#include <stamp/serialize/ordered_binary.h>
+#include <fstream>
+#include <filesystem>
 
 using namespace stamp::reflect;
 using namespace stamp::serialize;
 
-// 3. Member Pointers
-struct Dummy {
-	int test;
-	float my_ptr;
-
-
-	void my_func(int& i) {
-		std::cout << i << std::endl;
-		i = 13;
-	}
-};
-template<> struct stamp::reflect::reflect_traits<Dummy> {
-	using type = Dummy;
-	static constexpr string_literal space = "my";
-	static constexpr string_literal name = "Dummy";
-	static constexpr auto properties = std::tuple{
-		reflect("test"_rf, &type::test),
-		reflect("my_ptr"_rf, &type::my_ptr)
-	};
-	static constexpr auto functions = std::tuple{
-		reflect("my_func"_rf, &type::my_func),
-
-		// for cv overloads, use:
-		// reflect(tag::const_rf, "my_func"_rf, &type::my_func),
-		// reflect(tag::none_rf, "my_func"_rf, &type::my_func),
-	};
-};
 
 struct my_obj_t {
-	std::array<int, 3> vec;
-	float my_num;
+	float* my_ptr;
+	int my_value = 39;
 };
 
 template<> struct stamp::reflect::reflect_traits<my_obj_t> {
 	using type = my_obj_t;
-	static constexpr string_literal name = "Dummy_obj_tmy";
+	static constexpr string_literal name = "my_obj_t";
 	static constexpr auto properties = std::tuple{
-		reflect("vec"_rf, &type::vec),
-		reflect("my_num"_rf, &type::my_num)
+		reflect("my_ptr"_rf, &type::my_ptr),
+		reflect("my_value"_rf, &type::my_value)
 	};
 };
 
 int main(int argc, char** argv) {
-	std::array<int, 10> v{1, 2, 3, 4, 5};
 
-	std::cout << (std::string_view)stamp::reflect::traits::name_v<std::pair<int, float> const>;
-	for_each_reflect_member_properties<std::pair<int, float> const>([&]<typename P>(const P & property) {
-		using value_type = typename P::value_type;
 
-		std::cout << (std::string_view)property.name();
-	});
-
-	{
-		Dummy obj = {};
-		obj.test = 4;
-		view my_view{obj};
-		std::cout << my_view.reflect_info().name << std::endl;
-		std::cout << my_view.fetch("test").to_string() << std::endl;
-		std::cout << my_view.fetch("test").reflect_info().name << std::endl;
-		std::cout << my_view.fetch("my_func").reflect_info().name << std::endl;
-
-		int i = 17;
-		my_view.fetch("my_func").invoke(i);
-		my_view.fetch("my_func").invoke(i);
-	}
-
+	float value = 12.94;
 	my_obj_t obj = {};
-	obj.vec[0] = 1;
-	obj.vec[1] = 5;
-	obj.vec[2] = 13;
-	obj.my_num = 12.48;
-	std::string buffer;
-	stamp::serialize::string_stream_wrapper stream{buffer};
+	obj.my_ptr = &value;
 
-	stamp::serialize::json_formatter format{
-		.nested_str = "",
-		.newline_str = "",
-		.spacing_str = "",
-		.force_object_pairs = false,
-		.force_string_char_array = false
-	};
+	std::cout << std::filesystem::current_path() << std::endl;
+	std::stringstream file{std::ios::binary | std::ios::in | std::ios::out};
+	stamp::serialize::pointer_track_registry tracker1{};
 
-	std::cout << stamp::serialize::json(obj, format) << std::endl;
+	file << stamp::serialize::ordered_binary(obj, tracker1);
 
-	my_obj_t oobj;
+	my_obj_t obj2 = {};
+	stamp::serialize::pointer_track_registry tracker2{};
 
-	for (int i = 0; i < 1000000; i++) {
-		stream.str("");
-		stream.clear();
-		stream << stamp::serialize::json(obj, format);
-
-		oobj = {};
-		stream >> stamp::serialize::json(oobj);
-	}
-
+	file >> stamp::serialize::ordered_binary(obj2, tracker2);
 
 	
 	std::cout << "done" << std::endl;

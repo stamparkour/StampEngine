@@ -18,7 +18,7 @@ namespace stamp::serialize {
 
 	template<std::size_t S>
 	inline std::array<char, S> reverse_bytes_arr(const std::array<char, S>& val) {
-		std::array<char, sizeof(T)> out;
+		std::array<char, S> out;
 		std::ranges::reverse_copy(val.begin(), val.end(), out.begin());
 		return out;
 	}

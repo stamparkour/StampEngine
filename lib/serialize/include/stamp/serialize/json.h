@@ -3,9 +3,9 @@
 
 #include <stamp/reflect/reflect.h>
 #include <stamp/reflect/string_literal.h>
+#include <stamp/serialize/concepts.h>  
 #include <string>
 #include <string_view>
-#include <concepts>
 #include <unordered_map>
 #include <functional>
 #include <iterator>
@@ -47,78 +47,6 @@ namespace stamp::serialize {
 				return false;
 			}
 		}
-	}
-
-	namespace concepts {
-		template<typename T>
-		concept stamp_istream_c = 
-			requires {
-				typename T::char_type;
-				typename T::int_type;
-			}&&
-			requires(T & v, T::char_type* buffer, std::streamsize size) {
-				static_cast<bool>(v);
-				{ v.read(buffer, size) } -> std::same_as<T&>;
-				{ v.peek() } -> std::same_as<typename T::int_type>;
-				{ v.get() } -> std::same_as<typename T::int_type>;
-				{ (bool)v } -> std::same_as<bool>;
-			};
-
-		template<typename T>
-		concept stamp_ostream_c = 
-			requires {
-				typename T::char_type;
-			} &&
-			requires(T & v, typename T::char_type * buffer, std::streamsize size, typename T::char_type next_char) {
-				static_cast<bool>(v);
-				{ v.write(buffer, size) } -> std::same_as<T&>;
-				{ v.put(next_char) } -> std::same_as<T&>;
-				{ (bool)v } -> std::same_as<bool>;
-			};
-
-		template<typename T>
-		concept json_key = std::convertible_to<std::string, T>;
-
-		template<typename Container>
-		concept array_iterable =
-			requires {
-				typename Container::iterator;
-				typename Container::value_type;
-			} && 
-			std::forward_iterator<typename Container::iterator> &&
-			requires (Container c, typename Container::iterator i, typename Container::value_type v) {
-				{ std::begin(c) } -> std::same_as<typename Container::iterator>;
-				{ std::end(c) } -> std::same_as<typename Container::iterator>;
-				{ *i } -> std::same_as<typename Container::value_type&>;
-				{ *i = v } -> std::same_as<typename Container::value_type&>;
-			};
-		template<typename Container>
-		concept array_json_pair_iterable =
-			array_iterable<Container> &&
-			requires {
-				typename Container::value_type::first_type;
-				typename Container::value_type::second_type;
-			} && 
-			json_key<typename Container::value_type::first_type>;
-
-
-		template<typename Container>
-		concept inserter_iterable = 
-			array_iterable<Container> &&
-			requires (Container c, typename Container::iterator i, typename Container::value_type v) {
-				c.insert(i, v);
-				{ std::inserter(c, i) } -> std::same_as<std::insert_iterator<Container>>;
-			};
-
-		template<typename Container>
-		concept inserter_json_pair_iterable =
-			inserter_iterable<Container> &&
-			requires {
-				typename Container::value_type::first_type;
-				typename Container::value_type::second_type;
-			} && 
-			json_key<typename Container::value_type::first_type>;
-
 	}
 
 	struct json_formatter {
@@ -397,7 +325,7 @@ namespace stamp::serialize {
 
 	template<typename T>
 	json_serializer<T> json(T& val) {
-		return {&val, 0};
+		return {&val, nullptr};
 	}
 	template<typename T>
 	json_serializer<T> json(T& val, const json_formatter& format) {
@@ -519,6 +447,7 @@ namespace stamp::serialize {
 
 	template<typename IS, typename T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
+		static_assert(stamp::reflect::concepts::reflect_traits_usertype_c<T>);
 		using namespace stamp::reflect;
 
 		static std::unordered_map<stamp::reflect::hash_fnv1a, std::function<void(IS&, const json_serializer<T>&)>> member_map = []() {
@@ -589,7 +518,7 @@ namespace stamp::serialize {
 
 	template<typename OS, typename T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
-		static_assert(stamp::reflect::concepts::reflect_traits_c<T>);
+		static_assert(stamp::reflect::concepts::reflect_traits_usertype_c<T>);
 
 		// already pre-indented
 		const char left_bracket[] = "{";
