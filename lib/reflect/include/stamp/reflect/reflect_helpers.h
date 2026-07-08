@@ -74,19 +74,6 @@ namespace stamp::reflect {
 		for_each(traits::properties_v<T>, func);
 	}
 
-	template<string_literal... Other>
-	struct comma_list_string_literals;
-	template<string_literal A, string_literal... Other>
-	struct comma_list_string_literals<A, Other...> {
-		constexpr static auto value = concat_cstring_v<A, concat_cstring_v<", ", Other>...>;
-	};
-	template<>
-	struct comma_list_string_literals<> {
-		constexpr static auto value = string_literal{""};
-	};
-	template<string_literal... Arg>
-	constexpr auto comma_list_string_literals_v = comma_list_string_literals< Arg...>::value;
-
 	template<typename... T>
 	struct first_argument;
 	template<typename T0, typename... T>

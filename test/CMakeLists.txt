@@ -3,12 +3,12 @@ include(FetchContent)
 #source files
 set(PROJECT_SOURCES
 	"src/source.cpp"
+	"src/reflect_test.cpp"
+	"src/diagnose_test.cpp"
 )
 set(PROJECT_HEADERS
 	"src/core_tests.h"
-	"src/diagnose_test.h"
 	"src/math_test.h"
-	"src/reflect_test.h"
 	"src/serialize_test.h"
 	"src/signal_test.h"
 )

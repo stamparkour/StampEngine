@@ -23,7 +23,7 @@
 // unique_ptr, weak_ptr
 // error code
 // config to prevent any memory leaks
-// iterator support
+// iterator support. deliminate std::array (by detecting constexpr array.size(); )
 
 
 namespace stamp::serialize {

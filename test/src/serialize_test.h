@@ -1,6 +1,3 @@
-#ifndef STAMP_TEST_SERIALIZE_TEST_H
-#define STAMP_TEST_SERIALIZE_TEST_H
-
 #include <gtest/gtest.h>
 
 #include <stamp/serialize/serialize_helpers.h>
@@ -50,7 +47,7 @@ TEST(stamp_serialize, ordered_binary) {
 
 	int val = 0x12345678;
 	std::stringstream out{};
-	
+
 	out << ordered_binary(val);
 
 	auto view = out.view();
@@ -58,5 +55,3 @@ TEST(stamp_serialize, ordered_binary) {
 	EXPECT_EQ(view, val_view);
 
 }
-
-#endif // STAMP_TEST_SERIALIZE_TEST_H
