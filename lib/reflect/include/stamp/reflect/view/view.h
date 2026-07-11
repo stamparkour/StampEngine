@@ -2,12 +2,12 @@
 #ifndef STAMP_REFLECT_VIEW_VIEW_H
 #define STAMP_REFLECT_VIEW_VIEW_H
 
-#include "view_handle.h"
+#include <stamp/reflect/view/view_handle.h>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
-#include "../reflect_types.h"
+#include <stamp/reflect/reflect_types.h>
 // unified way to access class member attributes and methods and interact with them.
 
 namespace stamp::reflect {

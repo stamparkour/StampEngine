@@ -5,7 +5,7 @@
 #include <stamp/reflect/reflect_traits.h>
 #include <stamp/reflect/reflect_types.h>
 #include <array>
-#include "reflect_iterator.h"
+#include <stamp/reflect/std/reflect_iterator.h>
 
 namespace stamp::reflect {
 	template<typename T, std::size_t N>

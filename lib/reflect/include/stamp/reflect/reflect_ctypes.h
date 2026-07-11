@@ -2,9 +2,9 @@
 #ifndef STAMP_REFLECT_REFLECT_CTYPES_H
 #define STAMP_REFLECT_REFLECT_CTYPES_H
 
-#include "reflect_helpers.h"
-#include "reflect_traits.h"
-#include "reflect_types.h"
+#include <stamp/reflect/reflect_helpers.h>
+#include <stamp/reflect/reflect_traits.h>
+#include <stamp/reflect/reflect_types.h>
 #include <stamp/reflect/types/tag.h>
 #include <concepts>
 #include <string>

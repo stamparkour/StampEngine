@@ -8,10 +8,10 @@
 #include <functional>
 #include <stdexcept>
 
-#include "../member_function_traits.h"
-#include "view_handle_impl.h"
-#include "../reflect_helpers.h"
-#include "../reflect_types.h"
+#include <stamp/reflect/member_function_traits.h>
+#include <stamp/reflect/view/view_handle_impl.h>
+#include <stamp/reflect/reflect_helpers.h>
+#include <stamp/reflect/reflect_types.h>
 
 namespace stamp::reflect {
 

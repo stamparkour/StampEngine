@@ -1,9 +1,10 @@
 #ifndef STAMP_SERIALIZE_ORDERED_BINARY_H
 #define STAMP_SERIALIZE_ORDERED_BINARY_H
 
-#include "serialize_helpers.h"
-#include <stamp/reflect/reflect.h>
+#include <stamp/serialize/serialize_helpers.h>
 #include <stamp/serialize/concepts.h>
+
+#include <stamp/reflect/reflect.h>
 
 #include <iostream>
 #include <type_traits>

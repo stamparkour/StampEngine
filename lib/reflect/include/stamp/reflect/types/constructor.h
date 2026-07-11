@@ -4,7 +4,7 @@
 
 #include<tuple>
 #include<type_traits>
-#include "function.h"
+#include <stamp/reflect/types/function.h>
 
 namespace stamp::reflect {
 

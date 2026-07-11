@@ -5,6 +5,7 @@ project(stamp VERSION 0.1.0 LANGUAGES C CXX)
 
 #options
 option(STAMP_BUILD_APP OFF)
+option(STAMP_BUILD_DOXYGEN OFF)
 
 #config
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -35,5 +36,29 @@ if(STAMP_BUILD_APP)
         add_compile_options(/std:c++latest) 
     else()
         add_compile_options(-Wall -Wextra -pedantic -Werror)
+    endif()
+endif()
+
+if(STAMP_BUILD_DOXYGEN)
+    include(doxygen)
+    if(Doxygen_FOUND)
+        set(MY_DOXYGEN_SOURCES 
+            ${PROJECT_SOURCE_DIR}/lib/
+            ${PROJECT_SOURCE_DIR}/docs/
+            ${PROJECT_SOURCE_DIR}/README.md
+            ${PROJECT_SOURCE_DIR}/LICENSE.txt
+        )
+
+        set(DOXYGEN_USE_MDFILE_AS_MAINPAGE ${PROJECT_SOURCE_DIR}/README.md)
+        set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
+        set(DOXYGEN_EXTRACT_ALL YES)
+        set(DOXYGEN_EXTENSION_MAPPING txt=md)
+        set(DOXYGEN_SHOW_NAMESPACES YES)
+        set(DOXYGEN_INCLUDE_GRAPH YES)
+        set(DOXYGEN_HAVE_DOT YES)
+        set(DOXYGEN_CALL_GRAPH YES)
+        set(DOXYGEN_RECURSIVE YES)
+
+        doxygen_add_docs(stamp_docs ${MY_DOXYGEN_SOURCES} ALL)
     endif()
 endif()

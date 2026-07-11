@@ -11,6 +11,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/string_literal.h"
 	"include/stamp/reflect/meta_tuple.h"
 	"include/stamp/reflect/reflect_private.h"
+	"include/stamp/reflect/member_function_traits.h"
 	 
 
 	"include/stamp/reflect/std/reflect_std.h" 
@@ -38,7 +39,7 @@ set(STAMP_REFLECT_HEADERS
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})
 add_library(stamp::reflect ALIAS stamp_reflect)
-target_link_libraries(stamp_reflect)
+# target_link_libraries(stamp_reflect)
 target_compile_features(stamp_reflect INTERFACE cxx_std_20)
 
 

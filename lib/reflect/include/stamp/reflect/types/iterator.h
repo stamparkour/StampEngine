@@ -1,12 +1,12 @@
 #pragma once
-#ifndef STAMP_REFLECT_ITERATOR_H
-#define STAMP_REFLECT_ITERATOR_H
+#ifndef STAMP_REFLECT_TYPES_ITERATOR_H
+#define STAMP_REFLECT_TYPES_ITERATOR_H
 
-#include<tuple>
-#include<type_traits>
-#include<stamp/reflect/string_literal.h>
-#include "function.h"
-#include "tag.h"
+#include <tuple>
+#include <type_traits>
+#include <stamp/reflect/string_literal.h>
+#include <stamp/reflect/types/function.h>
+#include <stamp/reflect/types/tag.h>
 
 namespace stamp::reflect {
 	template<typename T>
@@ -58,4 +58,4 @@ namespace stamp::reflect {
 	}
 }
 
-#endif // STAMP_REFLECT_ITERATOR_H
+#endif // STAMP_REFLECT_TYPES_ITERATOR_H

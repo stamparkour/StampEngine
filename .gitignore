@@ -1,13 +1,13 @@
 # ignore build
-build/
-out/
+/build/
+/out/
 
 # VS specific
-.vs/
+/.vs/
 /CMakeSettings.json
 
 #gtest
-Testing/
+/Testing/
 
 # obsidian
-.obsidian
+/.obsidian

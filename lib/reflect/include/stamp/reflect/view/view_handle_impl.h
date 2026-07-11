@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "../reflect_helpers.h"
+#include <stamp/reflect/reflect_helpers.h>
 
 namespace stamp::reflect {
 	class view_handle;

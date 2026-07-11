@@ -7,8 +7,8 @@
 #include<tuple>
 #include<type_traits>
 #include<stamp/reflect/string_literal.h>
-#include "function.h"
-#include "../reflect_helpers.h"
+#include <stamp/reflect/types/function.h>
+#include <stamp/reflect/reflect_helpers.h>
 
 namespace stamp::reflect {
 	template<typename T>

@@ -1,16 +1,15 @@
 #pragma once
-#ifndef STAMP_REFLECT_FUNCTION_H
-#define STAMP_REFLECT_FUNCTION_H
+#ifndef STAMP_REFLECT_TYPES_FUNCTION_H
+#define STAMP_REFLECT_TYPES_FUNCTION_H
 
 // need to add overloads for lvalue and rvalue stuff
 
 #include<tuple>
 #include<type_traits>
 #include<stamp/reflect/reflect_helpers.h>
-#include<stamp/reflect/reflect_ctypes.h>
 #include <stamp/reflect/string_literal.h>
 #include <stamp/reflect/member_function_traits.h>
-#include "tag.h"
+#include <stamp/reflect/types/tag.h>
 #include <string>
 
 namespace stamp::reflect {
@@ -107,4 +106,4 @@ namespace stamp::reflect {
 	}
 }
 
-#endif // STAMP_REFLECT_MEMBER_H
+#endif // STAMP_REFLECT_TYPES_FUNCTION_H

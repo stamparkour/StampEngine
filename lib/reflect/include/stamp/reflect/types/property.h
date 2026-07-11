@@ -4,7 +4,7 @@
 
 #include<tuple>
 #include <stamp/reflect/string_literal.h>
-#include "tag.h"
+#include  <stamp/reflect/types/tag.h>
 #include<type_traits>
 
 namespace stamp::reflect {
