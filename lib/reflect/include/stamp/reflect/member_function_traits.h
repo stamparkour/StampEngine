@@ -1,3 +1,4 @@
+// stamp/reflect/member_function_traits.h
 #pragma once
 #ifndef STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H
 #define STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H

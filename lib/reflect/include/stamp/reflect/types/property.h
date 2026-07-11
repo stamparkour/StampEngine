@@ -1,3 +1,4 @@
+// stamp/reflect/types/property.h
 #pragma once
 #ifndef STAMP_REFLECT_PROPERTY_H
 #define STAMP_REFLECT_MEMBER_H

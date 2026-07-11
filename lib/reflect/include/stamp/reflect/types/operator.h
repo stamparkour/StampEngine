@@ -1,3 +1,4 @@
+// stamp/reflect/types/operator.h
 #pragma once
 #ifndef STAMP_REFLECT_OPERATOR_H
 #define STAMP_REFLECT_OPERATOR_H

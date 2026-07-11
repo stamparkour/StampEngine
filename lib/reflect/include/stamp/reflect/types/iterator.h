@@ -1,3 +1,4 @@
+// stamp/reflect/types/iterator.h
 #pragma once
 #ifndef STAMP_REFLECT_TYPES_ITERATOR_H
 #define STAMP_REFLECT_TYPES_ITERATOR_H

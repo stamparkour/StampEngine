@@ -1,3 +1,4 @@
+// stamp/serialize/ordered_binary.h
 #ifndef STAMP_SERIALIZE_ORDERED_BINARY_H
 #define STAMP_SERIALIZE_ORDERED_BINARY_H
 

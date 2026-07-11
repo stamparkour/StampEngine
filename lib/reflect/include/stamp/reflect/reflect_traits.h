@@ -1,4 +1,4 @@
-#pragma once
+// stamp/reflect/reflect_traits.h
 #ifndef STAMP_REFLECT_REFLECT_TRAITS_H
 #define STAMP_REFLECT_REFLECT_TRAITS_H
 

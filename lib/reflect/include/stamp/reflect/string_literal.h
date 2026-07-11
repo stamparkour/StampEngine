@@ -1,4 +1,4 @@
-#pragma once
+// stamp/reflect/string_literal.h
 #ifndef STAMP_REFLECT_STRING_LITERAL_H
 #define STAMP_REFLECT_STRING_LITERAL_H
 

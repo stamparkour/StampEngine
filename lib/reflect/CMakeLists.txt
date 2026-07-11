@@ -10,7 +10,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/reflect_ctypes.h"
 	"include/stamp/reflect/string_literal.h"
 	"include/stamp/reflect/meta_tuple.h"
-	"include/stamp/reflect/reflect_private.h"
+	
 	"include/stamp/reflect/member_function_traits.h"
 	 
 

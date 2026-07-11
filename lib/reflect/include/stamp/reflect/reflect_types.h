@@ -1,4 +1,4 @@
-#pragma once
+// stamp/reflect/reflect_types.h
 #ifndef STAMP_REFLECT_REFLECT_TYPES_H
 #define STAMP_REFLECT_REFLECT_TYPES_H
 

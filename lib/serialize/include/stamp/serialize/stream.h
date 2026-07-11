@@ -1,4 +1,4 @@
-#pragma once
+// stamp/serialize/stream.h
 #ifndef STAMP_SERIALIZE_STREAM_H
 #define STAMP_SERIALIZE_STREAM_H
 

@@ -1,12 +1,19 @@
-#pragma once
+// stamp/reflect/meta_tuple.h
 #ifndef STAMP_REFLECT_META_TUPLE_H
 #define STAMP_REFLECT_META_TUPLE_H
+
+/**
+* @file
+* @brief Compile-time helper functions for tuples.
+*/
 
 #include <tuple>
 #include <cstddef>
 
 namespace stamp::reflect {
-	// runs the Func on all the types of the tuple<Arg...> that match Pred. passes a std::tuple_element to the func
+	/**
+	* @brief runs 
+	*/
 	template<typename Tuple, typename Func>
 	constexpr void for_each(Func func) {
 		[&] <std::size_t... Is>(std::index_sequence<Is...>) {

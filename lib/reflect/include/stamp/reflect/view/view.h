@@ -1,3 +1,4 @@
+// stamp/reflect/view/view.h
 #pragma once
 #ifndef STAMP_REFLECT_VIEW_VIEW_H
 #define STAMP_REFLECT_VIEW_VIEW_H
