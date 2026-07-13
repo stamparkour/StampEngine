@@ -3,7 +3,10 @@
 #ifndef STAMP_REFLECT_REFLECT_STD_H
 #define STAMP_REFLECT_REFLECT_STD_H
 
-// this header includes the reflections for std
+/**
+* @file
+* @brief Includes all reflections for std library.
+*/
 
 #include "reflect_array.h"
 #include "reflect_vector.h"

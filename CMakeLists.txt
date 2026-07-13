@@ -58,6 +58,7 @@ if(STAMP_BUILD_DOXYGEN)
         set(DOXYGEN_HAVE_DOT YES)
         set(DOXYGEN_CALL_GRAPH YES)
         set(DOXYGEN_RECURSIVE YES)
+        set(DOXYGEN_SOURCE_BROWSER YES)
 
         doxygen_add_docs(stamp_docs ${MY_DOXYGEN_SOURCES} ALL)
     endif()

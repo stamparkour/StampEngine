@@ -25,7 +25,7 @@ namespace stamp::reflect {
 		template<stamp::reflect::concepts::reflect_traits_c T> requires detail::has_space_c<T>
 		constexpr string_literal space_v<T> = reflect_traits<T>::space;
 		template<typename T>
-		constexpr string_literal name_v = "@unknown";
+		constexpr string_literal name_v = "";
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::name; }
 		constexpr string_literal name_v<T> = reflect_traits<T>::name;
 		template<typename T>
@@ -65,13 +65,13 @@ namespace stamp::reflect {
 	}
 
 	// runs the Func on all member functions of T’s reflect traits
-	template<typename T, typename Func>
-	constexpr void for_each_reflect_member_functions(Func func) {
+	template<typename T, typename UnaryFunc>
+	constexpr void for_each_reflect_member_functions(UnaryFunc func) {
 		for_each(traits::functions_v<T>, func);
 	}
 	// runs the Func on all member properties of T’s reflect traits
-	template<typename T, typename Func>
-	constexpr void for_each_reflect_member_properties(Func func) {
+	template<typename T, typename UnaryFunc>
+	constexpr void for_each_reflect_member_properties(UnaryFunc func) {
 		for_each(traits::properties_v<T>, func);
 	}
 

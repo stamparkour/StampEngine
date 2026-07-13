@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <stamp/reflect/reflect_types.h>
 // unified way to access class member attributes and methods and interact with them.
 
 namespace stamp::reflect {

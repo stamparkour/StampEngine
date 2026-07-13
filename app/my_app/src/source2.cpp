@@ -104,38 +104,6 @@ int testmain(int argc, char** argv) {
 	
 	std::cout << "done" << std::endl;
 
-	/*auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
-	stamp::reflect::for_each(tuple, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-		
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.name << std::endl;
-		});
-	});
-	std::cout << std::endl;
-	auto& t3 = stamp::reflect::traits::constructors_v<std::array<int, 10>>;
-	stamp::reflect::for_each(t3, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.name << std::endl;
-			});
-		});
-	std::cout << std::endl;
-	auto& t2 = stamp::reflect::traits::properties_v<Dummy>;
-	stamp::reflect::for_each(t2, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.operator_name << std::endl;
-			});
-		});*/
 
 	return 0;
 }

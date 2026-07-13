@@ -5,24 +5,43 @@
 #include <type_traits>
 
 namespace stamp::reflect {
+	/**
+	* @brief Enables reflections for each overload
+	* 
+	* possible members:
+	* - `constexpr static string_literal space = "";`
+	* - `constexpr static string_literal name = "";`
+	* - `constexpr static string_literal full_name = "";`
+	* - `constexpr static string_literal basic_name = "";`
+	* - `constexpr static auto base = std::tuple{};`
+	* - `constexpr static auto properties = std::tuple{};`
+	* - `constexpr static auto functions = std::tuple{};`
+	* - `constexpr static auto constructors = std::tuple{};`
+	* - `constexpr static auto static_functions = std::tuple{};`
+	* - `constexpr static auto static_properties = std::tuple{};`
+	* 
+	* all reflect_trait members should be retrieved through the [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors in stamp::reflect::traits.
+	* 
+	* example implementation:
+	* ``` c++
+	* struct stamp::reflect::reflect_traits<MyType> {
+	*	constexpr static string_literal name = "MyType";
+	*	constexpr static auto properties = std::tuple{
+	*		reflect("val1"_rf, &MyType::val1),
+	*		reflect("val2"_rf, &MyType::val2)
+	*	};
+	* };
+	* ```
+	*/
 	template<typename T>
 	struct reflect_traits;
-	// using type = T;
-	// constexpr static string_literal space = "";
-	// constexpr static string_literal name = "";
-	// constexpr static auto base = std::tuple{};
-	// constexpr static auto properties = std::tuple{};
-	// constexpr static auto functions = std::tuple{};
-	// constexpr static auto constructors = std::tuple{};
-	// constexpr static auto static_functions = std::tuple{};
-	// constexpr static auto static_properties = std::tuple{};
 
 	namespace concepts {
 		template<typename T>
 		concept reflect_traits_c = 
 			requires {
 				reflect_traits<T>{};
-				typename reflect_traits<T>::type;
+				// typename reflect_traits<T>::type;
 			};
 		template<typename T>
 		concept reflect_traits_class_c =
