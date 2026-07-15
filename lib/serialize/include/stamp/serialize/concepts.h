@@ -112,6 +112,7 @@ namespace stamp::serialize::concepts {
 		}&&
 		json_key<typename Container::value_type::first_type>;
 
+	
 };
 
 #endif // STAMP_SERIALIZE_CONCEPTS_H

@@ -12,6 +12,10 @@
 
 namespace stamp::reflect {
 
+	/**
+	* @namespace
+	* @brief Contains [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors for reflections.
+	*/
 	namespace traits {
 		namespace detail {
 			template<typename T>
@@ -39,29 +43,29 @@ namespace stamp::reflect {
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::basic_name; }
 		constexpr string_literal basic_name_v<T> = reflect_traits<T>::basic_name;
 		template<typename T>
-		constexpr auto base_v = std::tuple{};
+		constexpr std::tuple base_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::base; }
-		constexpr auto base_v<T> = reflect_traits<T>::base;
+		constexpr std::tuple base_v<T> = reflect_traits<T>::base;
 		template<typename T>
-		constexpr auto properties_v = std::tuple{};
+		constexpr std::tuple properties_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::properties; }
-		constexpr auto properties_v<T> = reflect_traits<T>::properties;
+		constexpr std::tuple properties_v<T> = reflect_traits<T>::properties;
 		template<typename T>
-		constexpr auto functions_v = std::tuple{};
+		constexpr std::tuple functions_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::functions; }
-		constexpr auto functions_v<T> = reflect_traits<T>::functions;
+		constexpr std::tuple functions_v<T> = reflect_traits<T>::functions;
 		template<typename T>
-		constexpr auto constructors_v = std::tuple{};
+		constexpr std::tuple constructors_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::constructors; }
-		constexpr auto constructors_v<T> = reflect_traits<T>::constructors;
+		constexpr std::tuple constructors_v<T> = reflect_traits<T>::constructors;
 		template<typename T>
-		constexpr auto static_properties_v = std::tuple{};
+		constexpr std::tuple static_properties_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_properties; }
-		constexpr auto static_properties_v<T> = reflect_traits<T>::static_properties;
+		constexpr std::tuple static_properties_v<T> = reflect_traits<T>::static_properties;
 		template<typename T>
-		constexpr auto static_functions_v = std::tuple{};
+		constexpr std::tuple static_functions_v = std::tuple{};
 		template<stamp::reflect::concepts::reflect_traits_c T> requires requires { reflect_traits<T>::static_functions; }
-		constexpr auto static_functions_v<T> = reflect_traits<T>::static_functions;
+		constexpr std::tuple static_functions_v<T> = reflect_traits<T>::static_functions;
 	}
 
 	// runs the Func on all member functions of T’s reflect traits

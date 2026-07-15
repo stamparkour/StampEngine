@@ -1,3 +1,5 @@
+
+
 @page reflect_page Reflect
 
 # Overview
@@ -19,7 +21,7 @@ meta_tuple.h contains several functions that can itterate over every member of a
 [Reflections][1] are used to make generic code for using or displaying members without explicitly referencing them. 
 Reflections are similar to how many scripting languages (javascript, lua) handle objects--a programmer can iterate over all members without knowing the names.
 
-Within the Stamp Engine project, reflections will be used for python and lua bindings, and displaying debug information about any object.
+Within the Stamp Engine project, reflections will be used for serialization, python and lua bindings, and displaying debug information about any object.
 
 ## Reflecting a Class
 
@@ -39,7 +41,17 @@ struct stamp::reflect::reflect_traits<MyType> {
 };
 ```
 
-To access the reflections, call @ref stamp::reflect::for_each_reflect_member_properties "for_each_reflect_member_properties":
+## Using Reflections
+
+Reflections can be accessed through accessor values, @ref "stamp::reflect::traits", and tailored functions to iterate over members. 
+
+To acess the name from reflections, use @ref "stamp::reflect::traits::name_v":  
+``` c++
+// prints 'MyName'
+std::cout << stamp::reflect::traits::name_v<MyType>;
+```
+
+To iterate over reflections, call @ref stamp::reflect::for_each_reflect_member_properties "for_each_reflect_member_properties":  
 ``` c++
 stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& property) {
 	using value_type = typename P::value_type;
@@ -47,6 +59,57 @@ stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& pro
 	value_type MyType::* memberPtr = property.member_ptr();
 });
 ```
-Note that the lambda's parameter's type is stamp::reflect::member_property_t.
+**Note:** The lambda's parameter's type is stamp::reflect::member_property_t.
 
 [1]: https://en.wikipedia.org/wiki/Reflective_programming
+
+## Tagging reflections
+
+Each reflection can be tagged with custom values. 
+Such as, min, max, setpoints, etc.
+
+Example:
+```  c++
+#include <stamp/reflect/reflect.h>
+
+struct MyTag {
+	int score;
+};
+
+struct stamp::reflect::reflect_traits<MyType> {
+	static constexpr string_literal name = "MyType";
+	static constexpr auto properties = std::tuple{
+		reflect("val1"_rf,  &MyType::val1, MyTag{12}),
+		reflect("val2"_rf,  &MyType::val2)
+	};
+};
+
+stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& property) {
+	using value_type = typename P::value_type;
+	string_literal name = property.name();
+	value_type MyType::* memberPtr = property.member_ptr();
+	const std::tuple& tags = property.attributes();
+
+	stamp::reflect::for_each(tags, []<typename A>(A a) {
+		if constexpr (std::same_as<A, MyTag>) {
+			std::cout << a.score;
+		}
+	});
+});
+```
+
+# Meta Tuple
+
+meta_tuple.h contains helper functions to iterate over and construct tuples.
+
+example:
+``` c++
+stamp::reflect::for_each<std::tuple<int, float, double>>([]<typename T>(T) {
+	using type = typename T::type;
+	std::cout << stamp::reflect::traits::name_v<type>;
+});
+```
+
+# String Literal
+
+string_literal.h contains several functions to facilate compile-time string manipulation.

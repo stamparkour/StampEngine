@@ -5,6 +5,7 @@ set(STAMP_TASK_SOURCES
 )
 set(STAMP_TASK_HEADERS
 	"include/stamp/task/task.h"
+	"include/stamp/task/task_queue.h"
 )
 
 # add the library

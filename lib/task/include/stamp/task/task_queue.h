@@ -1,0 +1,6 @@
+#ifndef STAMP_TASK_TASK_QUEUE_H
+#define STAMP_TASK_TASK_QUEUE_H
+
+
+
+#endif // STAMP_TASK_TASK_QUEUE_H

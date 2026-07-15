@@ -20,9 +20,9 @@ namespace stamp::reflect {
 	* - `constexpr static auto static_functions = std::tuple{};`
 	* - `constexpr static auto static_properties = std::tuple{};`
 	* 
-	* all reflect_trait members should be retrieved through the [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors in stamp::reflect::traits.
+	* All reflect_trait members should be retrieved through the [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors in stamp::reflect::traits.
 	* 
-	* example implementation:
+	* example:
 	* ``` c++
 	* struct stamp::reflect::reflect_traits<MyType> {
 	*	constexpr static string_literal name = "MyType";

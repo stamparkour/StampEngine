@@ -12,10 +12,20 @@
 
 namespace stamp::reflect {
 	/**
-	* @brief runs 
+	* @brief runs a unary function on each element of the tuple.
+	* 
+	* The function is called with std::tuple_element<N, Tuple> of the nth element of the tuple.
+	* Use T::type to retrieve the type information of the std::tuple_element.
+	* 
+	* example:
+	* ``` c++
+	* stamp::reflect::for_each<int, float, double>([]<typename T>(T) {
+	*	using type = typename T::type;
+	* });
+	* ```
 	*/
-	template<typename Tuple, typename Func>
-	constexpr void for_each(Func func) {
+	template<typename Tuple, typename UnaryFunc>
+	constexpr void for_each(UnaryFunc func) {
 		[&] <std::size_t... Is>(std::index_sequence<Is...>) {
 			(func(std::tuple_element<Is, Tuple>{}), ...);
 		}(std::make_index_sequence<std::tuple_size_v<Tuple>>{});

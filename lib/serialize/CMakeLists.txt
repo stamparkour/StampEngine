@@ -21,6 +21,6 @@ target_compile_features(stamp_serialize INTERFACE cxx_std_20)
 
 
 # adds a directory to search when finding header files
-target_include_directories(stamp_reflect 
+target_include_directories(stamp_serialize 
 	INTERFACE "include" 
 )

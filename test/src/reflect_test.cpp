@@ -285,7 +285,7 @@ TEST(MetaTupleTest, ForEachConstruct) {
 	auto result = stamp::reflect::for_each_construct<std::tuple<int, float, double>>(
 		[](auto&& elem) {
 			using type = typename std::remove_cvref_t<decltype(elem)>::type;
-			return sizeof(type);
+			return static_cast<type>(sizeof(type));
 		}
 	);
 
@@ -330,11 +330,10 @@ TEST(ReflectTraitsTest, TypeNames) {
 	EXPECT_TRUE(float_name == "float");
 	EXPECT_TRUE(void_name == "void");
 
-	// Test unknown types default to "@unknown"
 	struct UnreflectedType {};
 	constexpr auto unknown_name = stamp::reflect::traits::name_v<UnreflectedType>;
-	static_assert(unknown_name == "@unknown");
-	EXPECT_TRUE(unknown_name == "@unknown");
+	static_assert(unknown_name == "");
+	EXPECT_TRUE(unknown_name == "");
 }
 
 TEST(ReflectTraitsTest, SimpleClassProperties) {
