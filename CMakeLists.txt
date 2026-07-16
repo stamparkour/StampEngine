@@ -17,6 +17,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # include subdirectories
 add_subdirectory(lib/reflect)
 add_subdirectory(lib/serialize)
+add_subdirectory(lib/memory)
+add_subdirectory(lib/task)
 add_subdirectory(lib/core)
 add_subdirectory(lib/diagnose)
 add_subdirectory(lib/math)
