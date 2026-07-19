@@ -1,89 +1,46 @@
 #include <iostream>
-#include <vector>
-#include <map>
-#include <stamp/reflect/reflect.h>
-#include <stamp/reflect/reflect_ctypes.h>
-#include <stamp/reflect/std/reflect_std.h>
-#include <stamp/reflect/view/view.h>
-#include <stamp/serialize/json.h>
-#include <concepts>
-#include <sstream>
-#include <stamp/serialize/stream.h>
-#include <stamp/serialize/ordered_binary.h>
-#include <fstream>
-#include <filesystem>
+#include <stamp/task/coroutine.h>
+#include <stamp/task/task_queue.h>
+#include <thread>
 
-using namespace stamp::reflect;
-using namespace stamp::serialize;
+using namespace stamp::task;
 
+coroutine<int> get_msg() {
+	int i = 0;
+	while (true) {
+		std::this_thread::sleep_for(std::chrono::duration<float, std::chrono::seconds::period>(0.01203));
+		std::cout << "hello " << i << std::endl;
+		co_yield i;
+		i++;
+	}
 
-struct my_obj_t {
-	float* my_ptr;
-	int my_value = 39;
-};
+	co_return 0;
+}
 
-template<> struct stamp::reflect::reflect_traits<my_obj_t> {
-	using type = my_obj_t;
-	static constexpr string_literal name = "my_obj_t";
-	static constexpr auto properties = std::tuple{
-		reflect("my_ptr"_rf, &type::my_ptr),
-		reflect("my_value"_rf, &type::my_value)
-	};
-};
+coroutine<void> test(const coroutine<void>& trigger, const char* message) {
+	while (!trigger.done()) {
+		co_await trigger;
+		std::cout << message << std::endl;
+	}
+	co_return;
+}
 
 int main(int argc, char** argv) {
 
+	auto coro_pair = co_dispatch_thread(get_msg);
 
-	float value = 12.94;
-	my_obj_t obj = {};
-	obj.my_ptr = &value;
+	coroutine<void> coro = std::move(coro_pair.first);
+	coro_pair.second();
+	std::this_thread::sleep_for(std::chrono::duration<float, std::chrono::seconds::period>(0.1));
+	auto c1 = test(coro, "hello world!").start();
 
-	std::cout << std::filesystem::current_path() << std::endl;
-	std::stringstream file{std::ios::binary | std::ios::in | std::ios::out};
-	stamp::serialize::pointer_track_registry tracker1{};
+	auto c2 = test(c1, "cheese!").start();
 
-	file << stamp::serialize::ordered_binary(obj, tracker1);
-
-	my_obj_t obj2 = {};
-	stamp::serialize::pointer_track_registry tracker2{};
-
-	file >> stamp::serialize::ordered_binary(obj2, tracker2);
-
-	
-	std::cout << "done" << std::endl;
-
-	/*auto& tuple = stamp::reflect::traits::functions_v<std::array<int, 10>>;
-	stamp::reflect::for_each(tuple, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-		
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.name << std::endl;
-		});
-	});
-	std::cout << std::endl;
-	auto& t3 = stamp::reflect::traits::constructors_v<std::array<int, 10>>;
-	stamp::reflect::for_each(t3, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.name << std::endl;
-			});
-		});
-	std::cout << std::endl;
-	auto& t2 = stamp::reflect::traits::properties_v<Dummy>;
-	stamp::reflect::for_each(t2, [](auto member) {
-		using type = decltype(member);
-		using ptr_type = typename decltype(member)::ptr_type;
-		std::cout << member.name() << " -> " << stamp::reflect::traits::name_v<ptr_type> << std::endl;
-
-		stamp::reflect::for_each(member.attributes(), [](auto attrib) {
-			std::cout << "attribute: " << attrib.operator_name << std::endl;
-			});
-		});*/
+	std::this_thread::sleep_for(std::chrono::duration<float, std::chrono::seconds::period>(1));
+	coro.kill();
+	std::cout << "killed!" << std::endl;
+	coro.wait();
+	std::cout << "ended!" << std::endl;
 
 	return 0;
 }

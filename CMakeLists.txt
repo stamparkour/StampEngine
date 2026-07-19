@@ -26,7 +26,7 @@ add_subdirectory(lib/signal)
 
 add_library(stamp_stamp INTERFACE)
 add_library(stamp::stamp ALIAS stamp_stamp)
-target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::reflect)
+target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::reflect stamp::task)
 
 if(STAMP_BUILD_APP)
     add_subdirectory(app/my_app)
