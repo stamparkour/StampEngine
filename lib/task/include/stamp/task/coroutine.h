@@ -112,6 +112,7 @@ namespace stamp::task {
 		std::atomic_bool request_kill_v{false};
 		// std::atomic_bool is_killed_v{false};
 		std::atomic_bool is_done_v{false};
+		std::atomic_bool is_finished_v{false};
 		std::atomic_flag on_end_handle_flag{};
 		std::atomic<void*> on_end_handle{nullptr};
 
@@ -132,13 +133,15 @@ namespace stamp::task {
 					void* addr;
 					{
 						atomic_flag_lock_guard l{promise->on_end_handle_flag};
-						addr = promise->on_end_handle.exchange(nullptr);
 						promise->is_done_v.store(true);
 						promise->is_done_v.notify_all();
+						addr = promise->on_end_handle.exchange(nullptr);
 					}
 					if (addr != nullptr) {
 						std::coroutine_handle<void>::from_address(addr).resume();
 					}
+					promise->is_finished_v.store(true);
+					promise->is_finished_v.notify_all();
 				}
 				void await_resume() noexcept {}
 			};
@@ -154,7 +157,10 @@ namespace stamp::task {
 			}
 		}
 
-		int done() const {
+		bool done() const {
+			return is_done_v.load();
+		}
+		bool is_finished() const {
 			return is_done_v.load();
 		}
 
@@ -233,11 +239,11 @@ namespace stamp::task {
 
 		// should return a dedicated awaiter object. in order to prevent mangling coroutine_handle
 		coroutine<T> get_return_object();
-		void return_value(T&& new_value) noexcept {
-			ret_value = std::forward<T>(new_value);
+		void return_value(T new_value) noexcept {
+			ret_value = new_value;
 		}
 
-		auto yield_value(T& new_value) {
+		auto yield_value(T new_value) {
 			struct await_t {
 				promise<T>& promise_v;
 				T& new_value;
@@ -323,6 +329,13 @@ namespace stamp::task {
 			return *this;
 		}
 
+		T& result() {
+			return handle_v.promise().ret_value;
+		}
+		const T& result() const {
+			return handle_v.promise().ret_value;
+		}
+
 		// threadsafe
 		void kill() {
 			if (handle_v) handle_v.promise().kill();
@@ -330,9 +343,9 @@ namespace stamp::task {
 
 		// threadsafe
 		void wait() {
-			auto& is_done_v = handle_v.promise().is_done_v;
-			while (!is_done_v.load()) {
-				is_done_v.wait(false);
+			auto& is_finished_v = handle_v.promise().is_finished_v;
+			while (!is_finished_v.load()) {
+				is_finished_v.wait(false);
 			}
 		}
 
@@ -493,9 +506,9 @@ namespace stamp::task {
 
 		// threadsafe
 		void wait() {
-			auto& is_done_v = promise_v->is_done_v;
-			while (!is_done_v.load()) {
-				is_done_v.wait(false);
+			auto& is_finshed_v = promise_v->is_finished_v;
+			while (!is_finshed_v.load()) {
+				is_finshed_v.wait(false);
 			}
 		}
 
