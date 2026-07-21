@@ -47,73 +47,19 @@ namespace stamp::task {
 	template<typename T>
 	struct coroutine;
 
-	template<typename Return, typename Container = std::vector<std::coroutine_handle<void>>>
-	class task_sequence {
-	public:
-		using container_type = Container;
-		using return_type = Return;
-	private:
-		container_type container{};
-		return_type ret; // might change to reference because it should just work (depending on stack layout)
-		bool is_complete = false;
-	public:
-		task_sequence() {}
-		task_sequence(const return_type& init_ret) : ret(init_ret) {}
-		task_sequence(return_type&& init_ret) : ret(init_ret) {}
-
-		bool await_ready() const noexcept {
-			return !is_complete;
-		}
-		void await_suspend(const std::coroutine_handle<void>& handle) {
-			container.emplace(container.end(), handle);
-		}
-		return_type await_resume() {
-			return ret;
-		}
-
-		void yield() {
-			for (const auto& c : container) {
-				c.resume();
-			}
-		}
-
-		void yield(return_type&& ret_v) requires (not std::same_as<return_type, void>) {
-			ret = std::forward<return_type>(ret_v);
-			yield();
-		}
-
-		void finish() {
-			is_complete = true;
-			yield();
-			container.clear();
-		}
-		
-		void finish(return_type&& ret_v) requires (not std::same_as<return_type, void>) {
-			is_complete = true;
-			yield(std::forward<return_type>(ret_v));
-			container.clear();
-		}
-		
-		bool done() const noexcept {
-			return is_complete;
-		}
-
-		void error() {
-			finish();
-		}
-	};
-
-	// struct void_t {};
-
 	class promise_interface {
 		template<typename T>
 		friend struct coroutine;
 	public:
 		std::atomic_bool request_kill_v{false};
-		// std::atomic_bool is_killed_v{false};
+		std::atomic_bool request_pause_v{false};
 		std::atomic_bool is_done_v{false};
 		std::atomic_bool is_finished_v{false};
 		std::atomic_flag on_end_handle_flag{};
+
+		std::atomic_int yield_pause_count_v{0};
+		std::atomic_int auto_yield_pause_count_v{0};
+		// std::atomic_bool is_killed_v{false};
 		std::atomic<void*> on_end_handle{nullptr};
 
 		std::exception_ptr exception_buffer{nullptr};
@@ -167,9 +113,15 @@ namespace stamp::task {
 		void kill() {
 			request_kill_v.store(true);
 		}
+		void pause() {
+			request_pause_v.store(true);
+		}
+		void set_yield_pause(int count, bool auto_yield = false) {
+			yield_pause_count_v.store(count);
+			auto_yield_pause_count_v.store(auto_yield ? count : 0);
+		}
 
 		void set_is_killed() {
-			// is_killed_v.store(true);
 			exception_buffer = std::make_exception_ptr(std::runtime_error("awaited coroutine has been killed"));
 			auto v = final_suspend();
 			v.await_suspend(std::coroutine_handle<void>::from_address(this));
@@ -247,8 +199,11 @@ namespace stamp::task {
 			struct await_t {
 				promise<T>& promise_v;
 				T& new_value;
-				bool request_kill_v;
-				await_t(promise<T>& promise_v, T& new_value, bool request_kill_v) : promise_v(promise_v), new_value(new_value), request_kill_v(request_kill_v) {}
+				await_t(
+					promise<T>& promise_v, 
+					T& new_value) :
+					promise_v(promise_v), 
+					new_value(new_value) {}
 
 				bool await_ready() {
 					return false;
@@ -256,26 +211,38 @@ namespace stamp::task {
 				bool await_suspend(std::coroutine_handle<void> handle) {
 					promise_v.ret_value = std::forward<T>(new_value);
 					
-					if (request_kill_v) {
+					if (promise_v.request_kill_v.load()) {
 						auto fs = promise_v.final_suspend();
 						fs.await_suspend(handle);
 						promise_v.set_is_killed();
+						return true;
 					}
-					else {
-						void* addr;
-						{
-							atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
-							addr = promise_v.on_end_handle.exchange(nullptr);
-						}
-						if (addr != nullptr) {
-							std::coroutine_handle<void>::from_address(addr).resume();
-						}
+
+					void* addr;
+					{
+						atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
+						addr = promise_v.on_end_handle.exchange(nullptr);
 					}
+					if (addr != nullptr) {
+						std::coroutine_handle<void>::from_address(addr).resume();
+					}
+
+					if (promise_v.request_pause_v.exchange(false)) {
+						return true;
+					}
+
+					int v = promise_v.yield_pause_count_v.fetch_sub(1);
+					if (v <= 0) {
+						promise_v.yield_pause_count_v.store(promise_v.auto_yield_pause_count_v.load());
+						return v == 0; // return true if is 0
+					}
+
 					return false;
 				}
 				void await_resume() {}
 			};
-			return await_t{*this, new_value, request_kill_v.load()};
+
+			return await_t{*this, new_value};
 		}
 	};
 
@@ -293,12 +260,12 @@ namespace stamp::task {
 		coroutine() {}
 
 		coroutine(const coroutine&) = delete;
-		coroutine(coroutine&& other) : 
+		coroutine(coroutine&& other) noexcept :
 			handle_v(other.handle_v) {
 			other.handle_v = nullptr;
 		}
 		coroutine& operator = (const coroutine&) = delete;
-		coroutine& operator = (coroutine&& other) {
+		coroutine& operator = (coroutine&& other) noexcept {
 			handle_v = other.handle_v;
 			other.handle_v = nullptr;
 			return *this;
@@ -320,11 +287,11 @@ namespace stamp::task {
 			return (bool)handle_v;
 		}
 
-		coroutine<T>&& start()&& {
+		coroutine<T>&& resume()&& {
 			if (handle_v) handle_v.resume();
 			return std::move(*this);
 		}
-		coroutine<T>& start()& {
+		coroutine<T>& resume()& {
 			if (handle_v) handle_v.resume();
 			return *this;
 		}
@@ -339,6 +306,14 @@ namespace stamp::task {
 		// threadsafe
 		void kill() {
 			if (handle_v) handle_v.promise().kill();
+		}
+		// threadsafe
+		void pause() {
+			if (handle_v) handle_v.promise().pause();
+		}
+		// threadsafe
+		void pause_interval(int interval, bool auto_pause = false) {
+			if (handle_v) handle_v.promise().set_yield_pause(interval, auto_pause);
 		}
 
 		// threadsafe
@@ -399,33 +374,46 @@ namespace stamp::task {
 		auto yield_value(void_t) {
 			struct await_t {
 				promise<void>& promise_v;
-				bool request_kill_v;
-				await_t(promise<void>& promise_v, bool request_kill_v) : promise_v(promise_v), request_kill_v(request_kill_v) {}
+				await_t(promise<void>& promise_v) :
+					promise_v(promise_v) {}
 
 				bool await_ready() {
 					return false;
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-					if (request_kill_v) {
+
+					if (promise_v.request_kill_v.load()) {
 						auto fs = promise_v.final_suspend();
 						fs.await_suspend(handle);
 						promise_v.set_is_killed();
+						return true;
 					}
-					else {
-						void* addr;
-						{
-							atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
-							addr = promise_v.on_end_handle.exchange(nullptr);
-						}
-						if (addr != nullptr) {
-							std::coroutine_handle<void>::from_address(addr).resume();
-						}
+
+					void* addr;
+					{
+						atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
+						addr = promise_v.on_end_handle.exchange(nullptr);
 					}
+					if (addr != nullptr) {
+						std::coroutine_handle<void>::from_address(addr).resume();
+					}
+
+					if (promise_v.request_pause_v.exchange(false)) {
+						return true;
+					}
+
+					int v = promise_v.yield_pause_count_v.fetch_sub(1) - 1;
+					if (v <= 0) {
+						promise_v.yield_pause_count_v.store(promise_v.auto_yield_pause_count_v.load());
+						return v == 0; // return true if is 0
+					}
+
 					return false;
 				}
 				void await_resume() {}
 			};
-			return await_t{*this, request_kill_v.load()};
+
+			return await_t{*this};
 		}
 	};
 
@@ -452,20 +440,20 @@ namespace stamp::task {
 			promise_v = &other.handle_v.promise();
 			other.handle_v = nullptr;
 		}
-		coroutine(coroutine<void>&& other) :
+		coroutine(coroutine<void>&& other) noexcept :
 			handle_v(other.handle_v),
 			promise_v(other.promise_v) {
 			other.handle_v = nullptr;
 			other.promise_v = nullptr;
 		}
 		template<typename T>
-		coroutine& operator = (coroutine<T>&& other) {
+		coroutine& operator = (coroutine<T>&& other) noexcept {
 			handle_v = other.handle_v;
 			promise_v = &other.handle_v.promise();
 			other.handle_v = nullptr;
 			return *this;
 		}
-		coroutine& operator = (coroutine<void>&& other) {
+		coroutine& operator = (coroutine<void>&& other) noexcept {
 			handle_v = other.handle_v;
 			promise_v = other.promise_v;
 			other.handle_v = nullptr;
@@ -479,6 +467,7 @@ namespace stamp::task {
 				kill();
 				handle_v.destroy();
 				handle_v = nullptr;
+				promise_v = nullptr;
 			}
 		}
 
@@ -490,11 +479,11 @@ namespace stamp::task {
 			return (bool)handle_v;
 		}
 
-		coroutine<void>&& start()&& {
+		coroutine<void>&& resume()&& {
 			if (handle_v) handle_v.resume();
 			return std::move(*this);
 		}
-		coroutine<void>& start() & {
+		coroutine<void>& resume() & {
 			if (handle_v) handle_v.resume();
 			return *this;
 		}
@@ -502,6 +491,14 @@ namespace stamp::task {
 		// threadsafe
 		void kill() {
 			if (handle_v) promise_v->kill();
+		}
+		// threadsafe
+		void pause() {
+			if (handle_v) promise_v->pause();
+		}
+		// threadsafe
+		void pause_interval(int interval, bool auto_pause = false) {
+			if (handle_v) promise_v->set_yield_pause(interval, auto_pause);
 		}
 
 		// threadsafe

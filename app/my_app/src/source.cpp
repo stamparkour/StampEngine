@@ -5,108 +5,47 @@
 
 #include <stamp/task/coroutine.h>
 #include <benchmark/benchmark.h>
+#include <unordered_map>
+#include <mutex>
 
 using namespace stamp::task;
 
-// --- Helpers ---
-
-coroutine<void> empty_task() {
-	co_return;
-}
-
-coroutine<int> yield_value_task(int count) {
-	for (int i = 0; i < count; i++) {
-		co_yield i;
-	}
-	co_return count;
-}
-
-coroutine<void> yield_void_task(int count) {
-	for (int i = 0; i < count; i++) {
-		void_t _;
-		co_yield _;
+coroutine<void> looping_test(int a) {
+	for(int i = 0; i < a; i++) {
+		benchmark::DoNotOptimize(i);
+		co_yield{};
 	}
 	co_return;
 }
 
-coroutine<void> consumer_task(const coroutine<int>& producer) {
-	while (!producer.done()) {
-		auto val = co_await producer;
-		(void)val;
-	}
-	co_return;
-}
-
-// --- Benchmarks ---
-
-static void BM_TaskCreationAndDestruction(benchmark::State& state) {
+static void LoopingTest(benchmark::State& state) {
 	for (auto _ : state) {
-		auto task = empty_task();
+		auto task = looping_test(state.range(0));
+		task.pause_interval(state.range(1), true);
+		while (!task.done()) 
+			task.resume();
 		benchmark::DoNotOptimize(task);
 	}
+	state.SetItemsProcessed(state.range(0) * state.iterations());
 }
-BENCHMARK(BM_TaskCreationAndDestruction);
-
-static void BM_TaskExecutionEmpty(benchmark::State& state) {
-	for (auto _ : state) {
-		auto task = empty_task();
-		task.start();
-		task.wait();
-	}
-}
-BENCHMARK(BM_TaskExecutionEmpty);
-
-static void BM_TaskYieldValues(benchmark::State& state) {
-	int yields_per_task = state.range(0);
-	for (auto _ : state) {
-		state.PauseTiming();
-		auto task = yield_value_task(yields_per_task);
-		state.ResumeTiming();
-
-		task.start();
-		while (!task.done()) {
-			task.start(); // Resumes
-		}
-		task.wait();
-	}
-	state.SetItemsProcessed(state.iterations() * yields_per_task);
-}
-BENCHMARK(BM_TaskYieldValues)->Range(1, 1024);
-
-static void BM_TaskYieldVoid(benchmark::State& state) {
-	int yields_per_task = state.range(0);
-	for (auto _ : state) {
-		state.PauseTiming();
-		auto task = yield_void_task(yields_per_task);
-		state.ResumeTiming();
-
-		task.start();
-		while (!task.done()) {
-			task.start(); // Resumes
-		}
-		task.wait();
-	}
-	state.SetItemsProcessed(state.iterations() * yields_per_task);
-}
-BENCHMARK(BM_TaskYieldVoid)->Range(1, 1024);
-
-static void BM_TaskAwait(benchmark::State& state) {
-	int yields = state.range(0);
-	for (auto _ : state) {
-		state.PauseTiming();
-		auto prod = yield_value_task(yields);
-		auto cons = consumer_task(prod);
-		state.ResumeTiming();
-
-		prod.start();
-		cons.start();
-
-		while (!cons.done()) {
-			cons.start();
-			prod.start();
-		}
-	}
-}
-BENCHMARK(BM_TaskAwait)->Range(1, 1024);
+BENCHMARK(LoopingTest)->RangeMultiplier(4)->Ranges({{1024, 1024}, {1, 1024}});
 
 BENCHMARK_MAIN();
+
+/*coroutine<void> looping_test() {
+	int c = 0;
+	while (true) {
+		std::cout << "loop " << c << std::endl;
+		c++;
+		co_yield void_t{};
+	}
+}
+
+int main(int argc, char** argv) {
+	coroutine<void> looping_test_v = looping_test();
+	looping_test_v.pause_interval(3, true);
+	for (int i = 0; i < 100; i++) {
+		looping_test_v.resume();
+		std::cout << "auto paused" << std::endl;
+	}
+}*/
