@@ -1,3 +1,4 @@
+// stamp/task/coroutine.h
 #ifndef STAMP_TASK_COROUTINE_H
 #define STAMP_TASK_COROUTINE_H
 
@@ -10,6 +11,8 @@
 #include <exception>
 #include <stdexcept>
 #include <thread>
+
+// TODO: add some way to query for exceptions from coroutine_view
 
 namespace stamp::task {
 	class atomic_flag_lock_guard {
@@ -26,7 +29,8 @@ namespace stamp::task {
 			flag->notify_all();
 		}
 	};
-	class atomic_bool_lock_guard {
+
+	/*class atomic_bool_lock_guard {
 		std::atomic_bool* flag;
 	public:
 		atomic_bool_lock_guard(std::atomic_bool& flag) : flag(&flag) {
@@ -39,43 +43,59 @@ namespace stamp::task {
 			flag->store(false);
 			flag->notify_all();
 		}
-	};
+	};*/
 
 
 	template<typename T>
-	struct promise;
+	struct basic_promise;
 	template<typename T>
 	struct coroutine;
+	template<typename T>
+	class coroutine_view;
 
-	class promise_interface {
+	class generic_promise {
 		template<typename T>
-		friend struct coroutine;
+		friend struct coroutine_view;
 	public:
 		std::atomic_bool request_kill_v{false};
-		std::atomic_bool request_pause_v{false};
+		std::atomic_bool is_started_v{false};
 		std::atomic_bool is_done_v{false};
 		std::atomic_bool is_finished_v{false};
+		std::atomic_bool is_detached_v{false};
+		std::atomic_bool is_pausing_v{true};
+		std::atomic_flag is_detached_flag{};
 		std::atomic_flag on_end_handle_flag{};
-
-		std::atomic_int yield_pause_count_v{0};
-		std::atomic_int auto_yield_pause_count_v{0};
 		// std::atomic_bool is_killed_v{false};
 		std::atomic<void*> on_end_handle{nullptr};
-
+		std::coroutine_handle<void> handle_v;
 		std::exception_ptr exception_buffer{nullptr};
 
 		// should return a dedicated awaiter object. in order to prevent mangling coroutine_handle
-		std::suspend_always initial_suspend() noexcept {
-			return {};
+		auto initial_suspend() noexcept {
+			struct await_t {
+				generic_promise* promise_v;
+				bool await_ready() noexcept {
+					return false;
+				}
+				bool await_suspend(const std::coroutine_handle<void>& handle) noexcept {
+					promise_v->handle_v = handle;
+					return true;
+				}
+				void await_resume() noexcept {
+					promise_v->is_started_v.store(true);
+					promise_v->is_started_v.notify_all();
+				}
+			};
+			return await_t{this};
 		}
 		auto final_suspend() noexcept {
 			struct await_t {
-				promise_interface* promise;
+				generic_promise* promise;
 
 				bool await_ready() noexcept {
 					return false;
 				}
-				void await_suspend(const std::coroutine_handle<void>&) noexcept {
+				bool await_suspend(const std::coroutine_handle<void>&) noexcept {
 					void* addr;
 					{
 						atomic_flag_lock_guard l{promise->on_end_handle_flag};
@@ -86,8 +106,15 @@ namespace stamp::task {
 					if (addr != nullptr) {
 						std::coroutine_handle<void>::from_address(addr).resume();
 					}
-					promise->is_finished_v.store(true);
-					promise->is_finished_v.notify_all();
+					
+					bool ret_val;
+					{
+						atomic_flag_lock_guard l{promise->is_detached_flag};
+						ret_val = !promise->is_detached_v.load();
+						promise->is_finished_v.store(true);
+						promise->is_finished_v.notify_all();
+					}
+					return ret_val; // return false (resume coroutine) if kill on finish
 				}
 				void await_resume() noexcept {}
 			};
@@ -106,33 +133,26 @@ namespace stamp::task {
 		bool done() const {
 			return is_done_v.load();
 		}
-		bool is_finished() const {
-			return is_done_v.load();
-		}
 
 		void kill() {
 			request_kill_v.store(true);
 		}
 		void pause() {
-			request_pause_v.store(true);
-		}
-		void set_yield_pause(int count, bool auto_yield = false) {
-			yield_pause_count_v.store(count);
-			auto_yield_pause_count_v.store(auto_yield ? count : 0);
+			is_pausing_v.store(true);
 		}
 
 		void set_is_killed() {
 			exception_buffer = std::make_exception_ptr(std::runtime_error("awaited coroutine has been killed"));
 			auto v = final_suspend();
-			v.await_suspend(std::coroutine_handle<void>::from_address(this));
+			v.await_suspend(handle_v);
 		}
 
 		template<typename V>
 		struct await_ready_t {
 			V awaiter;
-			promise_interface& promise;
+			generic_promise& promise;
 			bool request_kill_v;
-			await_ready_t(promise_interface& promise, V awaiter, bool request_kill_v) : promise(promise), awaiter(awaiter), request_kill_v(request_kill_v) {}
+			await_ready_t(generic_promise& promise, V awaiter, bool request_kill_v) : promise(promise), awaiter(awaiter), request_kill_v(request_kill_v) {}
 
 			bool await_ready() {
 				if (request_kill_v) return false;
@@ -185,22 +205,26 @@ namespace stamp::task {
 	};
 
 	template<typename T>
-	class promise : public promise_interface {
+	class basic_promise : public generic_promise {
 	public:
 		T ret_value{};
 
 		// should return a dedicated awaiter object. in order to prevent mangling coroutine_handle
 		coroutine<T> get_return_object();
-		void return_value(T new_value) noexcept {
+		void return_value(const T& new_value) noexcept {
 			ret_value = new_value;
 		}
+		void return_value(T&& new_value) noexcept {
+			ret_value = std::move(new_value);
+		}
 
+		// TODO: add lvalue and rvalue variants (for move and copy)
 		auto yield_value(T new_value) {
 			struct await_t {
-				promise<T>& promise_v;
+				basic_promise<T>& promise_v;
 				T& new_value;
 				await_t(
-					promise<T>& promise_v, 
+					basic_promise<T>& promise_v, 
 					T& new_value) :
 					promise_v(promise_v), 
 					new_value(new_value) {}
@@ -210,7 +234,7 @@ namespace stamp::task {
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
 					promise_v.ret_value = std::forward<T>(new_value);
-					
+
 					if (promise_v.request_kill_v.load()) {
 						auto fs = promise_v.final_suspend();
 						fs.await_suspend(handle);
@@ -218,23 +242,16 @@ namespace stamp::task {
 						return true;
 					}
 
-					void* addr;
-					{
-						atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
-						addr = promise_v.on_end_handle.exchange(nullptr);
-					}
+					void* addr = promise_v.on_end_handle.load();
 					if (addr != nullptr) {
+						promise_v.on_end_handle.compare_exchange_strong(addr, nullptr);
 						std::coroutine_handle<void>::from_address(addr).resume();
 					}
 
-					if (promise_v.request_pause_v.exchange(false)) {
+					bool is_pausing_v = promise_v.is_pausing_v.load();
+					if (is_pausing_v) {
+						promise_v.is_pausing_v.store(false);
 						return true;
-					}
-
-					int v = promise_v.yield_pause_count_v.fetch_sub(1);
-					if (v <= 0) {
-						promise_v.yield_pause_count_v.store(promise_v.auto_yield_pause_count_v.load());
-						return v == 0; // return true if is 0
 					}
 
 					return false;
@@ -247,93 +264,86 @@ namespace stamp::task {
 	};
 
 	template<typename T>
-	class coroutine {
-		friend struct coroutine<void>;
-		friend class promise<T>;
+	class coroutine_view {
+		friend struct coroutine_view<void>;
+		friend class basic_promise<T>;
 	public:
-		using promise_type = promise<T>;
-	private:
-		std::coroutine_handle<promise<T>> handle_v{nullptr};
-
-		coroutine(const std::coroutine_handle<promise<T>>& handle) : handle_v(handle) {}
+		using return_type = T;
+	protected:
+		basic_promise<T>* promise_v{nullptr};
 	public:
-		coroutine() {}
-
-		coroutine(const coroutine&) = delete;
-		coroutine(coroutine&& other) noexcept :
-			handle_v(other.handle_v) {
-			other.handle_v = nullptr;
-		}
-		coroutine& operator = (const coroutine&) = delete;
-		coroutine& operator = (coroutine&& other) noexcept {
-			handle_v = other.handle_v;
-			other.handle_v = nullptr;
+		coroutine_view() {}
+		coroutine_view(nullptr_t) {}
+		coroutine_view& operator =(nullptr_t) noexcept {
+			promise_v = nullptr;
 			return *this;
 		}
 
-		~coroutine() {
-			if (handle_v) {
-				kill();
-				handle_v.destroy();
-				handle_v = nullptr;
-			}
+		coroutine_view(const std::coroutine_handle<basic_promise<T>>& h) {
+			promise_v = &h.promise();
 		}
+		coroutine_view& operator =(const std::coroutine_handle<basic_promise<T>>& h) {
+			promise_v = &h.promise();
+			return *this;
+		}
+
 
 		bool done() const {
-			if (!handle_v) return true;
-			return handle_v.promise().done();
+			return promise_v->done();
+		}
+		bool is_started() const {
+			return promise_v->is_started_v.load();
 		}
 		explicit operator bool() const {
-			return (bool)handle_v;
+			return (bool)promise_v;
 		}
-
-		coroutine<T>&& resume()&& {
-			if (handle_v) handle_v.resume();
-			return std::move(*this);
-		}
-		coroutine<T>& resume()& {
-			if (handle_v) handle_v.resume();
+		coroutine_view<T>& resume() {
+			promise_v->handle_v.resume();
 			return *this;
 		}
 
 		T& result() {
-			return handle_v.promise().ret_value;
+			return promise_v->ret_value;
 		}
 		const T& result() const {
-			return handle_v.promise().ret_value;
+			return promise_v->ret_value;
+		}
+
+		// threadsafe
+		std::exception_ptr get_exception() const {
+			if (promise_v) return promise_v->exception_buffer;
 		}
 
 		// threadsafe
 		void kill() {
-			if (handle_v) handle_v.promise().kill();
+			if (promise_v) promise_v->kill();
 		}
 		// threadsafe
 		void pause() {
-			if (handle_v) handle_v.promise().pause();
-		}
-		// threadsafe
-		void pause_interval(int interval, bool auto_pause = false) {
-			if (handle_v) handle_v.promise().set_yield_pause(interval, auto_pause);
+			if (promise_v) promise_v->pause();
 		}
 
 		// threadsafe
 		void wait() {
-			auto& is_finished_v = handle_v.promise().is_finished_v;
-			while (!is_finished_v.load()) {
-				is_finished_v.wait(false);
+			while (!promise_v->is_finished_v.load()) {
+				promise_v->is_finished_v.wait(false);
 			}
 		}
 
 		// threadsafe
 		std::coroutine_handle<void> handle() const {
-			return static_cast<std::coroutine_handle<void>>(handle_v);
+			return promise_v->handle_v;
+		}
+		// threadsafe
+		basic_promise<T>& promise() const {
+			return *promise_v;
 		}
 
 		auto operator co_await() const noexcept {
 			struct await_t {
-				promise<T>& my_promise;
+				basic_promise<T>& my_promise;
 				void* next_handle{nullptr};
-				await_t(promise<T>& my_promise) : my_promise(my_promise) {}
+				await_t(basic_promise<T>& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
@@ -342,6 +352,10 @@ namespace stamp::task {
 					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
 					if (!my_promise.done()) {
 						next_handle = my_promise.on_end_handle.exchange(handle.address());
+						// debating whether to auto resume if not started
+						if (!my_promise.is_started_v.load()) {
+							my_promise.handle_v.resume();
+						}
 						return true;
 					}
 					else {
@@ -355,14 +369,14 @@ namespace stamp::task {
 				}
 			};
 
-			return await_t{handle_v.promise()};
+			return await_t{*promise_v};
 		}
 	};
 
 
 	struct void_t {};
 	template<>
-	class promise<void> : public promise_interface {
+	class basic_promise<void> : public generic_promise {
 	public:
 
 		coroutine<void> get_return_object();
@@ -373,15 +387,14 @@ namespace stamp::task {
 
 		auto yield_value(void_t) {
 			struct await_t {
-				promise<void>& promise_v;
-				await_t(promise<void>& promise_v) :
+				basic_promise<void>& promise_v;
+				await_t(basic_promise<void>& promise_v) :
 					promise_v(promise_v) {}
 
 				bool await_ready() {
 					return false;
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-
 					if (promise_v.request_kill_v.load()) {
 						auto fs = promise_v.final_suspend();
 						fs.await_suspend(handle);
@@ -389,23 +402,16 @@ namespace stamp::task {
 						return true;
 					}
 
-					void* addr;
-					{
-						atomic_flag_lock_guard l{promise_v.on_end_handle_flag};
-						addr = promise_v.on_end_handle.exchange(nullptr);
-					}
+					void* addr = promise_v.on_end_handle.load();
 					if (addr != nullptr) {
+						promise_v.on_end_handle.compare_exchange_strong(addr, nullptr);
 						std::coroutine_handle<void>::from_address(addr).resume();
 					}
 
-					if (promise_v.request_pause_v.exchange(false)) {
+					bool is_pausing_v = promise_v.is_pausing_v.load();
+					if (is_pausing_v) {
+						promise_v.is_pausing_v.store(false);
 						return true;
-					}
-
-					int v = promise_v.yield_pause_count_v.fetch_sub(1) - 1;
-					if (v <= 0) {
-						promise_v.yield_pause_count_v.store(promise_v.auto_yield_pause_count_v.load());
-						return v == 0; // return true if is 0
 					}
 
 					return false;
@@ -418,108 +424,102 @@ namespace stamp::task {
 	};
 
 	template<>
-	class coroutine<void> {
-		friend class promise<void>;
+	class coroutine_view<void> {
+		friend class basic_promise<void>;
 	public:
-		using promise_type = promise<void>;
-	private:
-		std::coroutine_handle<void> handle_v{nullptr};
-		promise_interface* promise_v{nullptr};
-
-		coroutine(const std::coroutine_handle<promise<void>>& handle) : handle_v(handle) {
-			promise_v = &handle.promise();
+		using return_type = void;
+	protected:
+		generic_promise* promise_v{nullptr};
+	public:
+		coroutine_view() {}
+		coroutine_view(nullptr_t) {}
+		coroutine_view& operator =(nullptr_t) noexcept {
+			promise_v = nullptr;
+			return *this;
 		}
-	public:
-		coroutine() {}
-
-		coroutine(const coroutine&) = delete;
-		coroutine& operator = (const coroutine&) = delete;
 
 		template<typename T>
-		coroutine(coroutine<T>&& other) : handle_v(std::move(other.handle_v)) {
-			promise_v = &other.handle_v.promise();
-			other.handle_v = nullptr;
+		coroutine_view(const std::coroutine_handle<basic_promise<T>>& h) {
+			if (h) promise_v = &h.promise();
 		}
-		coroutine(coroutine<void>&& other) noexcept :
-			handle_v(other.handle_v),
-			promise_v(other.promise_v) {
-			other.handle_v = nullptr;
+		template<typename T>
+		coroutine_view& operator = (const std::coroutine_handle<basic_promise<T>>& h) {
+			if(h) promise_v = &h.promise();
+			return *this;
+		}
+
+		template<typename T>
+		coroutine_view(coroutine_view<T>&& other) {
+			if (other.promise_v) promise_v = other.promise_v;
 			other.promise_v = nullptr;
 		}
 		template<typename T>
-		coroutine& operator = (coroutine<T>&& other) noexcept {
-			handle_v = other.handle_v;
-			promise_v = &other.handle_v.promise();
-			other.handle_v = nullptr;
-			return *this;
-		}
-		coroutine& operator = (coroutine<void>&& other) noexcept {
-			handle_v = other.handle_v;
+		coroutine_view(const coroutine_view<T>& other) {
 			promise_v = other.promise_v;
-			other.handle_v = nullptr;
+		}
+
+		template<typename T>
+		coroutine_view& operator =(coroutine_view<T>&& other) {
+			promise_v = other.promise_v;
 			other.promise_v = nullptr;
 			return *this;
 		}
-
-
-		~coroutine() {
-			if (handle_v) {
-				kill();
-				handle_v.destroy();
-				handle_v = nullptr;
-				promise_v = nullptr;
-			}
+		template<typename T>
+		coroutine_view& operator =(const coroutine_view<T>& other) {
+			promise_v = other.promise_v;
+			return *this;
 		}
+
 
 		bool done() const {
-			if (!handle_v) return true;
 			return promise_v->done();
 		}
+		bool is_started() const {
+			return promise_v->is_started_v.load();
+		}
 		explicit operator bool() const {
-			return (bool)handle_v;
+			return (bool)promise_v;
+		}
+		coroutine_view<void>& resume() {
+			promise_v->handle_v.resume();
+			return *this;
 		}
 
-		coroutine<void>&& resume()&& {
-			if (handle_v) handle_v.resume();
-			return std::move(*this);
-		}
-		coroutine<void>& resume() & {
-			if (handle_v) handle_v.resume();
-			return *this;
+		// threadsafe
+		std::exception_ptr get_exception() const {
+			if (promise_v) return promise_v->exception_buffer;
 		}
 
 		// threadsafe
 		void kill() {
-			if (handle_v) promise_v->kill();
+			if (promise_v) promise_v->kill();
 		}
 		// threadsafe
 		void pause() {
-			if (handle_v) promise_v->pause();
-		}
-		// threadsafe
-		void pause_interval(int interval, bool auto_pause = false) {
-			if (handle_v) promise_v->set_yield_pause(interval, auto_pause);
+			if (promise_v) promise_v->pause();
 		}
 
 		// threadsafe
 		void wait() {
-			auto& is_finshed_v = promise_v->is_finished_v;
-			while (!is_finshed_v.load()) {
-				is_finshed_v.wait(false);
+			while (!promise_v->is_finished_v.load()) {
+				promise_v->is_finished_v.wait(false);
 			}
 		}
 
 		// threadsafe
-
 		std::coroutine_handle<void> handle() const {
-			return static_cast<std::coroutine_handle<void>>(handle_v);
+			return promise_v->handle_v;
+		}
+		// threadsafe
+		generic_promise& promise() const {
+			return *promise_v;
 		}
 
 		auto operator co_await() const noexcept {
 			struct await_t {
-				promise_interface& my_promise;
+				generic_promise& my_promise;
 				void* next_handle{nullptr};
-				await_t(promise_interface& my_promise) : my_promise(my_promise) {}
+				await_t(generic_promise& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
@@ -528,6 +528,10 @@ namespace stamp::task {
 					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
 					if (!my_promise.done()) {
 						next_handle = my_promise.on_end_handle.exchange(handle.address());
+						// debating whether to auto resume if not started  
+						if (!my_promise.is_started_v.load()) {
+							my_promise.handle_v.resume();
+						}
 						return true;
 					}
 					else {
@@ -545,29 +549,139 @@ namespace stamp::task {
 	};
 
 	template<typename T>
-	class coroutine_view {
+	class coroutine : public coroutine_view<T> {
+		friend class basic_promise<T>;
 	public:
+		using promise_type = basic_promise<T>;
+		using return_type = T;
+	private:
+		coroutine(const std::coroutine_handle<basic_promise<T>>& handle) {
+			this->promise_v = &handle.promise();
+		}
+
+	public:
+		coroutine() {}
+
+		coroutine(const coroutine<T>&) = delete;
+		coroutine(coroutine<T>&& other) noexcept {
+			this->promise_v = other.promise_v;
+			other.promise_v = nullptr;
+		}
+		coroutine<T>& operator = (const coroutine<T>&) = delete;
+		coroutine<T>& operator = (coroutine<T>&& other) noexcept {
+			this->promise_v = other.promise_v;
+			other.promise_v = nullptr;
+			return *this;
+		}
+
+		coroutine<T>& resume()& {
+			coroutine_view<T>::resume();
+			return *this;
+		}
+		coroutine<T>&& resume()&& {
+			coroutine_view<T>::resume();
+			return std::move(*this);
+		}
+
+		// threadsafe
+		void detach() {
+			if (this->promise_v) {
+				auto& p = *this->promise_v;
+				atomic_flag_lock_guard l{p.is_detached_flag};
+				if (p.is_finished_v.load()) {
+					this->promise_v->handle_v.destroy();
+					this->promise_v = nullptr;
+				}
+				p.is_detached_v.store(true);
+			}
+		}
+
+		~coroutine() {
+			if (this->promise_v && !(this->promise_v->is_detached_v.load())) {
+				this->promise_v->handle_v.destroy();
+				this->promise_v = nullptr;
+			}
+		}
 	};
+
+	template<>
+	class coroutine<void> : public coroutine_view<void> {
+		friend class basic_promise<void>;
+	public:
+		using promise_type = basic_promise<void>;
+		using return_type = void;
+	private:
+
+		coroutine(const std::coroutine_handle<basic_promise<void>>& handle) {
+			promise_v = &handle.promise();
+		}
+
+	public:
+		coroutine() {}
+
+		coroutine(const coroutine&) = delete;
+		coroutine& operator = (const coroutine&) = delete;
+
+		template<typename T>
+		coroutine(coroutine<T>&& other) {
+			promise_v = other.promise_v;
+			other.promise_v = nullptr;
+		}
+		coroutine(coroutine<void>&& other) noexcept {
+			this->promise_v = other.promise_v;
+			other.promise_v = nullptr;
+		}
+		template<typename T>
+		coroutine& operator = (coroutine<T>&& other) noexcept {
+			this->promise_v = other.promise_v;
+			other.promise_v = nullptr;
+			return *this;
+		}
+		coroutine& operator = (coroutine<void>&& other) noexcept {
+			this->promise_v = other.promise_v;
+			other.promise_v = nullptr;
+			return *this;
+		}
+
+		coroutine<void>& resume()& {
+			coroutine_view<void>::resume();
+			return *this;
+		}
+		coroutine<void>&& resume()&& {
+			coroutine_view<void>::resume();
+			return std::move(*this);
+		}
+
+		// threadsafe
+		void detach() {
+			if (promise_v) {
+				auto& p = *this->promise_v;
+				atomic_flag_lock_guard l{p.is_detached_flag};
+				if (p.is_finished_v.load()) {
+					this->promise_v->handle_v.destroy();
+					this->promise_v = nullptr;
+				}
+				p.is_detached_v.store(true);
+			}
+		}
+
+		~coroutine() {
+			if (this->promise_v && !promise_v->is_detached_v.load()) {
+				this->promise_v->handle_v.destroy();
+				this->promise_v = nullptr;
+			}
+		}
+	};
+
+	/*template<typename T>
+	class coroutine_view {
+		coroutine<T>* coroutine_v;
+	public:
+		coroutine_view(coroutine<T>& co) : coroutine_v(&co) {}
+	};*/
 
 	// some object that converts coroutines into std::promise in order to work with non-coroutine code.
 
-
-	template<typename T>
-	class coroutine_promise {
-		std::promise<T> promise;
-		coroutine<void> handle;
-	public:
-		coroutine_promise(const coroutine<T>& target_handle) {
-			handle = [&]() -> coroutine<void> {
-				promise.set_value(co_await target_handle);
-				co_return;
-			}();
-		}
-
-		std::future<T> get_future() {
-			return promise.get_future();
-		}
-	};
 
 	template<typename CoFunc, typename... Args>
 	auto co_dispatch_thread(CoFunc&& co_func, Args&&... args) {
@@ -601,14 +715,24 @@ namespace stamp::task {
 		};
 		return std::pair<coroutine_type, co_start_t>{std::move(coro), co_start_t{is_start_p}};
 	}
+
+	// bool BoolFunc(coroutine_view<T>)
+	template<typename T, typename BoolFunc>
+	coroutine<void> co_pause_function(coroutine_view<T> target, BoolFunc&& func) {
+		while ((bool)std::forward<BoolFunc>(func)(target)) {
+			co_await target;
+			target.pause();
+		}
+		co_return;
+	}
 }
 
 template<typename T>
-stamp::task::coroutine<T> stamp::task::promise<T>::get_return_object() {
-	return coroutine<T>(std::coroutine_handle<stamp::task::promise<T>>::from_promise(*this));
+stamp::task::coroutine<T> stamp::task::basic_promise<T>::get_return_object() {
+	return coroutine<T>(std::coroutine_handle<stamp::task::basic_promise<T>>::from_promise(*this));
 }
-stamp::task::coroutine<void> stamp::task::promise<void>::get_return_object() {
-	return coroutine<void>(std::coroutine_handle<stamp::task::promise<void>>::from_promise(*this));
+stamp::task::coroutine<void> stamp::task::basic_promise<void>::get_return_object() {
+	return coroutine<void>(std::coroutine_handle<stamp::task::basic_promise<void>>::from_promise(*this));
 }
 
 #endif // STAMP_TASK_COROUTINE_H
