@@ -5,7 +5,7 @@
 #include <concepts>
 #include <coroutine>
 
-namespace stamp::serialize::concepts {
+namespace stamp::serialize {
 	template<typename T>
 	concept awaitor_c =
 		requires (T a, std::coroutine_handle<> h) {
@@ -70,10 +70,10 @@ namespace stamp::serialize::concepts {
 		};
 
 	template<typename T>
-	concept json_key = std::convertible_to<std::string, T>;
+	concept json_key_c = std::convertible_to<std::string, T>;
 
 	template<typename Container>
-	concept array_iterable =
+	concept array_iterable_c =
 		requires {
 			typename Container::iterator;
 			typename Container::value_type;
@@ -86,31 +86,31 @@ namespace stamp::serialize::concepts {
 			{ *i = v } -> std::same_as<typename Container::value_type&>;
 		};
 	template<typename Container>
-	concept array_json_pair_iterable =
-		array_iterable<Container> &&
+	concept array_json_pair_iterable_c =
+		array_iterable_c<Container> &&
 		requires {
 		typename Container::value_type::first_type;
 		typename Container::value_type::second_type;
 	}&&
-		json_key<typename Container::value_type::first_type>;
+		json_key_c<typename Container::value_type::first_type>;
 
 
 	template<typename Container>
-	concept inserter_iterable =
-		array_iterable<Container> &&
+	concept inserter_iterable_c =
+		array_iterable_c<Container> &&
 		requires (Container c, typename Container::iterator i, typename Container::value_type v) {
 			c.insert(i, v);
 			{ std::inserter(c, i) } -> std::same_as<std::insert_iterator<Container>>;
 		};
 
 	template<typename Container>
-	concept inserter_json_pair_iterable =
-		inserter_iterable<Container> &&
+	concept inserter_json_pair_iterable_c =
+		inserter_iterable_c<Container> &&
 		requires {
 			typename Container::value_type::first_type;
 			typename Container::value_type::second_type;
 		}&&
-		json_key<typename Container::value_type::first_type>;
+		json_key_c<typename Container::value_type::first_type>;
 
 	
 };

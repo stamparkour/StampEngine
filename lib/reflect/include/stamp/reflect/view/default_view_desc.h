@@ -264,7 +264,7 @@ namespace detail {
 	struct default_view_generator {
 		template<typename ValT>
 		static const view_desc_base* view_desc_f() {
-			static_assert(concepts::reflect_traits_c<ValT>, "Type must have reflect_traits specialization");
+			static_assert(reflect_traits_c<ValT>, "Type must have reflect_traits specialization");
 			static default_view_desc<ValT, default_to_string, default_view_generator> desc{};
 			return &desc;
 		};

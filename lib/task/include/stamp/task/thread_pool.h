@@ -14,15 +14,12 @@
 namespace stamp::task {
 	inline constexpr auto fallback_thread_count_v = 4;
 
-	// TODO: change coroutine pause to normal bool
-	// TODO: add coroutine func that just auto pauses instead of using .is_paused()
-
-	// make thread_pool a more global resource
+	// thread_pool: convert awaitable to a wait_until condition using timer_task_queue
+	// coroutine mutex
+	// co_await timer_task_queue
 	// fix kill() to kill stuck coroutines
 	// add monitor coroutine that checks threads periodically.
 	class thread_pool {
-		// threadsafe task queue
-		// threadsafe time based priority queue
 		struct thread_state {
 			alignas(std::atomic_ref<coroutine_view<void>>::required_alignment) coroutine_view<void> current_task;
 			alignas(std::atomic_ref<unsigned int>::required_alignment) unsigned int update_count;
@@ -31,24 +28,61 @@ namespace stamp::task {
 
 		std::vector<std::thread> thread_vector{};
 		std::vector<thread_state> state_vector{};
-		task_queue queue{8192};
+		task_queue queue_v{8192};
 
+		thread_state timer_thread_state;
+		timer_task_queue timer_queue_v{};
+		std::thread timer_thread;
+
+		static void timer_thread_func(thread_pool* pool) {
+			thread_state& state = pool->timer_thread_state;
+			std::atomic_ref<bool> should_end{state.should_end};
+
+			while (true) {
+				if (should_end.load()) break;
+
+				auto v = pool->timer_queue_v.pop_wait();
+				state.current_task = v;
+				v.resume();
+				state.current_task = nullptr;
+			}
+		}
 
 		static void thread_func(thread_pool* pool, int index) {
-
 			thread_state& state = pool->state_vector[index];
 			std::atomic_ref<bool> should_end{state.should_end};
+
 			while (true) {
-				if (should_end.load()) goto break_1;
-				task_bulk tasks = pool->queue.wait_dequeue_bulk(16); // do some smarter thing (like checking what the current queue size is
+				if (should_end.load()) break;
+
+				auto size = pool->queue_v.size_aprox();
+				auto max = pool->thread_vector.size();
+
+				std::size_t count;
+				if (size > max * 16)	count = 16;
+				else if (size > max)	count = size / pool->thread_vector.size();
+				else					count = 1;
+
+				task_bulk tasks = pool->queue_v.wait_dequeue_bulk(count); // do some smarter thing (like checking what the current queue size is
 				for (auto& v : tasks) {
 					if (!v) continue;
 
 					state.current_task = v;
 
+					auto co = [&](coroutine_view<void>& target) -> coroutine<void> {
+						co_await target.await_interupt();
+						/*if (target.is_yielded()) {
+						}
+						else if (target.done()) {
+						}
+						// is co_await
+						else {  
+						}*/
+						state.current_task = nullptr;
+					}(v);
+
 					v.resume();
 
-					if (should_end.load()) goto break_1;
 
 					// pool->queue.enqueue(v);
 
@@ -56,7 +90,6 @@ namespace stamp::task {
 				}
 				state.current_task = nullptr;
 			}
-			break_1:;
 
 			// pool->state_vector[index] = nullptr;
 		}
@@ -74,27 +107,39 @@ namespace stamp::task {
 			for (int i = 0; i < thread_count; ++i) {
 				thread_vector.emplace_back(thread_func, this, i);
 			}
+
+			timer_thread = std::thread{timer_thread_func, this};
 		}
-		template<typename CoFunc, typename... Args>
-		[[nodiscard]] auto enqueue(CoFunc&& func, Args&&... args) {
-			return queue.enqueue(std::forward<CoFunc>(func), std::forward<Args>(args)...);
+
+		task_queue& queue() {
+			return queue_v;
 		}
-		template<typename CoFunc, typename... Args>
-		void enqueue_detached(CoFunc&& func, Args&&... args) {
-			queue.enqueue_detached(std::forward<CoFunc>(func), std::forward<Args>(args)...);
+		const task_queue& queue() const {
+			return queue_v;
 		}
-		template<typename T>
-		void enqueue(coroutine<T>& co) {
-			queue.enqueue(coroutine_view<T>{co});
+		timer_task_queue& timer_queue() {
+			return timer_queue_v;
 		}
-		template<typename T>
-		void enqueue(coroutine_view<T>& co) {
-			queue.enqueue(co);
+		const timer_task_queue& timer_queue() const {
+			return timer_queue_v;
 		}
-		template<typename T>
-		void enqueue(coroutine_view<T>&& co) {
-			queue.enqueue(co);
-		}
+
+
+		/*template<typename T>
+		struct co_until_t {
+			bool await_ready() noexcept {
+				return false;
+			}
+			template<typename T>
+			bool await_suspend(decltype(auto) handle) noexcept {
+				return true;
+			}
+			void await_resume() noexcept {}
+		};
+		template<typename T> requires awaitable_c<T>
+		auto co_until(const timer_task_queue::time_point& time, T&& awaitable) {
+
+		}*/
 
 		void kill() {
 			for (auto& v : state_vector) {
@@ -102,21 +147,27 @@ namespace stamp::task {
 				should_end.store(true);
 			}
 
-			coroutine<void> v = enqueue([](thread_pool& pool) -> coroutine<void> {
+			coroutine<void> v1 = queue_v.emplace([](thread_pool& pool) -> coroutine<void> {
 				while (true) {
-					co_await pool;
+					co_await pool.queue();
 				}
+			}, *this);
+
+			std::atomic_ref<bool> should_end{timer_thread_state.should_end};
+			should_end.store(true);
+
+			coroutine<void> v2 = timer_queue_v.emplace_until(timer_task_queue::clock::now(), [](thread_pool& pool) -> coroutine<void> {
+				co_return;
 			}, *this);
 
 			for (auto& v : thread_vector) {
 				v.join();
 			}
-		}
-
-		auto operator co_await() {
-			return queue.operator co_await();
+			timer_thread.join();
 		}
 	};
+
+	// 
 }
 
 #endif // STAMP_TASK_THREAD_POOL_H

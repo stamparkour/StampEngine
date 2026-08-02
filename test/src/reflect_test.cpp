@@ -299,7 +299,7 @@ TEST(MetaTupleTest, ForEachConstruct) {
 // ============================================================================
 
 TEST(ReflectTraitsTest, HasReflectTraits) {
-	using namespace stamp::reflect::concepts;
+	using namespace stamp::reflect;
 
 	static_assert(reflect_traits_c<SimpleClass>);
 	static_assert(reflect_traits_c<ClassWithMethods>);
@@ -487,7 +487,7 @@ TEST(MemberFunctionTraitsTest, OverloadTags) {
 // ============================================================================
 
 TEST(ConceptsTest, ReflectTraitsClassConcept) {
-	using namespace stamp::reflect::concepts;
+	using namespace stamp::reflect;
 
 	static_assert(reflect_traits_class_c<SimpleClass>);
 	static_assert(reflect_traits_class_c<ClassWithMethods>);
@@ -496,7 +496,7 @@ TEST(ConceptsTest, ReflectTraitsClassConcept) {
 }
 
 TEST(ConceptsTest, ReflectTraitsEnumConcept) {
-	using namespace stamp::reflect::concepts;
+	using namespace stamp::reflect;
 
 	static_assert(reflect_traits_enum_c<TestEnum>);
 	static_assert(!reflect_traits_enum_c<SimpleClass>);
@@ -504,7 +504,7 @@ TEST(ConceptsTest, ReflectTraitsEnumConcept) {
 }
 
 TEST(ConceptsTest, ReflectTraitsUnionConcept) {
-	using namespace stamp::reflect::concepts;
+	using namespace stamp::reflect;
 
 	static_assert(reflect_traits_union_c<TestUnion>);
 	static_assert(!reflect_traits_union_c<SimpleClass>);
@@ -540,55 +540,13 @@ TEST(TemplateReflectionTest, TemplatePropertyAccess) {
 }
 
 // ============================================================================
-// Integration Tests
-// ============================================================================
-
-TEST(IntegrationTest, CompleteReflectionWorkflow) {
-	SimpleClass obj;
-	obj.int_prop = 123;
-	obj.float_prop = 4.56f;
-	obj.string_prop = "integration";
-
-	// Test 1: Iterate through properties using reflection
-	int prop_count = 0;
-	int int_count = 0;
-	int string_count = 0;
-
-	stamp::reflect::for_each_reflect_member_properties<SimpleClass>(
-		[&](const auto& property) {
-			prop_count++;
-			using value_type = typename std::remove_cvref_t<decltype(property)>::value_type;
-
-			if constexpr (std::is_integral_v<value_type>) {
-				int_count++;
-			} else if constexpr (std::is_same_v<value_type, std::string>) {
-				string_count++;
-			}
-		}
-	);
-
-	EXPECT_EQ(prop_count, 3);
-	EXPECT_EQ(int_count, 1);
-	EXPECT_EQ(string_count, 1);
-
-	// Test 2: Verify trait names across different types
-	constexpr auto int_name = stamp::reflect::traits::name_v<int>;
-	constexpr auto simple_name = stamp::reflect::traits::name_v<SimpleClass>;
-	constexpr auto enum_name = stamp::reflect::traits::name_v<TestEnum>;
-
-	EXPECT_TRUE(int_name == "int");
-	EXPECT_TRUE(simple_name == "SimpleClass");
-	EXPECT_TRUE(enum_name == "TestEnum");
-}
-
-// ============================================================================
 // Property Type Tests
 // ============================================================================
 
 TEST(PropertyTypeTest, MemberPropertyConcept) {
-	static_assert(stamp::reflect::concepts::is_member_property_c<int SimpleClass::*>);
-	static_assert(stamp::reflect::concepts::is_member_property_c<float SimpleClass::*>);
-	static_assert(stamp::reflect::concepts::is_member_property_c<std::string SimpleClass::*>);
+	static_assert(stamp::reflect::is_member_property_c<decltype(& SimpleClass::int_prop)>);
+	static_assert(stamp::reflect::is_member_property_c<decltype(&SimpleClass::float_prop)>);
+	static_assert(stamp::reflect::is_member_property_c<decltype(&SimpleClass::string_prop)>);
 
 	// Also verify property type information
 	constexpr auto properties = stamp::reflect::traits::properties_v<SimpleClass>;

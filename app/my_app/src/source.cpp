@@ -32,7 +32,7 @@ static void LoopingTest(benchmark::State& state) {
 	}
 	state.SetItemsProcessed(state.range(0) * state.iterations());
 }
-BENCHMARK(LoopingTest)->Iterations(10000)->RangeMultiplier(4)->Ranges({{2048, 2048}});
+BENCHMARK(LoopingTest)->Iterations(30000)->RangeMultiplier(4)->Ranges({{2048, 2048}});
 
 coroutine<void> schedular_test(thread_pool& pool, std::atomic_int& ct) {
 	ct++;
@@ -46,7 +46,7 @@ static void SchedularTest(benchmark::State& state) {
 	for (auto _ : state) {
 		count.store(0);
 		for (int i = 0; i < state.range(0); i++) {
-			pool.enqueue_detached(schedular_test, pool, count);
+			pool.queue().emplace_detached(schedular_test, pool, count);
 		}
 		int current_count;
 		while ((current_count = count.load()) < state.range(0)) {
@@ -56,7 +56,24 @@ static void SchedularTest(benchmark::State& state) {
 	pool.kill();
 	state.SetItemsProcessed(state.range(0) * state.iterations());
 }
-BENCHMARK(SchedularTest)->Iterations(3000)->RangeMultiplier(2)->Ranges({{2048, 2048}, {1, 16}});
+BENCHMARK(SchedularTest)->Iterations(6000)->RangeMultiplier(2)->Ranges({{2048, 2048}, {1, 4}});
+
+coroutine<void> timer_schedular_test(thread_pool& pool, std::atomic_int& ct) {
+	ct++;
+	ct.notify_all();
+	co_return;
+}
+
+static void TimerSchedularTest(benchmark::State& state) {
+	thread_pool pool{(unsigned int)state.range(1)};
+	std::atomic_int count{0};
+	for (auto _ : state) {
+		
+	}
+	pool.kill();
+	state.SetItemsProcessed(state.range(0) * state.iterations());
+}
+BENCHMARK(TimerSchedularTest)->Iterations(6000)->RangeMultiplier(2)->Ranges({{2048, 2048}, {1, 4}});
 
 BENCHMARK_MAIN();
 

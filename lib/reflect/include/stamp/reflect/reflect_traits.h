@@ -36,35 +36,33 @@ namespace stamp::reflect {
 	template<typename T>
 	struct reflect_traits;
 
-	namespace concepts {
-		template<typename T>
-		concept reflect_traits_c = 
-			requires {
-				reflect_traits<T>{};
-				// typename reflect_traits<T>::type;
-			};
-		template<typename T>
-		concept reflect_traits_class_c =
-			reflect_traits_c<T> &&
-			std::is_class_v<T>;
-		template<typename T>
-		concept reflect_traits_enum_c =
-			reflect_traits_c<T> &&
-			std::is_enum_v<T>;
-		template<typename T>
-		concept reflect_traits_union_c =
-			reflect_traits_c<T> &&
-			std::is_union_v<T>;
-		template<typename T>
-		concept reflect_traits_usertype_c =
-			reflect_traits_class_c<T> || 
-			reflect_traits_enum_c<T> || 
-			reflect_traits_union_c<T>;
+	template<typename T>
+	concept reflect_traits_c =
+		requires {
+		reflect_traits<T>{};
+		// typename reflect_traits<T>::type;
+	};
+	template<typename T>
+	concept reflect_traits_class_c =
+		reflect_traits_c<T> &&
+		std::is_class_v<T>;
+	template<typename T>
+	concept reflect_traits_enum_c =
+		reflect_traits_c<T> &&
+		std::is_enum_v<T>;
+	template<typename T>
+	concept reflect_traits_union_c =
+		reflect_traits_c<T> &&
+		std::is_union_v<T>;
+	template<typename T>
+	concept reflect_traits_usertype_c =
+		reflect_traits_class_c<T> ||
+		reflect_traits_enum_c<T> ||
+		reflect_traits_union_c<T>;
 
-	}
 	template<typename T>
 	constexpr auto has_reflect_traits_v = false;
-	template<concepts::reflect_traits_c T>
+	template<reflect_traits_c T>
 	constexpr auto has_reflect_traits_v<T> = true;
 	template<typename T>
 	struct has_reflect_traits : std::bool_constant<has_reflect_traits_v<T>> {};

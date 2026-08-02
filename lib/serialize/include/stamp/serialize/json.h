@@ -136,7 +136,7 @@ namespace stamp::serialize {
 			}
 		}
 
-		template<typename IS, concepts::array_iterable T>
+		template<typename IS, array_iterable_c T>
 		inline void json_in_impl(IS& istream, const json_serializer<T>& serializer, char next_char) {
 			if (next_char == '[') {
 				istream.get(); // skip [
@@ -174,7 +174,7 @@ namespace stamp::serialize {
 					++iter;
 				}
 			}
-			else if constexpr (concepts::array_json_pair_iterable<T>) {
+			else if constexpr (array_json_pair_iterable_c<T>) {
 				if (next_char == '{') {
 					istream.get(); // skip {
 					auto iter = std::begin(*serializer.data);
@@ -231,7 +231,7 @@ namespace stamp::serialize {
 				return; // should throw something
 			}
 		}
-		template<typename IS, concepts::inserter_iterable T>
+		template<typename IS, inserter_iterable_c T>
 		inline void json_in_impl(IS& istream, const json_serializer<T>& serializer, char next_char) {
 			if (next_char == '[') {
 				istream.get(); // skip [
@@ -267,7 +267,7 @@ namespace stamp::serialize {
 					detail::skip_whitespace(istream, serializer.format);
 				}
 			}
-			else if constexpr (concepts::inserter_json_pair_iterable<T>) {
+			else if constexpr (inserter_json_pair_iterable_c<T>) {
 				if (next_char == '{') {
 					istream.get(); // skip {
 					auto inserter = std::inserter(*serializer.data, serializer.data->end());
@@ -424,7 +424,7 @@ namespace stamp::serialize {
 
 	// iterable. specify with pair iterator to allow for generic dictionaries. std::back_inserter
 
-	template<typename IS, concepts::array_iterable T>
+	template<typename IS, array_iterable_c T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
 		if (!istream) return; // should throw something (error before call)
 		detail::skip_whitespace(istream, serializer.format);
@@ -448,7 +448,7 @@ namespace stamp::serialize {
 
 	template<typename IS, typename T>
 	inline void json_in(IS& istream, const json_serializer<T>& serializer) {
-		static_assert(stamp::reflect::concepts::reflect_traits_usertype_c<T>);
+		static_assert(stamp::reflect::reflect_traits_usertype_c<T>);
 		using namespace stamp::reflect;
 
 		static std::unordered_map<stamp::reflect::hash_fnv1a, std::function<void(IS&, const json_serializer<T>&)>> member_map = []() {
@@ -519,7 +519,7 @@ namespace stamp::serialize {
 
 	template<typename OS, typename T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
-		static_assert(stamp::reflect::concepts::reflect_traits_usertype_c<T>);
+		static_assert(stamp::reflect::reflect_traits_usertype_c<T>);
 
 		// already pre-indented
 		const char left_bracket[] = "{";
@@ -578,9 +578,9 @@ namespace stamp::serialize {
 		ostream.write(serializer.data->data(), serializer.data->size());
 		ostream.put('"');
 	}
-	template<typename OS, concepts::array_iterable T>
+	template<typename OS, array_iterable_c T>
 	inline void json_out(OS& ostream, const json_serializer<T>& serializer, std::size_t call_depth = 0) {
-		if constexpr (concepts::array_json_pair_iterable<T>) {
+		if constexpr (array_json_pair_iterable_c<T>) {
 			if (serializer.format->force_object_pairs) {
 				// already pre-indented
 				ostream.put('{');

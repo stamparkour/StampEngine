@@ -13,10 +13,9 @@ namespace stamp::reflect {
 	constexpr bool is_member_property_v = false;
 	template<typename T, typename B>
 	constexpr bool is_member_property_v<T B::*> = true;
-	namespace concepts {
-		template<typename T>
-		concept is_member_property_c = is_member_property_v<T>;
-	}
+
+	template<typename T>
+	concept is_member_property_c = is_member_property_v<T>;
 
 	template<typename B, typename T, string_literal S, typename... Arg>
 	struct member_property_t {
