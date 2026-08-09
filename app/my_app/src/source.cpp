@@ -6,74 +6,108 @@
 #include <stamp/task/coroutine.h>
 #include <stamp/task/task_queue.h>
 #include <stamp/task/thread_pool.h>
+#include <stamp/task/co_lock.h>
 #include <benchmark/benchmark.h>
 #include <unordered_map>
 #include <mutex>
+#include <shared_mutex>
 #include <chrono>
 #include <windows.h>
 
 using namespace stamp::task;
 
 
-coroutine<void> looping_test(int a) {
-	for(int i = 0; i < a; i++) {
-		benchmark::DoNotOptimize(i);
-		co_yield{};
+coroutine<void> co_lock_test(co_lock_shared* lock, std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+	for (int i = 0; i < 10; i++) {
+		if (i == 7) {
+			auto l = co_await lock->lock();
+			for (int k = 0; k < 50; k++) {
+				benchmark::DoNotOptimize(k);
+			}
+		}
+		else {
+			auto l = co_await lock->lock_shared();
+
+			for (int k = 0; k < 50; k++) {
+				benchmark::DoNotOptimize(k);
+			}
+		}
 	}
-	co_return;
+
+	counter->fetch_add(1);
+	counter->notify_all();
 }
 
-static void LoopingTest(benchmark::State& state) {
-	for (auto _ : state) {
-		auto task = looping_test(state.range(0));
-		while (!task.done()) 
-			task.resume();
-		benchmark::DoNotOptimize(task);
-	}
-	state.SetItemsProcessed(state.range(0) * state.iterations());
-}
-BENCHMARK(LoopingTest)->Iterations(30000)->RangeMultiplier(4)->Ranges({{2048, 2048}});
+static void CoLockTest(benchmark::State& state) {
+	constexpr int loop_count = 2000;
 
-coroutine<void> schedular_test(thread_pool& pool, std::atomic_int& ct) {
-	ct++;
-	ct.notify_all();
-	co_return;
-}
-
-static void SchedularTest(benchmark::State& state) {
-	thread_pool pool{(unsigned int)state.range(1)};
+	thread_pool pool{4};
 	std::atomic_int count{0};
+	co_lock_shared lock{};
 	for (auto _ : state) {
 		count.store(0);
-		for (int i = 0; i < state.range(0); i++) {
-			pool.queue().emplace_detached(schedular_test, pool, count);
+
+		for (int i = 0; i < loop_count; i++) {
+			pool.queue().emplace_detached(co_lock_test, &lock, &count);
 		}
-		int current_count;
-		while ((current_count = count.load()) < state.range(0)) {
-			count.wait(current_count);
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			count.wait(tmp);
 		}
 	}
 	pool.kill();
-	state.SetItemsProcessed(state.range(0) * state.iterations());
 }
-BENCHMARK(SchedularTest)->Iterations(6000)->RangeMultiplier(2)->Ranges({{2048, 2048}, {1, 4}});
+BENCHMARK(CoLockTest)->Iterations(1000);
 
-coroutine<void> timer_schedular_test(thread_pool& pool, std::atomic_int& ct) {
-	ct++;
-	ct.notify_all();
+coroutine<void> mutex_test(std::shared_mutex* lock, std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+
+	for (int i = 0; i < 10; i++) {
+		if (i == 7) {
+			lock->lock_shared();
+			for (int k = 0; k < 50; k++) {
+				benchmark::DoNotOptimize(k);
+			}
+			lock->unlock_shared();
+		}
+		else {
+			lock->lock();
+			for (int k = 0; k < 50; k++) {
+				benchmark::DoNotOptimize(k);
+			}
+			lock->unlock();
+		}
+	}
+
+	counter->fetch_add(1);
+	counter->notify_all();
+
 	co_return;
 }
 
-static void TimerSchedularTest(benchmark::State& state) {
-	thread_pool pool{(unsigned int)state.range(1)};
+static void MutexTest(benchmark::State& state) {
+	constexpr int loop_count = 2000;
+
+	thread_pool pool{4};
 	std::atomic_int count{0};
+	std::shared_mutex lock{};
 	for (auto _ : state) {
-		
+		count.store(0);
+
+		for (int i = 0; i < loop_count; i++) {
+			pool.queue().emplace_detached(mutex_test, &lock, &count);
+		}
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			count.wait(tmp);
+		}
 	}
 	pool.kill();
-	state.SetItemsProcessed(state.range(0) * state.iterations());
 }
-BENCHMARK(TimerSchedularTest)->Iterations(6000)->RangeMultiplier(2)->Ranges({{2048, 2048}, {1, 4}});
+BENCHMARK(MutexTest)->Iterations(1000);
 
 BENCHMARK_MAIN();
 

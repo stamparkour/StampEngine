@@ -40,8 +40,95 @@ coroutine<void> sleep_coroutine() {
 }
 coroutine<void> increment_coroutine(std::atomic_int* target) {
 	target->fetch_add(1);
+	target->notify_all();
 	co_return;
 }
+
+struct co_lock_state_t {
+	std::atomic_int access_count;
+	std::atomic_int max_access_count;
+	std::atomic_int shared_access_count;
+	std::atomic_int max_shared_access_count;
+};
+coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock* lock, co_lock_state_t* state) {
+	using namespace std::chrono_literals;
+
+	std::this_thread::sleep_for(5ms);
+
+	{
+		auto l = co_await lock->lock();
+
+		int ac = state->access_count.fetch_add(1) + 1;
+		int mac = state->max_access_count.load();
+
+		if (ac > mac) {
+			state->max_access_count.compare_exchange_strong(mac, ac);
+		}
+
+		std::this_thread::sleep_for(8ms);
+
+		state->access_count.fetch_sub(1);
+	}
+
+	target->fetch_add(1);
+	target->notify_all();
+
+	co_return;
+}
+
+
+coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock, co_lock_state_t* state) {
+	using namespace std::chrono_literals;
+
+	std::this_thread::sleep_for(5ms);
+
+	{
+		auto l = co_await lock->lock_shared();
+
+		int ac = state->shared_access_count.fetch_add(1) + 1;
+		int mac = state->max_shared_access_count.load();
+
+		if (ac > mac) {
+			state->max_shared_access_count.compare_exchange_strong(mac, ac);
+		}
+
+		std::this_thread::sleep_for(8ms);
+
+		state->shared_access_count.fetch_sub(1);
+	}
+
+	target->fetch_add(1);
+	target->notify_all();
+
+	co_return;
+}
+
+coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock, co_lock_state_t* state) {
+	using namespace std::chrono_literals;
+
+	std::this_thread::sleep_for(5ms);
+
+	{
+		auto l = co_await lock->lock();
+
+		int ac = state->access_count.fetch_add(1) + 1;
+		int mac = state->max_access_count.load();
+
+		if (ac > mac) {
+			state->max_access_count.compare_exchange_strong(mac, ac);
+		}
+
+		std::this_thread::sleep_for(8ms);
+
+		state->access_count.fetch_sub(1);
+	}
+
+	target->fetch_add(1);
+	target->notify_all();
+
+	co_return;
+}
+
 
 TEST(Coroutine, Invokation) {
 	coroutine<void> noop_coroutine_v = noop_coroutine();
@@ -176,14 +263,36 @@ TEST(Coroutine, Error) {
 TEST(Coroutine, CoAwait) {
 	coroutine<void> noop_coroutine_v = noop_coroutine();
 	coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
+	coroutine<void> await2 = co_await_coroutine(co_await_coroutine_v);
+	coroutine<void> await3 = co_await_coroutine(noop_coroutine_v);
 
 	co_await_coroutine_v.resume();
+	await2.resume();
+	await3.resume();
 
 	EXPECT_EQ(co_await_coroutine_v.done(), false);
 
 	noop_coroutine_v.resume();
 
 	EXPECT_EQ(co_await_coroutine_v.done(), true);
+}
+
+
+TEST(Coroutine, CoAwaitDeconstruct) {
+	coroutine<void> noop_coroutine_v = noop_coroutine();
+
+	coroutine<void> h;
+
+	{
+		coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
+		co_await_coroutine_v.resume();
+		h = co_await_coroutine(noop_coroutine_v);
+		h.resume();
+	}
+
+	noop_coroutine_v.resume();
+
+	EXPECT_EQ(h.done(), true);
 }
 
 
@@ -230,4 +339,125 @@ TEST(TimerTaskQueue, Emplace) {
 
 	EXPECT_EQ(noop_v, next_v);
 	EXPECT_GE(then_v, now_v + delay_padded);
+}
+
+TEST(ThreadPool, Enqueue) {
+	constexpr int target_count = 100;
+
+	thread_pool pool{4};
+	
+	std::atomic_int value = 0;
+
+	for (int i = 0; i < target_count; i++) {
+		pool.queue().emplace_detached(increment_coroutine, &value);
+	}
+
+	int t;
+	while ((t = value.load()) < target_count) {
+		value.wait(t);
+	}
+
+	pool.kill();
+}
+
+
+TEST(CoLock, CoLock) {
+	constexpr int target_count = 100;
+
+	thread_pool pool{8};
+
+	std::atomic_int value = 0;
+	co_lock lock{};
+	co_lock_state_t state{};
+
+	for (int i = 0; i < target_count; i++) {
+		pool.queue().emplace_detached(increment_and_co_lock_coroutine, &value, &lock, &state);
+	}
+
+	int t;
+	while ((t = value.load()) < target_count) {
+		value.wait(t);
+	}
+
+	EXPECT_EQ(state.access_count.load(), 0);
+	EXPECT_EQ(state.max_access_count.load(), 1);
+
+	pool.kill();
+}
+
+TEST(CoSharedLock, ParallelRead) {
+	constexpr int target_count = 100;
+
+	thread_pool pool{8};
+
+	std::atomic_int value = 0;
+	co_lock_shared lock{};
+	co_lock_state_t state{};
+
+	for (int i = 0; i < target_count; i++) {
+		pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock, &state);
+	}
+
+	int t;
+	while ((t = value.load()) < target_count) {
+		value.wait(t);
+	}
+
+	EXPECT_EQ(state.shared_access_count.load(), 0);
+	EXPECT_GT(state.max_shared_access_count.load(), 1);
+
+	pool.kill();
+}
+TEST(CoSharedLock, Write) {
+	constexpr int target_count = 100;
+
+	thread_pool pool{8};
+
+	std::atomic_int value = 0;
+	co_lock_shared lock{};
+	co_lock_state_t state{};
+
+	for (int i = 0; i < target_count; i++) {
+		pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock, &state);
+	}
+
+	int t;
+	while ((t = value.load()) < target_count) {
+		value.wait(t);
+	}
+
+	EXPECT_EQ(state.access_count.load(), 0);
+	EXPECT_EQ(state.max_access_count.load(), 1);
+
+	pool.kill();
+}
+TEST(CoSharedLock, ReadWrite) {
+	constexpr int target_count = 100;
+
+	thread_pool pool{8};
+
+	std::atomic_int value = 0;
+	co_lock_shared lock{};
+	co_lock_state_t state{};
+
+	for (int i = 0; i < target_count; i++) {
+		if (i % 16 == 15) {
+			pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock, &state);
+		}
+		else {
+			pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock, &state);
+		}
+	}
+
+	int t;
+	while ((t = value.load()) < target_count) {
+		value.wait(t);
+	}
+
+	EXPECT_EQ(state.access_count.load(), 0);
+	EXPECT_EQ(state.max_access_count.load(), 1);
+	EXPECT_EQ(state.shared_access_count.load(), 0);
+	EXPECT_GE(state.max_shared_access_count.load(), 1);
+
+	pool.kill();
 }

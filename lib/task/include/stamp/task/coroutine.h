@@ -1,4 +1,5 @@
 // stamp/task/coroutine.h
+
 #ifndef STAMP_TASK_COROUTINE_H
 #define STAMP_TASK_COROUTINE_H
 
@@ -12,7 +13,10 @@
 #include <stdexcept>
 #include <thread>
 
-// TODO: add some way to query for exceptions from coroutine_view
+// TODO: descructors for promise objects.
+// on_yield_handle is now destructor safe.
+// TODO: add node base class for coroutine queing
+// TODO: potentially add pause_t<T> type to explicity request co_yield to pause.
 
 namespace stamp::task {
 	template<typename T>
@@ -75,6 +79,11 @@ namespace stamp::task {
 		}
 	};
 
+	struct co_list_node {
+		co_list_node* next;
+		void* handle;
+		co_list_node* prev;
+	};
 
 	template<typename T>
 	struct basic_promise;
@@ -82,6 +91,10 @@ namespace stamp::task {
 	struct coroutine;
 	template<typename T>
 	class coroutine_view;
+
+	//struct pause_t {
+	//	explicit pause_t() = default;
+	//};
 
 	class generic_promise {
 		template<typename T>
@@ -95,8 +108,8 @@ namespace stamp::task {
 		std::atomic_bool is_pausing_v{false}; // needs to be threadsafe
 		std::atomic_bool is_yielded_v{false};
 		std::atomic_flag is_detached_flag{}; // needs to be threadsafe
-		std::atomic_flag on_end_handle_flag{}; // needs to be threadsafe
-		std::atomic<void*> on_yield_handle{nullptr}; // needs to be threadsafe
+		std::atomic_flag on_yield_handle_flag{}; // needs to be threadsafe
+		std::atomic<co_list_node*> on_yield_handle{nullptr}; // needs to be threadsafe
 		std::atomic<void*> on_interrupt_handle{nullptr}; // needs to be threadsafe
 		std::coroutine_handle<void> handle_v;
 		std::exception_ptr exception_buffer{nullptr};
@@ -130,9 +143,20 @@ namespace stamp::task {
 					void* addr;
 					void* addr_int;
 					{
-						atomic_flag_lock_guard l{promise->on_end_handle_flag};
+						atomic_flag_lock_guard l{promise->on_yield_handle_flag};
 						promise->is_done_v.store(true);
-						addr = promise->on_yield_handle.exchange(nullptr);
+						co_list_node* node = promise->on_yield_handle.exchange(nullptr);
+
+						if (node != nullptr) {
+							if (node->next != nullptr) {
+								node->next->prev = nullptr;
+							}
+							addr = node->handle;
+						}
+						else {
+							addr = nullptr;
+						}
+						
 						addr_int = promise->on_interrupt_handle.exchange(nullptr);
 					}
 
@@ -185,10 +209,10 @@ namespace stamp::task {
 
 		template<typename V>
 		struct await_transform_t {
-			V awaiter;
 			generic_promise& promise;
+			std::decay_t<V> awaiter;
 			bool request_kill_v;
-			await_transform_t(generic_promise& promise, V awaiter, bool request_kill_v) : promise(promise), awaiter(awaiter), request_kill_v(request_kill_v) {}
+			await_transform_t(generic_promise& promise, V&& awaiter, bool request_kill_v) : promise(promise), awaiter(std::forward<V>(awaiter)), request_kill_v(request_kill_v) {}
 
 			bool await_ready() {
 				if (request_kill_v) return false;
@@ -196,44 +220,55 @@ namespace stamp::task {
 			}
 			bool await_suspend(auto handle) {
 				if constexpr (std::same_as<decltype(awaiter.await_suspend(handle)), void>) {
-					void* addr_int = promise.on_interrupt_handle.exchange(nullptr, std::memory_order_relaxed);
+					if (request_kill_v) {
+						promise.set_is_killed();
+						return true;
+					}			
+
+					awaiter.await_suspend(handle);
+
+					void* addr_int = promise.on_interrupt_handle.exchange(nullptr);
 					if (addr_int != nullptr) {
 						std::coroutine_handle<void>::from_address(addr_int).resume();
 					}
 
-					if (request_kill_v) {
-						promise.set_is_killed();
-						return true;
-					}
-					
-					awaiter.await_suspend(handle);
 					return true;
 				}
 				else if constexpr (std::same_as<decltype(awaiter.await_suspend(handle)), bool>) {
-					void* addr_int = promise.on_interrupt_handle.exchange(nullptr, std::memory_order_relaxed);
-					if (addr_int != nullptr) {
-						std::coroutine_handle<void>::from_address(addr_int).resume();
-					}
-
 					if (request_kill_v) {
 						promise.set_is_killed();
 						return true;
 					}
-					
-					return awaiter.await_suspend(handle);
+
+					bool k = awaiter.await_suspend(handle);
+					if (k) {
+						void* addr_int = promise.on_interrupt_handle.exchange(nullptr);
+						if (addr_int != nullptr) {
+							std::coroutine_handle<void>::from_address(addr_int).resume();
+						}
+					}
+					return k;
 				}
 				else { // should be a coroutine_handle. could have problems here
+					if (request_kill_v) {
+						promise.set_is_killed();
+						return true;
+					}
+
 					auto next_handle = awaiter.await_suspend(handle);
 					next_handle.resume();
 
-					void* addr_int = promise.on_interrupt_handle.exchange(nullptr, std::memory_order_relaxed);
+					void* addr_int = promise.on_interrupt_handle.exchange(nullptr);
 					if (addr_int != nullptr) {
 						std::coroutine_handle<void>::from_address(addr_int).resume();
 					}
-
-					if (request_kill_v) {
-						promise.set_is_killed();
+					else {
+						void* addr_int = promise.on_interrupt_handle.exchange(nullptr);
+						if (addr_int != nullptr) {
+							std::coroutine_handle<void>::from_address(addr_int).resume();
+						}
 					}
+
 					return true;
 				}
 			}
@@ -241,7 +276,7 @@ namespace stamp::task {
 				return awaiter.await_resume();
 			}
 		};
-		template<typename V> requires awaitable_c<V>
+		template<typename V>
 		auto await_transform(V&& awaiter) {
 			if constexpr (requires { awaiter.operator co_await(); }) {
 				return await_transform_t{*this, std::forward<V>(awaiter).operator co_await(), request_kill_v.load()};
@@ -274,6 +309,7 @@ namespace stamp::task {
 			struct await_t {
 				basic_promise<T>& promise_v;
 				T& new_value;
+
 				await_t(
 					basic_promise<T>& promise_v, 
 					T& new_value) :
@@ -299,15 +335,38 @@ namespace stamp::task {
 						addr_int = promise_v.on_interrupt_handle.exchange(nullptr);
 						std::coroutine_handle<void>::from_address(addr_int).resume();
 					}
-					void* addr = promise_v.on_yield_handle.load();
-					if (addr != nullptr) {
-						addr = promise_v.on_yield_handle.exchange(nullptr);
-						std::coroutine_handle<void>::from_address(addr).resume();
+					co_list_node* node = promise_v.on_yield_handle.load();
+					if (node != nullptr) {
+						void* addr;
+						{
+							atomic_flag_lock_guard l{promise_v.on_yield_handle_flag};
+
+							node = promise_v.on_yield_handle.exchange(nullptr);
+							if (node != nullptr) {
+								if (node->next != nullptr) {
+									node->next->prev = nullptr;
+								}
+								addr = node->handle;
+							}
+							else {
+								addr = nullptr;
+							}
+						}
+
+						if (addr != nullptr) {
+							std::coroutine_handle<void>::from_address(addr).resume();
+						}
 					}
 
 					bool is_pausing_v = promise_v.is_pausing_v.load();
 					if (is_pausing_v) {
 						promise_v.is_pausing_v.store(false);
+
+						void* addr_int = promise_v.on_interrupt_handle.exchange(nullptr);
+						if (addr_int != nullptr) {
+							std::coroutine_handle<void>::from_address(addr_int).resume();
+						}
+
 						return true;
 					}
 
@@ -423,13 +482,14 @@ namespace stamp::task {
 			struct await_t {
 				generic_promise& my_promise;
 				void* next_handle{nullptr};
+
 				await_t(generic_promise& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
 					if (!my_promise.done()) {
 						next_handle = my_promise.on_interrupt_handle.exchange(handle.address());
 						// debating whether to auto resume if not started  
@@ -454,16 +514,21 @@ namespace stamp::task {
 		auto operator co_await() const noexcept {
 			struct await_t {
 				basic_promise<T>& my_promise;
-				void* next_handle{nullptr};
+				co_list_node node;
+
 				await_t(basic_promise<T>& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
 					if (!my_promise.done()) {
-						next_handle = my_promise.on_yield_handle.exchange(handle.address());
+						node.handle = handle.address();
+						node.next = my_promise.on_yield_handle.exchange(&node);
+						if (node.next != nullptr) {
+							node.next->prev = &node;
+						}
 						// debating whether to auto resume if not started
 						//if (!my_promise.is_started_v.load()) {
 						//	my_promise.handle_v.resume();
@@ -475,9 +540,35 @@ namespace stamp::task {
 					}
 				}
 				T await_resume() {
-					if (next_handle) std::coroutine_handle<void>::from_address(next_handle).resume();
-					my_promise.throw_if_exception(); 
+					void* n;
+					{
+						atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
+						if (node.next != nullptr) {
+							n = node.next->handle;
+							node.next->prev = nullptr;
+						}
+						else {
+							n = nullptr;
+						}
+					}
+
+					node = {};
+					if (n != nullptr) std::coroutine_handle<void>::from_address(n).resume();
+					my_promise.throw_if_exception();
 					return my_promise.ret_value;
+				}
+
+				~await_t() {
+					if (node.handle == nullptr) return;
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
+					if (node.next != nullptr) {
+						node.next->prev = node.prev;
+					}
+					if (node.prev != nullptr) {
+						node.prev->next = node.next;
+					}
+					co_list_node* tmp = &node;
+					my_promise.on_yield_handle.compare_exchange_strong(tmp, node.next);
 				}
 			};
 
@@ -500,6 +591,7 @@ namespace stamp::task {
 		auto yield_value(void_t) {
 			struct await_t {
 				basic_promise<void>& promise_v;
+
 				await_t(basic_promise<void>& promise_v) :
 					promise_v(promise_v) {}
 
@@ -521,15 +613,38 @@ namespace stamp::task {
 						addr_int = promise_v.on_interrupt_handle.exchange(nullptr);
 						std::coroutine_handle<void>::from_address(addr_int).resume();
 					}
-					void* addr = promise_v.on_yield_handle.load();
-					if (addr != nullptr) {
-						addr = promise_v.on_yield_handle.exchange(nullptr);
-						std::coroutine_handle<void>::from_address(addr).resume();
+					co_list_node* node = promise_v.on_yield_handle.load();
+					if (node != nullptr) {
+						void* addr;
+						{
+							atomic_flag_lock_guard l{promise_v.on_yield_handle_flag};
+
+							node = promise_v.on_yield_handle.exchange(nullptr);
+							if (node != nullptr) {
+								if (node->next != nullptr) {
+									node->next->prev = nullptr;
+								}
+								addr = node->handle;
+							}
+							else {
+								addr = nullptr;
+							}
+						}
+
+						if (addr != nullptr) {
+							std::coroutine_handle<void>::from_address(addr).resume();
+						}
 					}
 
 					bool is_pausing_v = promise_v.is_pausing_v.load();
 					if (is_pausing_v) {
 						promise_v.is_pausing_v.store(false);
+
+						void* addr_int = promise_v.on_interrupt_handle.exchange(nullptr);
+						if (addr_int != nullptr) {
+							std::coroutine_handle<void>::from_address(addr_int).resume();
+						}
+
 						return true;
 					}
 
@@ -670,13 +785,14 @@ namespace stamp::task {
 			struct await_t {
 				generic_promise& my_promise;
 				void* next_handle{nullptr};
+
 				await_t(generic_promise& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
 					if (!my_promise.done()) {
 						next_handle = my_promise.on_interrupt_handle.exchange(handle.address());
 						// debating whether to auto resume if not started  
@@ -701,16 +817,21 @@ namespace stamp::task {
 		auto operator co_await() const noexcept {
 			struct await_t {
 				generic_promise& my_promise;
-				void* next_handle{nullptr};
+				co_list_node node{};
+
 				await_t(generic_promise& my_promise) : my_promise(my_promise) {}
 
 				bool await_ready() const noexcept {
 					return my_promise.done();
 				}
 				bool await_suspend(std::coroutine_handle<void> handle) {
-					atomic_flag_lock_guard l{my_promise.on_end_handle_flag};
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
 					if (!my_promise.done()) {
-						next_handle = my_promise.on_yield_handle.exchange(handle.address());
+						node.handle = handle.address();
+						node.next = my_promise.on_yield_handle.exchange(&node);
+						if (node.next != nullptr) {
+							node.next->prev = &node;
+						}
 						// debating whether to auto resume if not started  
 						//if (!my_promise.is_started_v.load()) {
 						//	my_promise.handle_v.resume();
@@ -722,8 +843,35 @@ namespace stamp::task {
 					}
 				}
 				void await_resume() {
-					if (next_handle) std::coroutine_handle<void>::from_address(next_handle).resume();
+					void* n;
+					{
+						atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
+						if (node.next != nullptr) {
+							n = node.next->handle;
+							node.next->prev = nullptr;
+						}
+						else {
+							n = nullptr;
+						}
+					}
+
+					node = {};
+					if (n != nullptr) std::coroutine_handle<void>::from_address(n).resume();
 					my_promise.throw_if_exception();
+				
+				}
+
+				~await_t() {
+					if (node.handle == nullptr) return;
+					atomic_flag_lock_guard l{my_promise.on_yield_handle_flag};
+					if (node.next != nullptr) {
+						node.next->prev = node.prev;
+					}
+					if (node.prev != nullptr) {
+						node.prev->next = node.next;
+					}
+					co_list_node* tmp = &node;
+					my_promise.on_yield_handle.compare_exchange_strong(tmp, node.next);
 				}
 			};
 
@@ -936,7 +1084,7 @@ namespace stamp::task {
 		}
 	};
 	template<typename RetType>
-	auto co_get_coroutine() {
+	auto current_coroutine() {
 		return co_get_coroutine_await_t<RetType>{};
 	}
 }

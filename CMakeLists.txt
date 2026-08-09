@@ -39,6 +39,11 @@ if(STAMP_BUILD_APP)
     else()
         add_compile_options(-Wall -Wextra -pedantic -Werror)
     endif()
+
+    #stack size
+    #if (MSVC)
+    #    add_link_options(/STACK:8388608)
+    #endif()
 endif()
 
 if(STAMP_BUILD_DOXYGEN)

@@ -60,26 +60,14 @@ namespace stamp::task {
 
 				std::size_t count;
 				if (size > max * 16)	count = 16;
-				else if (size > max)	count = size / pool->thread_vector.size();
+				else if (size > max)	count = size / max;
 				else					count = 1;
 
 				task_bulk tasks = pool->queue_v.wait_dequeue_bulk(count); // do some smarter thing (like checking what the current queue size is
 				for (auto& v : tasks) {
 					if (!v) continue;
 
-					state.current_task = v;
-
-					auto co = [&](coroutine_view<void>& target) -> coroutine<void> {
-						co_await target.await_interupt();
-						/*if (target.is_yielded()) {
-						}
-						else if (target.done()) {
-						}
-						// is co_await
-						else {  
-						}*/
-						state.current_task = nullptr;
-					}(v);
+					// state.current_task = v;
 
 					v.resume();
 
@@ -122,6 +110,10 @@ namespace stamp::task {
 		}
 		const timer_task_queue& timer_queue() const {
 			return timer_queue_v;
+		}
+
+		std::size_t thread_count() const {
+			return thread_vector.size();
 		}
 
 
