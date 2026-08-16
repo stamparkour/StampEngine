@@ -25,10 +25,8 @@ namespace stamp::reflect {
 		return {};
 	}
 
-	namespace concepts {
-		template<typename T>
-		concept is_tag_c = std::derived_from<T, stamp::reflect::tag::generic_tag_t>;
-	}
+	template<typename T>
+	concept is_tag_c = std::derived_from<T, stamp::reflect::tag::generic_tag_t>;
 }
 
 #endif // STAMP_REFLECT_TAG_H

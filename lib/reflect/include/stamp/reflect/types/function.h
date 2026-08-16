@@ -63,13 +63,13 @@ namespace stamp::reflect {
 	}
 
 	// string literal reflect
-	template<string_literal S, concepts::is_member_function_traits_c T, typename... Attr>
+	template<string_literal S, is_member_function_c T, typename... Attr>
 	constexpr member_function_t<T, S, Attr...> reflect_member_function(T member_ptr, Attr... attr) {
 		return { member_ptr, attr... };
 	}
 
 	// generic reflect member function
-	template<concepts::is_tag_c Tag, concepts::is_member_function_traits_c T, typename... Attr>
+	template<is_tag_c Tag, is_member_function_c T, typename... Attr>
 	constexpr auto reflect(Tag, T member_ptr, Attr... attr) {
 		if constexpr (requires { typename Tag::attrib_type; }) {
 			using attrib = typename Tag::attrib_type;
@@ -86,22 +86,22 @@ namespace stamp::reflect {
 
 
 	// overload none
-	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	template<typename... Arg, is_tag_c Tag, typename R, typename B, typename... Attr>
 	constexpr auto reflect(tag::none_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...), Attr... attr) {
 		return reflect(t, member_ptr, attr...);
 	}
-	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	template<typename... Arg, is_tag_c Tag, typename R, typename B, typename... Attr>
 	constexpr auto reflect(tag::none_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) noexcept, Attr... attr) {
 		return reflect(t, member_ptr, attr...);
 	}
 
 
 	// overload const
-	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	template<typename... Arg, is_tag_c Tag, typename R, typename B, typename... Attr>
 	constexpr auto reflect(tag::const_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) const, Attr... attr) {
 		return reflect(t, member_ptr, attr...);
 	}
-	template<typename... Arg, concepts::is_tag_c Tag, typename R, typename B, typename... Attr>
+	template<typename... Arg, is_tag_c Tag, typename R, typename B, typename... Attr>
 	constexpr auto reflect(tag::const_overload_tag_t, Tag t, R(B::* member_ptr)(Arg...) const noexcept, Attr... attr) {
 		return reflect(t, member_ptr, attr...);
 	}

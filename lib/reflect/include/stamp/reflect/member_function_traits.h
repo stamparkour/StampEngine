@@ -161,19 +161,18 @@ namespace stamp::reflect {
 
 	template<typename T, typename Tag>
 	constexpr bool member_function_check_tag_v = std::same_as<Tag, typename member_function_traits<T>::overload_tag_type>;
+	template<typename T, typename Tag>
+	concept member_function_with_tag_c = member_function_check_tag_v<T, Tag>;
 
-	namespace concepts {
-		template<typename T, typename... Arg>
-		concept member_function_with_param_c = std::same_as<typename member_function_traits<T>::arg_type, std::tuple<Arg...>>;
-		template<typename T>
-		concept is_member_function_traits_c = requires {
-			member_function_traits<T>{};
-		};
-		template<typename T, typename Tag>
-		concept member_function_with_tag_c = member_function_check_tag_v<T, Tag>;
-	}
+	template<typename T, typename... Arg>
+	concept member_function_with_param_c = std::same_as<typename member_function_traits<T>::arg_type, std::tuple<Arg...>>;
 	template<typename T>
-	constexpr bool is_member_function_traits_v = concepts::is_member_function_traits_c<T>;
+	concept is_member_function_c = requires {
+		member_function_traits<T>{};
+	};
+
+	template<typename T>
+	constexpr bool is_member_function_v = is_member_function_c<T>;
 }
 
 #endif // STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_H

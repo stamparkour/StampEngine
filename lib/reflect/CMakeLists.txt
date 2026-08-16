@@ -12,7 +12,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/meta_tuple.h"
 	
 	"include/stamp/reflect/member_function_traits.h"
-	 
+	"include/stamp/reflect/function_traits.h"
 
 	"include/stamp/reflect/std/reflect_std.h" 
 	"include/stamp/reflect/std/reflect_vector.h" 
@@ -35,6 +35,8 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/view/view_desc_ctypes.h"
 
 	"include/stamp/reflect/attributes/attributes.h"
+
+	"include/stamp/reflect/generic_iterator.h"
 )
 
 # add the library

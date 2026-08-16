@@ -52,7 +52,7 @@ namespace stamp::reflect {
 	}
 
 
-	template<concepts::is_tag_c O, typename B, typename T, typename... Attr>
+	template<is_tag_c O, typename B, typename T, typename... Attr>
 	constexpr auto reflect(O, T B::* member_ptr, Attr... attr) {
 		if constexpr (requires { typename O::attrib_type; }) {
 			using attrib = typename O::attrib_type;
