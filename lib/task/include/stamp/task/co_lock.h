@@ -83,6 +83,7 @@ namespace stamp::task {
 		}
 	};
 
+	// DOES NOT WORK
 	class co_lock_shared {
 		std::atomic<void*> next_handle_v{};
 		void* tmp_handle_v{};

@@ -85,7 +85,8 @@ namespace stamp::task {
 	class generic_read_buffer {
 		virtual ~generic_read_buffer() = default;
 		virtual std::size_t size() const = 0;
-		virtual 
+		virtual /* iterator */ begin();
+		virtual /* iterator */ end();
 	};
 	class generic_write_buffer {
 		virtual ~generic_write_buffer() = default;

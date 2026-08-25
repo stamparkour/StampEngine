@@ -11,7 +11,7 @@ set(STAMP_SERIALIZE_HEADERS
 	"include/stamp/serialize/json.h" 
 	"include/stamp/serialize/stream.h"
 	"include/stamp/serialize/concepts.h"
-)
+ "include/stamp/serialize/buffer.h")
 
 # add the library
 add_library(stamp_serialize INTERFACE ${STAMP_SERIALIZE_SOURCES} ${STAMP_SERIALIZE_HEADERS})

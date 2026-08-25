@@ -231,7 +231,7 @@ namespace stamp::task {
 			timer_task_queue* queue_v;
 			time_point time;
 			bool await_ready() noexcept {
-				return false;
+				return !(clock::now() > time);
 			}
 			template<typename T>
 			bool await_suspend(const std::coroutine_handle<basic_promise<T>>& handle) noexcept {
