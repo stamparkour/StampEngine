@@ -5,7 +5,7 @@ Toolset of several libraries that, when combined be used as a complete game engi
 # Build Test App
 
 Make sure you have
-- Cmake
+- Cmake >3.24
 
 run 
 ``` sh
@@ -16,7 +16,7 @@ cmake --build build
 # Build Documentation
 
 Make sure you have
-- CMake
+- CMake >3.24
 - [doxygen](https://www.doxygen.nl/manual/install.html)
 - Graphviz (optional)
 
