@@ -5,10 +5,6 @@ set(STAMP_TASK_SOURCES
 )
 set(STAMP_TASK_HEADERS
 	"include/stamp/task/coroutine.h"
-	"include/stamp/task/task_queue.h"
-	"include/stamp/task/thread_pool.h"
-	"include/stamp/task/co_lock.h"
-	"include/stamp/task/co_stream.h"
 )
 
 # add the library
