@@ -1,0 +1,38 @@
+// stamp/core/assert.h
+
+#ifndef STAMP_CORE_ASSERT_H
+#define STAMP_CORE_ASSERT_H
+
+#include <string>
+#include <stringview>
+#include <stdexcept>
+#include <source_location>
+
+#if !defined(NDEBUG) || defined(_DEBUG)
+#define STAMP_CORE_DEBUG
+#endif
+
+namespace stamp::core {
+#ifdef STAMP_CORE_DEBUG
+	static inline constexpr bool is_debug_v = true;
+#else
+	static inline constexpr bool is_debug_v = false;
+#endif
+
+	inline void s_assert(bool condition, const std::string_view& str = {}, std::source_location sl = std::source_location::current()) {
+		if constexpr (!is_debug_v) return;
+		if (condition) return;
+
+		std::string msg{str};
+		msg = std::string{} sl.file_name() + " " + sl.line() + " " + sl.function_name() + ": " + msg;
+		throw std::runtime_error(msg);
+	}
+	inline void s_assert(bool condition, const std::string& str, std::source_location sl = std::source_location::current()) {
+		s_assert(condition, std::string_view(str), sl);
+	}
+	inline void s_assert(bool condition, const char* str, std::source_location sl = std::source_location::current()) {
+		s_assert(condition, std::string_view(str), sl);
+	}
+}
+
+#endif // STAMP_CORE_ASSERT_H

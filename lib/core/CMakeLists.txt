@@ -7,6 +7,7 @@ set(STAMP_CORE_SOURCES
 set(STAMP_CORE_HEADERS
 	"include/stamp/stamp_config.h.in"
 	"include/stamp/core/core.h"
+	"include/stamp/core/assert.h"
 )
 
 # add the library
