@@ -17,17 +17,17 @@
 using namespace stamp::task;
 
 
-coroutine<void> co_lock_test(co_lock_shared* lock, std::atomic_int* counter) {
+coroutine<void> co_lock_test(co_lock_shared* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 	for (int i = 0; i < 10; i++) {
 		if (i == 7) {
-			auto l = co_await lock->lock();
+			auto l = co_await lock_v->lock_v();
 			for (int k = 0; k < 50; k++) {
 				benchmark::DoNotOptimize(k);
 			}
 		}
 		else {
-			auto l = co_await lock->lock_shared();
+			auto l = co_await lock_v->lock_shared();
 
 			for (int k = 0; k < 50; k++) {
 				benchmark::DoNotOptimize(k);
@@ -44,12 +44,12 @@ static void CoLockTest(benchmark::State& state) {
 
 	thread_pool pool{4};
 	std::atomic_int count{0};
-	co_lock_shared lock{};
+	co_lock_shared lock_v{};
 	for (auto _ : state) {
 		count.store(0);
 
 		for (int i = 0; i < loop_count; i++) {
-			pool.queue().emplace_detached(co_lock_test, &lock, &count);
+			pool.queue().emplace_detached(co_lock_test, &lock_v, &count);
 		}
 
 		int tmp;
@@ -61,23 +61,23 @@ static void CoLockTest(benchmark::State& state) {
 }
 BENCHMARK(CoLockTest)->Iterations(1000);
 
-coroutine<void> mutex_test(std::shared_mutex* lock, std::atomic_int* counter) {
+coroutine<void> mutex_test(std::shared_mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 
 	for (int i = 0; i < 10; i++) {
 		if (i == 7) {
-			lock->lock_shared();
+			lock_v->lock_shared();
 			for (int k = 0; k < 50; k++) {
 				benchmark::DoNotOptimize(k);
 			}
-			lock->unlock_shared();
+			lock_v->unlock_shared();
 		}
 		else {
-			lock->lock();
+			lock_v->lock_v();
 			for (int k = 0; k < 50; k++) {
 				benchmark::DoNotOptimize(k);
 			}
-			lock->unlock();
+			lock_v->unlock();
 		}
 	}
 
@@ -92,12 +92,12 @@ static void MutexTest(benchmark::State& state) {
 
 	thread_pool pool{4};
 	std::atomic_int count{0};
-	std::shared_mutex lock{};
+	std::shared_mutex lock_v{};
 	for (auto _ : state) {
 		count.store(0);
 
 		for (int i = 0; i < loop_count; i++) {
-			pool.queue().emplace_detached(mutex_test, &lock, &count);
+			pool.queue().emplace_detached(mutex_test, &lock_v, &count);
 		}
 
 		int tmp;

@@ -50,13 +50,13 @@ struct co_lock_state_t {
 	std::atomic_int shared_access_count;
 	std::atomic_int max_shared_access_count;
 };
-coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock* lock, co_lock_state_t* state) {
+coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await lock->lock();
+		auto l = co_await lock_v->lock_v();
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();
@@ -77,13 +77,13 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 }
 
 
-coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock, co_lock_state_t* state) {
+coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await lock->lock_shared();
+		auto l = co_await lock_v->lock_shared();
 
 		int ac = state->shared_access_count.fetch_add(1) + 1;
 		int mac = state->max_shared_access_count.load();
@@ -103,13 +103,13 @@ coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* tar
 	co_return;
 }
 
-coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock, co_lock_state_t* state) {
+coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await lock->lock();
+		auto l = co_await lock_v->lock_v();
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();
@@ -367,11 +367,11 @@ TEST(CoLock, CoLock) {
 	thread_pool pool{8};
 
 	std::atomic_int value = 0;
-	co_lock lock{};
+	co_lock lock_v{};
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_and_co_lock_coroutine, &value, &lock, &state);
+		pool.queue().emplace_detached(increment_and_co_lock_coroutine, &value, &lock_v, &state);
 	}
 
 	int t;
@@ -391,11 +391,11 @@ TEST(CoSharedLock, ParallelRead) {
 	thread_pool pool{8};
 
 	std::atomic_int value = 0;
-	co_lock_shared lock{};
+	co_lock_shared lock_v{};
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock, &state);
+		pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock_v, &state);
 	}
 
 	int t;
@@ -414,11 +414,11 @@ TEST(CoSharedLock, Write) {
 	thread_pool pool{8};
 
 	std::atomic_int value = 0;
-	co_lock_shared lock{};
+	co_lock_shared lock_v{};
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock, &state);
+		pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock_v, &state);
 	}
 
 	int t;
@@ -437,15 +437,15 @@ TEST(CoSharedLock, ReadWrite) {
 	thread_pool pool{8};
 
 	std::atomic_int value = 0;
-	co_lock_shared lock{};
+	co_lock_shared lock_v{};
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
 		if (i % 16 == 15) {
-			pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock, &state);
+			pool.queue().emplace_detached(increment_and_co_shared_lock_write_coroutine, &value, &lock_v, &state);
 		}
 		else {
-			pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock, &state);
+			pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock_v, &state);
 		}
 	}
 
