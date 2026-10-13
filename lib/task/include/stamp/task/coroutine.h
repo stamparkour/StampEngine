@@ -11,6 +11,8 @@
 #include <memory>
 #include <stop_token>
 
+// TODO: have public function that returns the lock value from the co_bique
+
 namespace stamp::task {
 	struct atomic_lock_guard {
 		std::atomic_bool* lock = nullptr;
