@@ -1,5 +1,4 @@
 // stamp/task/coroutine.h
-
 #ifndef STAMP_TASK_COROUTINE_H
 #define STAMP_TASK_COROUTINE_H
 
@@ -14,6 +13,8 @@
 // TODO: have public function that returns the lock value from the co_bique
 
 namespace stamp::task {
+
+
 	struct atomic_lock_guard {
 		std::atomic_bool* lock_v = nullptr;
 
@@ -895,12 +896,32 @@ namespace stamp::task {
 		}
 	public:
 		coroutine() = default;
+		coroutine(handle_type h) {
+			handle_v = h;
+			initialize();
+		}
+		coroutine(nullptr_t) {
+			handle_v = nullptr;
+		}
+		template<typename T>
+		coroutine(std::coroutine_handle<coroutine_promise<T>> h) {
+			auto& p = other.handle_v.promise();
+			promise_type* my_promise = &p;
+			handle_v = handle_type::from_promise(my_promise); // works because first inheritance is same pointer as child class
+			initialize();
+		}
 		template<typename T>
 		coroutine(const coroutine<T>& other) {
 			operator =(other);
 		}
 		template<typename T>
 		coroutine(coroutine<T>&& other) {
+			operator =(std::move(other));
+		}
+		coroutine(const coroutine<void>& other) {
+			operator =(other);
+		}
+		coroutine(coroutine<void>&& other) {
 			operator =(std::move(other));
 		}
 		template<typename T>
@@ -933,6 +954,11 @@ namespace stamp::task {
 			handle_v = other.handle_v;
 			other.handle_v = nullptr;
 			// same count afterwards
+			return *this;
+		}
+		coroutine<void>& operator =(nullptr_t) {
+			deinitialize();
+			handle_v = nullptr;
 			return *this;
 		}
 		~coroutine() {
@@ -1013,14 +1039,14 @@ namespace stamp::task {
 		}
 
 	};
-	coroutine<void> coroutine_promise<void>::get_return_object() {
+	inline coroutine<void> coroutine_promise<void>::get_return_object() {
 		return {this};
 	}
 
 	template<typename T>
 	class coroutine_promise : public basic_coroutine_promise {
 	public:
-		using return_type = void;
+		using return_type = T;
 		using self_type = coroutine_promise<return_type>;
 		return_type return_v;
 
@@ -1089,6 +1115,13 @@ namespace stamp::task {
 		}
 	public:
 		coroutine() = default;
+		coroutine(handle_type h) {
+			handle_v = h;
+			initialize();
+		}
+		coroutine(nullptr_t) {
+			handle_v = nullptr;
+		}
 		coroutine(const coroutine<T>& other) {
 			operator =(other);
 		}
@@ -1106,6 +1139,11 @@ namespace stamp::task {
 			handle_v = other.handle_v;
 			other.handle_v = nullptr;
 			// same count afterwards
+			return *this;
+		}
+		coroutine<T>& operator =(nullptr_t) {
+			deinitialize();
+			handle_v = nullptr;
 			return *this;
 		}
 		~coroutine() {
@@ -1186,7 +1224,8 @@ namespace stamp::task {
 		}
 
 	};
-	coroutine<void> coroutine_promise<void>::get_return_object() {
+	template<typename T>
+	inline coroutine<T> coroutine_promise<T>::get_return_object() {
 		return {this};
 	}
 
