@@ -6,7 +6,6 @@
 #include <stamp/task/coroutine.h>
 #include <stamp/task/task_queue.h>
 #include <stamp/task/thread_pool.h>
-#include <stamp/task/co_lock.h>
 #include <benchmark/benchmark.h>
 #include <unordered_map>
 #include <mutex>
@@ -17,21 +16,12 @@
 using namespace stamp::task;
 
 
-coroutine<void> co_lock_test(co_lock_shared* lock_v, std::atomic_int* counter) {
+coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 	for (int i = 0; i < 10; i++) {
-		if (i == 7) {
-			auto l = co_await lock_v->lock_v();
-			for (int k = 0; k < 50; k++) {
-				benchmark::DoNotOptimize(k);
-			}
-		}
-		else {
-			auto l = co_await lock_v->lock_shared();
-
-			for (int k = 0; k < 50; k++) {
-				benchmark::DoNotOptimize(k);
-			}
+		auto l = co_await lock_v->lock();
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
 		}
 	}
 
@@ -44,7 +34,7 @@ static void CoLockTest(benchmark::State& state) {
 
 	thread_pool pool{4};
 	std::atomic_int count{0};
-	co_lock_shared lock_v{};
+	co_lock lock_v{};
 	for (auto _ : state) {
 		count.store(0);
 

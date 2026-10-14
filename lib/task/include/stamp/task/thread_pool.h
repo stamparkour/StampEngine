@@ -21,7 +21,7 @@ namespace stamp::task {
 	// add monitor coroutine that checks threads periodically.
 	class thread_pool {
 		struct thread_state {
-			alignas(std::atomic_ref<coroutine<void>>::required_alignment) coroutine<void> current_task;
+			/* alignas(std::atomic_ref<coroutine<void>>::required_alignment) */ coroutine<void> current_task;
 			alignas(std::atomic_ref<unsigned int>::required_alignment) unsigned int update_count;
 			alignas(std::atomic_ref<bool>::required_alignment) bool should_end;
 		};
@@ -37,23 +37,23 @@ namespace stamp::task {
 		static void timer_thread_func(thread_pool* pool) {
 			thread_state& state = pool->timer_thread_state;
 			std::atomic_ref<bool> should_end{state.should_end};
-			std::atomic_ref<coroutine<void>> current{state.current_task};
+			// std::atomic_ref<coroutine<void>> current{state.current_task};
 
 			while (true) {
 				if (should_end.load()) break;
 
 				auto v = pool->timer_queue_v.pop_wait();
-				current.store(v);
+				// current.store(v);
 				v.resume();
 				state.update_count++;
-				current.store(coroutine<void>(nullptr));
+				// current.store(coroutine<void>(nullptr));
 			}
 		}
 
 		static void thread_func(thread_pool* pool, int index) {
 			thread_state& state = pool->state_vector[index];
 			std::atomic_ref<bool> should_end{state.should_end};
-			std::atomic_ref<coroutine<void>> current{state.current_task};
+			// std::atomic_ref<coroutine<void>> current{state.current_task};
 
 			while (true) {
 				if (should_end.load()) break;
@@ -70,14 +70,14 @@ namespace stamp::task {
 				for (auto& v : tasks) {
 					if (!v) continue;
 
-					current.store(v);
+					// current.store(v);
 
 					v.resume();
 					// pool->queue.enqueue(v);
 
 					++state.update_count;
 				}
-				current.store(coroutine<void>(nullptr));
+				// current.store(coroutine<void>(nullptr));
 			}
 
 			// pool->state_vector[index] = nullptr;

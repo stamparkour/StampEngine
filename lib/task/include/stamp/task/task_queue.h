@@ -63,7 +63,7 @@ namespace stamp::task {
 		}
 		template<typename T>
 		void push(const coroutine<T>& co) {
-			queue.enqueue(coroutine_view<T>{co});
+			queue.enqueue(co);
 		}
 		template<typename T>
 		void push(coroutine<T>&& co) {
@@ -134,18 +134,11 @@ namespace stamp::task {
 		timer_task_queue() : queue() {}
 
 		template<typename CoFunc, typename... Args>
-		[[nodiscard]] auto emplace_until(const time_point& exec_time, CoFunc&& func, Args&&... args) {
+		auto emplace_until(const time_point& exec_time, CoFunc&& func, Args&&... args) {
 			auto ret = std::forward<CoFunc>(func)(std::forward<Args>(args)...);
-			coroutine_view<void> view = ret;
+			coroutine<void> view = ret;
 			push_until(exec_time, view);
 			return ret;
-		}
-		template<typename CoFunc, typename... Args>
-		void emplace_detached_until(const time_point& exec_time, CoFunc&& func, Args&&... args) {
-			auto ret = std::forward<CoFunc>(func)(std::forward<Args>(args)...);
-			ret.detach();
-			coroutine_view<void> view = ret;
-			push_until(exec_time, view);
 		}
 		template<typename T>
 		void push_until(const time_point& exec_time, const coroutine<T>& co) {
@@ -213,8 +206,8 @@ namespace stamp::task {
 				return !(clock::now() > time);
 			}
 			template<typename T>
-			bool await_suspend(const std::coroutine_handle<basic_promise<T>>& handle) noexcept {
-				queue_v->push_until(time, coroutine_view<T>{handle});
+			bool await_suspend(const std::coroutine_handle<coroutine_promise<T>>& handle) noexcept {
+				queue_v->push_until(time, coroutine<T>{handle});
 				return true;
 			}
 			void await_resume() noexcept {}

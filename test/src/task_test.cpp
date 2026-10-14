@@ -16,10 +16,6 @@ using namespace stamp::task;
 coroutine<void> noop_coroutine() {
 	co_return;
 }
-coroutine<void> yield_coroutine() {
-	co_yield{};
-	co_return;
-}
 coroutine<int> return_coroutine() {
 	co_return 1;
 }
@@ -55,7 +51,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await lock_v->lock_v();
+		auto l = co_await lock_v->lock();
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();
@@ -76,7 +72,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 }
 
 
-coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
+/*coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
 	std::this_thread::sleep_for(5ms);
@@ -100,9 +96,9 @@ coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* tar
 	target->notify_all();
 
 	co_return;
-}
+}*/
 
-coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
+/*coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
 	std::this_thread::sleep_for(5ms);
@@ -126,7 +122,7 @@ coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* ta
 	target->notify_all();
 
 	co_return;
-}
+}*/
 
 
 TEST(Coroutine, Invokation) {
@@ -142,80 +138,6 @@ TEST(Coroutine, Destruction) {
 	noop_coroutine_v.~coroutine();
 
 	EXPECT_EQ(static_cast<bool>(noop_coroutine_v), false);
-}
-
-TEST(Coroutine, Kill) {
-	coroutine<void> yield_coroutine_v = yield_coroutine();
-
-	EXPECT_EQ(yield_coroutine_v.done(), false);
-
-	yield_coroutine_v.kill();
-	yield_coroutine_v.resume();
-
-	EXPECT_EQ(yield_coroutine_v.done(), true);
-}
-
-TEST(Coroutine, Detatch) {
-	coroutine<void> noop_coroutine_v = noop_coroutine();
-
-	noop_coroutine_v.detach();
-	noop_coroutine_v.resume();
-
-	// undefined behavior after co_return
-}
-TEST(Coroutine, Pause) {
-	{
-		coroutine<void> yield_coroutine_v = yield_coroutine();
-
-		EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-		EXPECT_EQ(yield_coroutine_v.done(), false);
-
-		yield_coroutine_v.pause();
-		yield_coroutine_v.resume();
-
-		EXPECT_EQ(yield_coroutine_v.is_yielded(), true);
-		EXPECT_EQ(yield_coroutine_v.done(), false);
-
-		yield_coroutine_v.resume();
-
-		EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-		EXPECT_EQ(yield_coroutine_v.done(), true);
-	}
-	{
-		coroutine<void> yield_coroutine_v = yield_coroutine();
-
-		EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-		EXPECT_EQ(yield_coroutine_v.done(), false);
-
-		yield_coroutine_v.resume();
-
-		EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-		EXPECT_EQ(yield_coroutine_v.done(), true);
-	}
-}
-
-TEST(Coroutine, Accessors) {
-	coroutine<void> yield_coroutine_v = yield_coroutine();
-
-	EXPECT_EQ(yield_coroutine_v.done(), false);
-	EXPECT_EQ(yield_coroutine_v.is_started(), false);
-	EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-	EXPECT_EQ(static_cast<bool>(yield_coroutine_v), true);
-
-	yield_coroutine_v.pause();
-	yield_coroutine_v.resume();
-
-	EXPECT_EQ(yield_coroutine_v.done(), false);
-	EXPECT_EQ(yield_coroutine_v.is_started(), true);
-	EXPECT_EQ(yield_coroutine_v.is_yielded(), true);
-	EXPECT_EQ(static_cast<bool>(yield_coroutine_v), true);
-
-	yield_coroutine_v.resume();
-
-	EXPECT_EQ(yield_coroutine_v.done(), true);
-	EXPECT_EQ(yield_coroutine_v.is_started(), true);
-	EXPECT_EQ(yield_coroutine_v.is_yielded(), false);
-	EXPECT_EQ(static_cast<bool>(yield_coroutine_v), true);
 }
 
 TEST(Coroutine, Comparison) {
@@ -256,24 +178,7 @@ TEST(Coroutine, Error) {
 
 	throw_coroutine_v.resume();
 
-	EXPECT_EQ(static_cast<bool>(throw_coroutine_v.get_exception()), true);
-}
-
-TEST(Coroutine, CoAwait) {
-	coroutine<void> noop_coroutine_v = noop_coroutine();
-	coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
-	coroutine<void> await2 = co_await_coroutine(co_await_coroutine_v);
-	coroutine<void> await3 = co_await_coroutine(noop_coroutine_v);
-
-	co_await_coroutine_v.resume();
-	await2.resume();
-	await3.resume();
-
-	EXPECT_EQ(co_await_coroutine_v.done(), false);
-
-	noop_coroutine_v.resume();
-
-	EXPECT_EQ(co_await_coroutine_v.done(), true);
+	EXPECT_EQ(static_cast<bool>(throw_coroutine_v.exception()), true);
 }
 
 
@@ -295,7 +200,7 @@ TEST(Coroutine, CoAwaitDeconstruct) {
 }
 
 
-TEST(TaskQueue, Emplace) {
+TEST(Coroutine, TaskQueue) {
 	constexpr int target_count = 100;
 
 	task_queue queue{};
@@ -303,7 +208,7 @@ TEST(TaskQueue, Emplace) {
 	std::atomic_int value = 0;
 
 	for (int i = 0; i < target_count; i++) {
-		queue.emplace_detached(increment_coroutine, &value);
+		queue.emplace(increment_coroutine, &value);
 	}
 
 	int dequeue_count = 0;
@@ -321,7 +226,7 @@ TEST(TaskQueue, Emplace) {
 }
 
 
-TEST(TimerTaskQueue, Emplace) {
+TEST(Coroutine, TimerTaskQueueEmplace) {
 	using namespace std::chrono_literals;
 
 	auto delay = 200ms;
@@ -340,7 +245,7 @@ TEST(TimerTaskQueue, Emplace) {
 	EXPECT_GE(then_v, now_v + delay_padded);
 }
 
-TEST(ThreadPool, Enqueue) {
+TEST(Coroutine, ThreadPoolEnqueue) {
 	constexpr int target_count = 100;
 
 	thread_pool pool{4};
@@ -348,7 +253,7 @@ TEST(ThreadPool, Enqueue) {
 	std::atomic_int value = 0;
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_coroutine, &value);
+		pool.queue().emplace(increment_coroutine, &value);
 	}
 
 	int t;
@@ -360,7 +265,7 @@ TEST(ThreadPool, Enqueue) {
 }
 
 
-TEST(CoLock, CoLock) {
+TEST(Coroutine, CoLock) {
 	constexpr int target_count = 100;
 
 	thread_pool pool{8};
@@ -370,7 +275,7 @@ TEST(CoLock, CoLock) {
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_and_co_lock_coroutine, &value, &lock_v, &state);
+		pool.queue().emplace(increment_and_co_lock_coroutine, &value, &lock_v, &state);
 	}
 
 	int t;
@@ -384,7 +289,7 @@ TEST(CoLock, CoLock) {
 	pool.kill();
 }
 
-TEST(CoSharedLock, ParallelRead) {
+/*TEST(CoSharedLock, ParallelRead) {
 	constexpr int target_count = 100;
 
 	thread_pool pool{8};
@@ -394,7 +299,7 @@ TEST(CoSharedLock, ParallelRead) {
 	co_lock_state_t state{};
 
 	for (int i = 0; i < target_count; i++) {
-		pool.queue().emplace_detached(increment_and_co_shared_lock_read_coroutine, &value, &lock_v, &state);
+		pool.queue().emplace(increment_and_co_shared_lock_read_coroutine, &value, &lock_v, &state);
 	}
 
 	int t;
@@ -406,8 +311,8 @@ TEST(CoSharedLock, ParallelRead) {
 	EXPECT_GT(state.max_shared_access_count.load(), 1);
 
 	pool.kill();
-}
-TEST(CoSharedLock, Write) {
+}*/
+/*TEST(CoSharedLock, Write) {
 	constexpr int target_count = 100;
 
 	thread_pool pool{8};
@@ -429,8 +334,8 @@ TEST(CoSharedLock, Write) {
 	EXPECT_EQ(state.max_access_count.load(), 1);
 
 	pool.kill();
-}
-TEST(CoSharedLock, ReadWrite) {
+}*/
+/*TEST(CoSharedLock, ReadWrite) {
 	constexpr int target_count = 100;
 
 	thread_pool pool{8};
@@ -459,4 +364,4 @@ TEST(CoSharedLock, ReadWrite) {
 	EXPECT_GE(state.max_shared_access_count.load(), 1);
 
 	pool.kill();
-}
+}*/

@@ -13,7 +13,35 @@
 // TODO: have public function that returns the lock value from the co_bique
 
 namespace stamp::task {
+	template<typename T>
+	concept awaitor_c =
+		requires (T a) {
+			{ a.await_ready() } -> std::convertible_to<bool>;
+			a.await_suspend;
+			a.await_resume();
+		};
+	template<typename T>
+	concept awaitable_c =
+		awaitor_c<T> ||
+		requires (T a) {
+			{ a.operator co_await() } -> awaitor_c;
+		} ||
+		requires (T && a) {
+			{ operator co_await(a) } -> awaitor_c;
+		};
 
+	template<typename F>
+	constexpr auto awaitable_function_v = awaitable_c<std::invoke_result_t<F>>;
+
+	template<typename Coroutine>
+	concept is_coroutine_c = requires {
+		typename Coroutine::promise_type;
+	};
+
+	template<typename CoFunc, typename... Args>
+	concept coroutine_invocable_c =
+		std::invocable<CoFunc, Args...> &&
+		is_coroutine_c<std::invoke_result_t<CoFunc, Args...>>;
 
 	struct atomic_lock_guard {
 		std::atomic_bool* lock_v = nullptr;
@@ -59,6 +87,300 @@ namespace stamp::task {
 	template<typename T>
 	class co_bique;
 
+	template<>
+	class co_bique<void> {
+	public:
+		using return_type = void;
+	private:
+		struct node_t {
+			node_t* prev = nullptr;
+			node_t* next = nullptr;
+			std::coroutine_handle<> handle = nullptr;
+			std::exception_ptr except_ptr = nullptr;
+
+			node_t() = default;
+			node_t(const node_t&) = delete;
+			node_t(node_t&& other) {
+				operator = (std::move(other));
+			}
+			node_t& operator =(const node_t&) = delete;
+			node_t& operator =(node_t&& other) {
+				// remove self
+				if (prev != nullptr) prev->next = next;
+				if (next != nullptr) next->prev = prev;
+				// set to other
+				prev = other.prev;
+				next = other.next;
+				if (prev != nullptr) prev->next = this;
+				if (next != nullptr) next->prev = this;
+				other.prev = other.next = nullptr;
+				handle = other.handle;
+				other.handle = nullptr;
+				except_ptr = other.except_ptr;
+				return *this;
+			}
+
+			~node_t() {
+			}
+
+			void remove_node() {
+				prev->next = next;
+				next->prev = prev;
+				prev = next = nullptr;
+			}
+
+			void insert_after(node_t* target) {
+				stamp::core::s_assert(prev == nullptr);
+				stamp::core::s_assert(next == nullptr);
+
+				prev = target;
+				next = target->next;
+				prev->next = next->prev = this;
+			}
+
+			void resume() {
+				auto h = handle;
+				handle = nullptr;
+				h.resume();
+			}
+		};
+
+		std::atomic_size_t size_v = 0;
+		std::atomic_bool lock_v = false;
+		node_t root_node{};
+	public:
+		co_bique() {
+			root_node.prev = root_node.next = &root_node;
+		}
+		~co_bique() {
+			// stamp::core::s_assert(size_v.load() == 0);
+			if (!empty()) {
+				std::exception_ptr ptr = std::make_exception_ptr(std::runtime_error("queue must be emptied before deconstruction."));
+				pop_front_all_except(ptr);
+				std::rethrow_exception(ptr);
+			}
+
+			root_node.next = nullptr;
+			root_node.prev = nullptr;
+		}
+
+		std::size_t size() const {
+			return size_v.load();
+		}
+		bool empty() {
+			return size() == 0;
+		}
+		std::atomic_bool& lock() {
+			return lock_v;
+		}
+
+		auto push_back() {
+			struct await_t {
+				node_t node{};
+				co_bique<void>* self;
+				await_t(co_bique<void>* s) {
+					self = s;
+				}
+				~await_t() {
+					if (node.handle == nullptr) return;
+					atomic_lock_guard l{self->lock_v};
+					self->size_v--;
+					node.remove_node();
+				}
+				await_t(const await_t&) = delete;
+				await_t(await_t&& other) {
+					operator =(std::move(other));
+				}
+				await_t& operator =(const await_t&) = delete;
+				await_t& operator =(await_t&& other) {
+					node = std::move(other.node);
+					self = other.self;
+					return *this;
+				}
+
+				bool await_ready() {
+					return false;
+				}
+				void await_suspend(std::coroutine_handle<> h) {
+					node.handle = h;
+					atomic_lock_guard l{self->lock_v};
+					self->size_v++;
+					node.insert_after(self->root_node.prev);
+				}
+				void await_resume() {
+					if (node.except_ptr) {
+						std::rethrow_exception(node.except_ptr);
+					}
+				}
+			};
+			return await_t{this};
+		}
+		auto push_front() {
+			struct await_t {
+				node_t node{};
+				co_bique<void>* self;
+				await_t(co_bique<void>* s) {
+					self = s;
+				}
+				~await_t() {
+					if (node.handle == nullptr) return;
+					atomic_lock_guard l{self->lock_v};
+					self->size_v--;
+					node.remove_node();
+				}
+				await_t(const await_t&) = delete;
+				await_t(await_t&& other) {
+					operator =(std::move(other));
+				}
+				await_t& operator =(const await_t&) = delete;
+				await_t& operator =(await_t&& other) {
+					node = std::move(other.node);
+					self = other.self;
+					other.self = nullptr;
+					return *this;
+				}
+
+				bool await_ready() {
+					return false;
+				}
+				void await_suspend(std::coroutine_handle<> h) {
+					node.handle = h;
+					atomic_lock_guard l{self->lock_v};
+					self->size_v++;
+					node.insert_after(&self->root_node);
+				}
+				void await_resume() {
+					if (node.except_ptr) {
+						std::rethrow_exception(node.except_ptr);
+					}
+				}
+			};
+			return await_t{this};
+		}
+
+		bool pop_front() {
+			node_t* t;
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				t = root_node.next;
+				t->remove_node();
+				size_v--;
+			}
+			t->resume();
+			return true;
+		}
+		bool pop_front_all() {
+			node_t n{};
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				n = std::move(root_node);
+				root_node.prev = root_node.next = &root_node;
+				size_v = 0;
+			}
+			node_t* t = n.next;
+			while (t != &n) {
+				auto* l = t;
+				t = t->next;
+				l->resume();
+			}
+			return true;
+		}
+		bool pop_back() {
+			node_t* t;
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				t = root_node.prev;
+				t->remove_node();
+				size_v--;
+			}
+			t->resume();
+			return true;
+		}
+		bool pop_back_all() {
+			node_t n{};
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				n = std::move(root_node);
+				root_node.prev = root_node.next = &root_node;
+				size_v = 0;
+			}
+			node_t* t = n.prev;
+			while (t != &n) {
+				auto* l = t;
+				t = t->next;
+				l->resume();
+			}
+			return true;
+		}
+
+		bool pop_front_except(const std::exception_ptr& p) {
+			node_t* t;
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				t = root_node.next;
+				t->remove_node();
+				size_v--;
+			}
+			t->except_ptr = p;
+			t->resume();
+			return true;
+		}
+		bool pop_front_all_except(const std::exception_ptr& p) {
+			node_t n{};
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				n = std::move(root_node);
+				root_node.prev = root_node.next = &root_node;
+				size_v = 0;
+			}
+			node_t* t = n.next;
+			while (t != &n) {
+				t->except_ptr = p;
+				auto* l = t;
+				t = t->next;
+				l->resume();
+			}
+			return true;
+		}
+		bool pop_back_except(const std::exception_ptr& p) {
+			node_t* t;
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				t = root_node.prev;
+				t->remove_node();
+				size_v--;
+			}
+			t->except_ptr = p;
+			t->resume();
+			return true;
+		}
+		bool pop_back_all_except(const std::exception_ptr& p) {
+			node_t n{};
+			{
+				atomic_lock_guard l{lock_v};
+				if (size_v.load() == 0) return false;
+				n = std::move(root_node);
+				root_node.prev = root_node.next = &root_node;
+				size_v = 0;
+			}
+			node_t* t = n.prev;
+			while (t != &n) {
+				t->except_ptr = p;
+				auto* l = t;
+				t = t->next;
+				l->resume();
+			}
+			return true;
+		}
+	};
+
 	template<typename T>
 	class co_bique {
 	public:
@@ -84,8 +406,8 @@ namespace stamp::task {
 				// set to other
 				prev = other.prev;
 				next = other.next;
-				prev->next = this;
-				next->prev = this;
+				if (prev != nullptr) prev->next = this;
+				if (next != nullptr) next->prev = this;
 				other.prev = other.next = nullptr;
 				handle = other.handle;
 				other.handle = nullptr;
@@ -95,8 +417,6 @@ namespace stamp::task {
 			}
 
 			~node_t() {
-				stamp::core::s_assert(prev == nullptr);
-				stamp::core::s_assert(next == nullptr);
 			}
 
 			void remove_node() {
@@ -158,15 +478,22 @@ namespace stamp::task {
 					self = s;
 				}
 				~await_t() {
-					if (self == nullptr) return;
+					if (node.handle == nullptr) return;
 					atomic_lock_guard l{self->lock_v};
 					self->size_v--;
 					node.remove_node();
 				}
 				await_t(const await_t&) = delete;
-				await_t(await_t&&) = default;
+				await_t(await_t&& other) {
+					operator =(std::move(other));
+				}
 				await_t& operator =(const await_t&) = delete;
-				await_t& operator =(await_t&&) = default;
+				await_t& operator =(await_t&& other) {
+					node = std::move(other.node);
+					self = other.self;
+					other.self = nullptr;
+					return *this;
+				}
 
 				bool await_ready() {
 					return false;
@@ -194,15 +521,22 @@ namespace stamp::task {
 					self = s;
 				}
 				~await_t() {
-					if (self == nullptr) return;
+					if (node.handle == nullptr) return;
 					atomic_lock_guard l{self->lock_v};
 					self->size_v--;
 					node.remove_node();
 				}
 				await_t(const await_t&) = delete;
-				await_t(await_t&&) = default;
+				await_t(await_t&& other) {
+					operator =(std::move(other));
+				}
 				await_t& operator =(const await_t&) = delete;
-				await_t& operator =(await_t&&) = default;
+				await_t& operator =(await_t&& other) {
+					node = std::move(other.node);
+					self = other.self;
+					other.self = nullptr;
+					return *this;
+				}
 
 				bool await_ready() {
 					return false;
@@ -248,8 +582,9 @@ namespace stamp::task {
 			node_t* t = n.next;
 			while (t != &n) {
 				t->ret_v = &ret_value;
-				t->resume();
+				auto* l = t;
 				t = t->next;
+				l->resume();
 			}
 			return true;
 		}
@@ -278,8 +613,9 @@ namespace stamp::task {
 			node_t* t = n.prev;
 			while (t != &n) {
 				t->ret_v = &ret_value;
-				t->resume();
-				t = t->prev;
+				auto* l = t;
+				t = t->next;
+				l->resume();
 			}
 			return true;
 		}
@@ -308,8 +644,9 @@ namespace stamp::task {
 			node_t* t = n.next;
 			while (t != &n) {
 				t->except_ptr = p;
-				t->resume();
+				auto* l = t;
 				t = t->next;
+				l->resume();
 			}
 			return true;
 		}
@@ -338,287 +675,9 @@ namespace stamp::task {
 			node_t* t = n.prev;
 			while (t != &n) {
 				t->except_ptr = p;
-				t->resume();
-				t = t->prev;
-			}
-			return true;
-		}
-	};
-
-	template<>
-	class co_bique<void> {
-	public:
-		using return_type = void;
-	private:
-		struct node_t {
-			node_t* prev = nullptr;
-			node_t* next = nullptr;
-			std::coroutine_handle<> handle = nullptr;
-			std::exception_ptr except_ptr = nullptr;
-
-			node_t() = default;
-			node_t(const node_t&) = delete;
-			node_t(node_t&& other) {
-				operator = (std::move(other));
-			}
-			node_t& operator =(const node_t&) = delete;
-			node_t& operator =(node_t&& other) {
-				// remove self
-				if(prev != nullptr) prev->next = next;
-				if (next != nullptr) next->prev = prev;
-				// set to other
-				prev = other.prev;
-				next = other.next;
-				prev->next = this;
-				next->prev = this;
-				other.prev = other.next = nullptr;
-				handle = other.handle;
-				other.handle = nullptr;
-				except_ptr = other.except_ptr;
-				return *this;
-			}
-
-			~node_t() {
-				stamp::core::s_assert(prev == nullptr);
-				stamp::core::s_assert(next == nullptr);
-			}
-
-			void remove_node() {
-				prev->next = next;
-				next->prev = prev;
-				prev = next = nullptr;
-			}
-
-			void insert_after(node_t* target) {
-				stamp::core::s_assert(prev == nullptr);
-				stamp::core::s_assert(next == nullptr);
-
-				prev = target;
-				next = target->next;
-				prev->next = next->prev = this;
-			}
-
-			void resume() {
-				auto h = handle;
-				handle = nullptr;
-				h.resume();
-			}
-		};
-
-		std::atomic_size_t size_v = 0;
-		std::atomic_bool lock_v = false;
-		node_t root_node{};
-	public:
-		co_bique() {
-			root_node.prev = root_node.next = &root_node;
-		}
-		~co_bique() {
-			// stamp::core::s_assert(size_v.load() == 0);
-			if (!empty()) {
-				std::exception_ptr ptr = std::make_exception_ptr(std::runtime_error("queue must be emptied before deconstruction."));
-				pop_front_all_except(ptr);
-				std::rethrow_exception(ptr);
-			}
-
-			root_node.next = nullptr;
-			root_node.prev = nullptr;
-		}
-
-		std::size_t size() const {
-			return size_v.load();
-		}
-		bool empty() {
-			return size() == 0;
-		}
-		std::atomic_bool& lock() {
-			return lock_v;
-		}
-
-		auto push_back() {
-			struct await_t {
-				node_t node{};
-				co_bique<void>* self;
-				await_t(co_bique<void>* s) {
-					self = s;
-				}
-				~await_t() {
-					if (self == nullptr) return;
-					atomic_lock_guard l{self->lock_v};
-					self->size_v--;
-					node.remove_node();
-				}
-				await_t(const await_t&) = delete;
-				await_t(await_t&&) = default;
-				await_t& operator =(const await_t&) = delete;
-				await_t& operator =(await_t&&) = default;
-
-				bool await_ready() { 
-					return false;
-				}
-				void await_suspend(std::coroutine_handle<> h) {
-					node.handle = h;
-					atomic_lock_guard l{self->lock_v};
-					self->size_v++;
-					node.insert_after(self->root_node.prev);
-				}
-				void await_resume() {
-					if (node.except_ptr) {
-						std::rethrow_exception(node.except_ptr);
-					}
-				}
-			};
-			return await_t{this};
-		}
-		auto push_front() {
-			struct await_t {
-				node_t node{};
-				co_bique<void>* self;
-				await_t(co_bique<void>* s) {
-					self = s;
-				}
-				~await_t() {
-					if (self == nullptr) return;
-					atomic_lock_guard l{self->lock_v};
-					self->size_v--;
-					node.remove_node();
-				}
-				await_t(const await_t&) = delete;
-				await_t(await_t&&) = default;
-				await_t& operator =(const await_t&) = delete;
-				await_t& operator =(await_t&&) = default;
-
-				bool await_ready() {
-					return false;
-				}
-				void await_suspend(std::coroutine_handle<> h) {
-					node.handle = h;
-					atomic_lock_guard l{self->lock_v};
-					self->size_v++;
-					node.insert_after(&self->root_node);
-				}
-				void await_resume() {
-					if (node.except_ptr) {
-						std::rethrow_exception(node.except_ptr);
-					}
-				}
-			};
-			return await_t{this};
-		}
-
-		bool pop_front() {
-			node_t* t;
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				t = root_node.next;
-				t->remove_node();
-				size_v--;
-			}
-			t->resume();
-			return true;
-		}
-		bool pop_front_all() {
-			node_t n{};
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				n = std::move(root_node);
-				root_node.prev = root_node.next = &root_node;
-				size_v = 0;
-			}
-			node_t* t = n.next;
-			while (t != &n) {
-				t->resume();
+				auto* l = t;
 				t = t->next;
-			}
-			return true;
-		}
-		bool pop_back() {
-			node_t* t;
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				t = root_node.prev;
-				t->remove_node();
-				size_v--;
-			}
-			t->resume();
-			return true;
-		}
-		bool pop_back_all() {
-			node_t n{};
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				n = std::move(root_node);
-				root_node.prev = root_node.next = &root_node;
-				size_v = 0;
-			}
-			node_t* t = n.prev;
-			while (t != &n) {
-				t->resume();
-				t = t->prev;
-			}
-			return true;
-		}
-
-		bool pop_front_except(const std::exception_ptr& p) {
-			node_t* t;
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				t = root_node.next;
-				t->remove_node();
-				size_v--;
-			}
-			t->except_ptr = p;
-			t->resume();
-			return true;
-		}
-		bool pop_front_all_except(const std::exception_ptr& p) {
-			node_t n{};
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				n = std::move(root_node);
-				root_node.prev = root_node.next = &root_node;
-				size_v = 0;
-			}
-			node_t* t = n.next;
-			while (t != &n) {
-				t->except_ptr = p;
-				t->resume();
-				t = t->next;
-			}
-			return true;
-		}
-		bool pop_back_except(const std::exception_ptr& p) {
-			node_t* t;
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				t = root_node.prev;
-				t->remove_node();
-				size_v--;
-			}
-			t->except_ptr = p;
-			t->resume();
-			return true;
-		}
-		bool pop_back_all_except(const std::exception_ptr& p) {
-			node_t n{};
-			{
-				atomic_lock_guard l{lock_v};
-				if (size_v.load() == 0) return false;
-				n = std::move(root_node);
-				root_node.prev = root_node.next = &root_node;
-				size_v = 0;
-			}
-			node_t* t = n.prev;
-			while (t != &n) {
-				t->except_ptr = p;
-				t->resume();
-				t = t->prev;
+				l->resume();
 			}
 			return true;
 		}
@@ -679,35 +738,35 @@ namespace stamp::task {
 			return queue_v.push_back();
 		}
 		bool pop() {
-			queue_v.pop_front();
+			return queue_v.pop_front();
 		}
 		bool pop_all() {
-			queue_v.pop_front_all();
+			return queue_v.pop_front_all();
 		}
 		bool pop_except(const std::exception_ptr& p) {
-			queue_v.pop_front_except(p);
+			return queue_v.pop_front_except(p);
 		}
 		bool pop_all_except(const std::exception_ptr& p) {
-			queue_v.pop_front_all_except(p);
+			return queue_v.pop_front_all_except(p);
 		}
 	};
 
-	class co_mutex {
+	class co_lock {
 		co_queue<void> queue_v;
 		bool is_blocked_v = false;
 		std::atomic_bool lock_v = false;
 	public:
-		co_mutex() {}
-		~co_mutex() {}
+		co_lock() {}
+		~co_lock() {}
 
 		auto lock() {
 			auto p = queue_v.push();
 			using push_type = decltype(p);
 			struct await_t {
-				co_mutex* self;
+				co_lock* self;
 				push_type push_awaiter;
 				bool is_primary_lock = false;
-				await_t(co_mutex* s, push_type&& push_awaiter) : self(s), push_awaiter(std::move(push_awaiter)) {}
+				await_t(co_lock* s, push_type&& push_awaiter) : self(s), push_awaiter(std::move(push_awaiter)) {}
 
 				await_t(const await_t&) = delete;
 				await_t(await_t&&) = default;
@@ -718,23 +777,23 @@ namespace stamp::task {
 					return false;
 				}
 				bool await_suspend(std::coroutine_handle<> h) {
-					{
-						atomic_lock_guard l{self->lock_v};
-						if (self->is_blocked_v) {
-							push_awaiter.await_suspend(h); // adds to queue
-						}
-						else {
-							self->is_blocked_v = true;
-							is_primary_lock = true;
-						}
+					atomic_lock_guard l{self->lock_v};
+					if (self->is_blocked_v) {
+						push_awaiter.await_suspend(h); // adds to queue
+						return true;
+					}
+					else {
+						self->is_blocked_v = true;
+						is_primary_lock = true;
+						return false;
 					}
 				}
 				auto await_resume() {
 					struct lock_guard {
-						co_mutex* self;
+						co_lock* self;
 						bool is_primary_lock = false;
 
-						lock_guard(co_mutex* s, bool is_primary_lock) :
+						lock_guard(co_lock* s, bool is_primary_lock) :
 							self(s), 
 							is_primary_lock(is_primary_lock) {}
 
@@ -798,10 +857,10 @@ namespace stamp::task {
 					self = s;
 				}
 				~await_t() {}
-				bool await_ready() {
+				bool await_ready() noexcept {
 					return false;
 				}
-				bool await_suspend(std::coroutine_handle<> h) {
+				bool await_suspend(std::coroutine_handle<> h) noexcept {
 					bit_mask_t desired, expected = self->state.load();
 					do {
 						desired = expected;
@@ -809,7 +868,8 @@ namespace stamp::task {
 					} while (!self->state.compare_exchange_weak(expected, desired));
 					return desired.shared_count_v != 0; // return false when no shared access, thus destroying coroutine.
 				}
-				void await_resume() {}
+				void await_resume() noexcept {
+				}
 			};
 			return await_t{this};
 		}
@@ -850,16 +910,16 @@ namespace stamp::task {
 	class coroutine<void> {
 	public:
 		using return_type = void;
-		using self_type = class coroutine<typename return_type>;
-		using promise_type = class basic_coroutine_promise;
-		using handle_type = std::coroutine_handle<promise_type>;
+		using self_type = coroutine<void>;
+		using promise_type = coroutine_promise<void>;
+		using basic_promise_type = basic_coroutine_promise;
+		using handle_type = std::coroutine_handle<basic_promise_type>;
 
 		friend promise_type;
-		friend class coroutine_promise<void>;
 	private:
 		handle_type handle_v = nullptr;
 
-		coroutine(promise_type* promise) {
+		coroutine(basic_promise_type* promise) {
 			handle_v = handle_type::from_promise(*promise);
 			initialize();
 		}
@@ -867,7 +927,7 @@ namespace stamp::task {
 		void initialize() {
 			if (handle_v) {
 				auto& p = handle_v.promise();
-				promise_type::bit_mask_t desired, expected = p.state.load();
+				typename basic_promise_type::bit_mask_t desired, expected = p.state.load();
 				do {
 					desired = expected;
 					desired.shared_count_v++;
@@ -877,17 +937,14 @@ namespace stamp::task {
 		void deinitialize() {
 			if (handle_v) {
 				auto& p = handle_v.promise();
-				promise_type::bit_mask_t desired, expected = p.state.load();
+				typename basic_promise_type::bit_mask_t desired, expected = p.state.load();
 				do {
 					desired = expected;
 					desired.shared_count_v--;
 				} while (!p.state.compare_exchange_weak(expected, desired));
 
 				if (desired.shared_count_v == 0) {
-					if (desired.is_finalized_v) {
-						handle_v.resume();
-					}
-					else if (!desired.is_started_v) {
+					if (desired.is_finalized_v || !desired.is_started_v) {
 						handle_v.destroy();
 					}
 				}
@@ -905,9 +962,9 @@ namespace stamp::task {
 		}
 		template<typename T>
 		coroutine(std::coroutine_handle<coroutine_promise<T>> h) {
-			auto& p = other.handle_v.promise();
-			promise_type* my_promise = &p;
-			handle_v = handle_type::from_promise(my_promise); // works because first inheritance is same pointer as child class
+			auto& p = h.promise();
+			basic_promise_type* my_promise = &p;
+			handle_v = handle_type::from_promise(*my_promise); // works because first inheritance is same pointer as child class
 			initialize();
 		}
 		template<typename T>
@@ -928,7 +985,7 @@ namespace stamp::task {
 		coroutine<void>& operator =(const coroutine<T>& other) {
 			deinitialize();
 			auto& p = other.handle_v.promise();
-			promise_type* my_promise = &p;
+			basic_promise_type* my_promise = &p;
 			handle_v = handle_type::from_promise(my_promise);
 			initialize();
 			return *this;
@@ -937,8 +994,8 @@ namespace stamp::task {
 		coroutine<void>& operator =(coroutine<T>&& other) {
 			deinitialize();
 			auto& p = other.handle_v.promise();
-			promise_type* my_promise = &p;
-			handle_v = handle_type::from_promise(my_promise);
+			basic_promise_type* my_promise = &p;
+			handle_v = handle_type::from_promise(*my_promise);
 			other.handle_v = nullptr;
 			// same count afterwards
 			return *this;
@@ -977,7 +1034,7 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
-					promise_type::bit_mask_t value = p.state.load();
+					basic_promise_type::bit_mask_t value = p.state.load();
 					if (value.is_returned_v) {
 						return false;
 					}
@@ -1026,9 +1083,18 @@ namespace stamp::task {
 			p.stop_v.request_stop();
 		}
 
+		std::exception_ptr exception() const {
+			return handle_v.promise().exception_v;
+		}
+		bool done() const {
+			auto& p = handle_v.promise();
+			basic_promise_type::bit_mask_t value = p.state.load();
+			return value.is_returned_v;
+		}
+
 		std::size_t use_count() const {
 			auto& p = handle_v.promise();
-			promise_type::bit_mask_t value = p.state.load();
+			basic_promise_type::bit_mask_t value = p.state.load();
 			return (std::size_t)value.shared_count_v;
 		}
 		explicit operator bool() const {
@@ -1037,7 +1103,14 @@ namespace stamp::task {
 		handle_type get() const {
 			return handle_v;
 		}
-
+		template<typename V>
+		bool operator ==(const coroutine<V>& other) const {
+			return handle_v.address() == other.handle_v.address();
+		}
+		template<typename V>
+		auto operator <=>(const coroutine<V>& other) const {
+			return handle_v.address() <=> other.handle_v.address();
+		}
 	};
 	inline coroutine<void> coroutine_promise<void>::get_return_object() {
 		return {this};
@@ -1070,11 +1143,12 @@ namespace stamp::task {
 	class coroutine {
 	public:
 		using return_type = T;
-		using self_type = class coroutine<typename return_type>;
-		using promise_type = class coroutine_promise<typename return_type>;
+		using self_type = coroutine<typename return_type>;
+		using promise_type = coroutine_promise<typename return_type>;
 		using handle_type = std::coroutine_handle<promise_type>;
 
 		friend promise_type;
+		friend coroutine<void>;
 	private:
 		handle_type handle_v = nullptr;
 
@@ -1086,7 +1160,7 @@ namespace stamp::task {
 		void initialize() {
 			if (handle_v) {
 				auto& p = handle_v.promise();
-				promise_type::bit_mask_t desired, expected = p.state.load();
+				typename promise_type::bit_mask_t desired, expected = p.state.load();
 				do {
 					desired = expected;
 					desired.shared_count_v++;
@@ -1096,17 +1170,14 @@ namespace stamp::task {
 		void deinitialize() {
 			if (handle_v) {
 				auto& p = handle_v.promise();
-				promise_type::bit_mask_t desired, expected = p.state.load();
+				typename promise_type::bit_mask_t desired, expected = p.state.load();
 				do {
 					desired = expected;
 					desired.shared_count_v--;
 				} while (!p.state.compare_exchange_weak(expected, desired));
 
 				if (desired.shared_count_v == 0) {
-					if (desired.is_finalized_v) {
-						handle_v.resume();
-					}
-					else if (!desired.is_started_v) {
+					if (desired.is_finalized_v || !desired.is_started_v) {
 						handle_v.destroy();
 					}
 				}
@@ -1162,7 +1233,7 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
-					promise_type::bit_mask_t value = p.state.load();
+					typename promise_type::bit_mask_t value = p.state.load();
 					if (value.is_returned_v) {
 						return false;
 					}
@@ -1211,9 +1282,20 @@ namespace stamp::task {
 			p.stop_v.request_stop();
 		}
 
+		bool done() const {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t value = p.state.load();
+			return value.is_returned_v;
+		}
+		const return_type& result() const {
+			return handle_v.promise().return_v;
+		}
+		std::exception_ptr exception() const {
+			return handle_v.promise().exception_v;
+		}
 		std::size_t use_count() const {
 			auto& p = handle_v.promise();
-			promise_type::bit_mask_t value = p.state.load();
+			typename promise_type::bit_mask_t value = p.state.load();
 			return (std::size_t)value.shared_count_v;
 		}
 		explicit operator bool() const {
@@ -1222,7 +1304,14 @@ namespace stamp::task {
 		handle_type get() const {
 			return handle_v;
 		}
-
+		template<typename V>
+		bool operator ==(const coroutine<V>& other) const {
+			return handle_v.address() == other.handle_v.address();
+		}
+		template<typename V>
+		auto operator <=>(const coroutine<V>& other) const {
+			return handle_v.address() <=> other.handle_v.address();
+		}
 	};
 	template<typename T>
 	inline coroutine<T> coroutine_promise<T>::get_return_object() {
