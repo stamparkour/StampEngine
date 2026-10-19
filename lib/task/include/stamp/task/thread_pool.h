@@ -26,6 +26,8 @@ namespace stamp::task {
 			alignas(std::atomic_ref<bool>::required_alignment) bool should_end;
 		};
 
+		inline static thread_local thread_pool* current_threadpool_v = nullptr;
+
 		std::vector<std::thread> thread_vector{};
 		std::vector<thread_state> state_vector{};
 		task_queue queue_v{8192};
@@ -33,11 +35,13 @@ namespace stamp::task {
 		thread_state timer_thread_state;
 		timer_task_queue timer_queue_v{};
 		std::thread timer_thread;
+		bool is_killed_v = false;
 
 		static void timer_thread_func(thread_pool* pool) {
 			thread_state& state = pool->timer_thread_state;
 			std::atomic_ref<bool> should_end{state.should_end};
 			// std::atomic_ref<coroutine<void>> current{state.current_task};
+			current_threadpool_v = pool;
 
 			while (true) {
 				if (should_end.load()) break;
@@ -54,6 +58,8 @@ namespace stamp::task {
 			thread_state& state = pool->state_vector[index];
 			std::atomic_ref<bool> should_end{state.should_end};
 			// std::atomic_ref<coroutine<void>> current{state.current_task};
+
+			current_threadpool_v = pool;
 
 			while (true) {
 				if (should_end.load()) break;
@@ -99,6 +105,14 @@ namespace stamp::task {
 
 			timer_thread = std::thread{timer_thread_func, this};
 		}
+		~thread_pool() {
+			kill();
+		}
+
+		inline static thread_pool& current_threadpool() {
+			if (current_threadpool_v == nullptr) throw std::runtime_error("current_threadpool_v is nullptr. cannot query current_threadpool.");
+			return *current_threadpool_v;
+		}
 
 		task_queue& queue() {
 			return queue_v;
@@ -115,6 +129,10 @@ namespace stamp::task {
 
 		std::size_t thread_count() const {
 			return thread_vector.size();
+		}
+
+		auto operator co_await() {
+			return queue().operator co_await();
 		}
 
 
@@ -135,6 +153,8 @@ namespace stamp::task {
 		}*/
 
 		void kill() {
+			if (is_killed_v) return;
+			is_killed_v = true;
 			for (auto& v : state_vector) {
 				std::atomic_ref<bool> should_end{v.should_end};
 				should_end.store(true);

@@ -51,7 +51,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await lock_v->lock();
+		auto l = co_await *lock_v;
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();
@@ -64,65 +64,13 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 
 		state->access_count.fetch_sub(1);
 	}
+	co_await thread_pool::current_threadpool();
 
 	target->fetch_add(1);
 	target->notify_all();
 
 	co_return;
 }
-
-
-/*coroutine<void> increment_and_co_shared_lock_read_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
-	using namespace std::chrono_literals;
-
-	std::this_thread::sleep_for(5ms);
-
-	{
-		auto l = co_await lock_v->lock_shared();
-
-		int ac = state->shared_access_count.fetch_add(1) + 1;
-		int mac = state->max_shared_access_count.load();
-
-		if (ac > mac) {
-			state->max_shared_access_count.compare_exchange_strong(mac, ac);
-		}
-
-		std::this_thread::sleep_for(8ms);
-
-		state->shared_access_count.fetch_sub(1);
-	}
-
-	target->fetch_add(1);
-	target->notify_all();
-
-	co_return;
-}*/
-
-/*coroutine<void> increment_and_co_shared_lock_write_coroutine(std::atomic_int* target, co_lock_shared* lock_v, co_lock_state_t* state) {
-	using namespace std::chrono_literals;
-
-	std::this_thread::sleep_for(5ms);
-
-	{
-		auto l = co_await lock_v->lock_v();
-
-		int ac = state->access_count.fetch_add(1) + 1;
-		int mac = state->max_access_count.load();
-
-		if (ac > mac) {
-			state->max_access_count.compare_exchange_strong(mac, ac);
-		}
-
-		std::this_thread::sleep_for(8ms);
-
-		state->access_count.fetch_sub(1);
-	}
-
-	target->fetch_add(1);
-	target->notify_all();
-
-	co_return;
-}*/
 
 
 TEST(Coroutine, Invokation) {
@@ -138,6 +86,80 @@ TEST(Coroutine, Destruction) {
 	noop_coroutine_v.~coroutine();
 
 	EXPECT_EQ(static_cast<bool>(noop_coroutine_v), false);
+}
+
+TEST(Coroutine, NullAssign) {
+	coroutine<void> null_co = nullptr;
+
+	EXPECT_EQ(static_cast<bool>(null_co), false);
+	null_co.~coroutine();
+	EXPECT_EQ(static_cast<bool>(null_co), false);
+}
+
+TEST(Coroutine, Copy) {
+	{
+		coroutine<void> noop_coroutine_v = noop_coroutine();
+		coroutine<void> copy = noop_coroutine_v;
+		EXPECT_EQ(copy == noop_coroutine_v, true);
+		EXPECT_EQ(copy.use_count(), 2);
+
+		EXPECT_EQ(noop_coroutine_v.done(), false);
+		EXPECT_EQ(copy.done(), false);
+
+		noop_coroutine_v.~coroutine();
+		EXPECT_EQ(copy.use_count(), 1);
+		copy.resume();
+
+		EXPECT_EQ(copy.done(), true);
+	}
+	{
+		coroutine<void> copy = nullptr;
+		coroutine<void> noop_coroutine_v = noop_coroutine();
+		copy = noop_coroutine_v;
+		EXPECT_EQ(copy == noop_coroutine_v, true);
+		EXPECT_EQ(copy.use_count(), 2);
+
+		EXPECT_EQ(noop_coroutine_v.done(), false);
+		EXPECT_EQ(copy.done(), false);
+
+		noop_coroutine_v.~coroutine();
+		EXPECT_EQ(copy.use_count(), 1);
+		copy.resume();
+
+		EXPECT_EQ(copy.done(), true);
+	}
+}
+
+TEST(Coroutine, Move) {
+	{
+		coroutine<void> noop_coroutine_v = noop_coroutine();
+		coroutine<void> copy = std::move(noop_coroutine_v);
+		EXPECT_EQ(static_cast<bool>(noop_coroutine_v), false);
+		EXPECT_EQ(copy.use_count(), 1);
+
+		EXPECT_EQ(copy.done(), false);
+
+		noop_coroutine_v.~coroutine();
+		EXPECT_EQ(copy.use_count(), 1);
+		copy.resume();
+
+		EXPECT_EQ(copy.done(), true);
+	}
+	{
+		coroutine<void> copy = nullptr;
+		coroutine<void> noop_coroutine_v = noop_coroutine();
+		copy = std::move(noop_coroutine_v);
+		EXPECT_EQ(static_cast<bool>(noop_coroutine_v), false);
+		EXPECT_EQ(copy.use_count(), 1);
+
+		EXPECT_EQ(copy.done(), false);
+
+		noop_coroutine_v.~coroutine();
+		EXPECT_EQ(copy.use_count(), 1);
+		copy.resume();
+
+		EXPECT_EQ(copy.done(), true);
+	}
 }
 
 TEST(Coroutine, Comparison) {
@@ -171,6 +193,8 @@ TEST(Coroutine, Casting) {
 	coroutine<void> return_coroutine_v = return_coroutine();
 
 	return_coroutine_v.resume();
+
+	EXPECT_EQ(return_coroutine_v.done(), true);
 }
 
 TEST(Coroutine, Error) {
@@ -182,17 +206,13 @@ TEST(Coroutine, Error) {
 }
 
 
-TEST(Coroutine, CoAwaitDeconstruct) {
+TEST(Coroutine, CoAwaitChain) {
 	coroutine<void> noop_coroutine_v = noop_coroutine();
 
-	coroutine<void> h;
-
-	{
-		coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
-		co_await_coroutine_v.resume();
-		h = co_await_coroutine(noop_coroutine_v);
-		h.resume();
-	}
+	coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
+	co_await_coroutine_v.resume();
+	coroutine<void> h = co_await_coroutine(co_await_coroutine_v);
+	h.resume();
 
 	noop_coroutine_v.resume();
 
@@ -226,7 +246,7 @@ TEST(Coroutine, TaskQueue) {
 }
 
 
-TEST(Coroutine, TimerTaskQueueEmplace) {
+TEST(Coroutine, TimerTaskQueueEnqueue) {
 	using namespace std::chrono_literals;
 
 	auto delay = 200ms;

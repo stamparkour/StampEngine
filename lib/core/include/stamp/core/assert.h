@@ -13,11 +13,11 @@
 #endif
 
 #if defined(_MSC_VER)
-#define FORCE_BREAKPOINT() __debugbreak()
+#define STAMP_BREAKPOINT() __debugbreak()
 #elif defined(__GNUC__) || defined(__clang__)
-#define FORCE_BREAKPOINT() __builtin_trap()
+#define STAMP_BREAKPOINT() __builtin_trap()
 #else
-#define FORCE_BREAKPOINT() do { *(volatile int*)0 = 0; } while(0) // Fallback crash
+#define STAMP_BREAKPOINT() do { *(volatile int*)0 = 0; } while(0) // Fallback crash
 #endif
 
 namespace stamp::core {
@@ -33,7 +33,7 @@ namespace stamp::core {
 
 		std::string msg{str};
 		msg = std::string{} + sl.file_name() + " " + std::to_string(sl.line()) + " " + sl.function_name() + ": " + msg;
-		FORCE_BREAKPOINT();
+		STAMP_BREAKPOINT();
 		throw std::runtime_error(msg);
 	}
 	inline void s_assert(bool condition, const std::string& str, std::source_location sl = std::source_location::current()) {

@@ -9,8 +9,10 @@
 #include <exception>
 #include <memory>
 #include <stop_token>
+#include <future>
 
-// TODO: have public function that returns the lock value from the co_bique
+// TODO: add template overload for custom coroutine allocators
+// TODO: add new co_queue that can have custom states to atomically switch between
 
 namespace stamp::task {
 	template<typename T>
@@ -45,7 +47,6 @@ namespace stamp::task {
 
 	struct atomic_lock_guard {
 		std::atomic_bool* lock_v = nullptr;
-
 
 		atomic_lock_guard() = default;
 		atomic_lock_guard(std::atomic_bool& t) : lock_v(&t) {
@@ -83,7 +84,7 @@ namespace stamp::task {
 		}
 	};
 
-	class basic_co_bique;
+	// co_bique assumes multiple producers and multiple consumers 
 	template<typename T>
 	class co_bique;
 
@@ -751,71 +752,145 @@ namespace stamp::task {
 		}
 	};
 
-	class co_lock {
-		co_queue<void> queue_v;
-		bool is_blocked_v = false;
-		std::atomic_bool lock_v = false;
+	// multiple producer, single consumer, pop all
+	class co_simple_queue {
+		struct node_t {
+			node_t* next;
+			std::coroutine_handle<> handle;
+			std::exception_ptr exception;
+		};
+
+		std::atomic<node_t*> back{nullptr};
 	public:
-		co_lock() {}
-		~co_lock() {}
+		co_simple_queue() = default;
+		~co_simple_queue() {
+			pop_all_except_unsafe(std::make_exception_ptr(std::runtime_error("cannot destroy queue that is not empty")));
+		}
 
-		auto lock() {
-			auto p = queue_v.push();
-			using push_type = decltype(p);
+		auto push() {
 			struct await_t {
-				co_lock* self;
-				push_type push_awaiter;
-				bool is_primary_lock = false;
-				await_t(co_lock* s, push_type&& push_awaiter) : self(s), push_awaiter(std::move(push_awaiter)) {}
+				co_simple_queue* self;
+				node_t node{};
 
-				await_t(const await_t&) = delete;
-				await_t(await_t&&) = default;
-				await_t& operator =(const await_t&) = delete;
-				await_t& operator =(await_t&&) = default;
+				await_t() {}
+				await_t(co_simple_queue* self) : self(self) {}
 
-				bool await_ready() {
+				bool await_ready() noexcept {
 					return false;
 				}
-				bool await_suspend(std::coroutine_handle<> h) {
-					atomic_lock_guard l{self->lock_v};
-					if (self->is_blocked_v) {
-						push_awaiter.await_suspend(h); // adds to queue
+				void await_suspend(std::coroutine_handle<> h) {
+					node.handle = h;
+					node_t* n = self->back.load();
+					do {
+						node.next = n;
+					} while (!self->back.compare_exchange_weak(n, &node));
+				}
+				void await_resume() noexcept {
+					if (node.exception) std::rethrow_exception(node.exception);
+				}
+			};
+
+			return await_t{this};
+		}
+		bool pop_all_unsafe() {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+			auto f = [this](auto&& self, node_t* ptr) -> void {
+				if (ptr == nullptr) return;
+				self(self, ptr->next);
+				ptr->handle.resume();
+			};
+
+			f(f, n);
+			return true;
+		}
+		bool pop_all_except_unsafe(const std::exception_ptr& p) {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+
+			auto f = [this](auto&& self, node_t* ptr) -> void {
+				if (ptr == nullptr) return;
+				self(self, ptr->next);
+				ptr->handle.resume();
+			};
+
+			f(f, n);
+			return true;
+		}
+	};
+
+	// if awaited, then only one thread can access this lock
+	// example:
+	// co_lock my_lock{};
+	// auto l = co_await my_lock;
+	// // my code here.
+	// l.release(); // or use deconstructor
+	// co_await /* something else */
+	class co_lock {
+		co_simple_queue queue;
+		std::atomic_int count = 0;
+	public:
+		auto lock() {
+			auto p = queue.push();
+			using push_type = decltype(p);
+			struct await_t {
+				co_lock* self = nullptr;
+				bool is_primary = false;
+				push_type push_await{}; // cannot be moved nor copied while suspended
+
+				await_t(co_lock* self, const push_type& push_await) : self(self), push_await(push_await) {}
+
+				bool await_ready() noexcept {
+					int i = self->count.fetch_add(1) + 1;
+					// pause if another thread is index 1 (primary).
+					if (i == 1) {
+						is_primary = true;
 						return true;
 					}
-					else {
-						self->is_blocked_v = true;
-						is_primary_lock = true;
-						return false;
-					}
+					return false;
 				}
-				auto await_resume() {
-					struct lock_guard {
+				void await_suspend(std::coroutine_handle<> h) {
+					push_await.await_suspend(h);
+				}
+				auto await_resume() noexcept {
+					push_await.await_resume();
+					struct release_t {
 						co_lock* self;
-						bool is_primary_lock = false;
+						bool is_primary = false;
+						bool is_released = false;
 
-						lock_guard(co_lock* s, bool is_primary_lock) :
-							self(s), 
-							is_primary_lock(is_primary_lock) {}
+						~release_t() {
+							release();
+						}
+						void release() {
+							int tmp;
+							if (is_released) return;
+							is_released = true;
 
-						~lock_guard() {
-							if (is_primary_lock) {
-								while (self->queue_v.pop_all());
-
-								{
-									atomic_lock_guard l{self->lock_v};
-									self->is_blocked_v = false;
+							if (is_primary) {
+								// while queue has more than one item queued, pop. when queue is empty, atomically clear count.
+								while (true) {
+									tmp = 1;
+									self->queue.pop_all_unsafe();
+									if (self->count.compare_exchange_strong(tmp, 0))
+										break;
+								}
+							}
+							else {
+								if (self->count.fetch_sub(1) - 1 < 1) {
+									STAMP_BREAKPOINT();
 								}
 							}
 						}
 					};
-
-					if (!is_primary_lock) {
-						push_awaiter.await_resume();
-					}
-					return lock_guard{self, is_primary_lock};
+					return release_t{self, is_primary};
 				}
 			};
-			return await_t{this, std::move(p)};
+			return await_t{this, p};
+		}
+
+		auto operator co_await() {
+			return lock();
 		}
 	};
 
@@ -830,17 +905,19 @@ namespace stamp::task {
 		// TODO: implement detection for 32 bit atomics
 		struct bit_mask_t {
 			std::uint32_t shared_count_v = 0;
-			std::uint32_t is_started_v : 1 = 0; // when ended (returned or exception
-			std::uint32_t is_ended_v : 1 = 0; // when ended (returned or exception
-			std::uint32_t is_returned_v : 1 = 0; // when returned
-			std::uint32_t is_finalized_v : 1 = 0; // when final suspended
+			std::uint16_t unused_0 = 0;
+			std::uint16_t is_started_v : 1 = 0; // when first resume
+			std::uint16_t is_ended_v : 1 = 0; // when ended (returned or exception)
+			std::uint16_t is_returned_v : 1 = 0; // when returned (no exception) (can only be true if is_ended is true)
+			std::uint16_t is_finalized_v : 1 = 0; // when final suspended
 		};
 		static_assert(std::atomic<bit_mask_t>::is_always_lock_free, "coroutine_promise should be lock free");
 
 		std::atomic<bit_mask_t> state{};
+		std::atomic_int queue_size_v{0};
 		std::exception_ptr exception_v{};
 		std::stop_source stop_v{};
-		co_queue<void> queue_v{};
+		co_simple_queue queue_v{};
 
 		std::suspend_always initial_suspend() {
 			bit_mask_t desired, expected = state.load();
@@ -876,11 +953,16 @@ namespace stamp::task {
 		void unhandled_exception() {
 			exception_v = std::current_exception();
 			bit_mask_t desired, expected = state.load();
-			do {
+			while(true) {
 				desired = expected;
 				desired.is_ended_v = true;
-			} while (!state.compare_exchange_weak(expected, desired));
-			queue_v.pop_all_except(exception_v);
+				if (state.compare_exchange_weak(expected, desired)) break;
+			}
+			while(!is_queue_empty()) queue_v.pop_all_except_unsafe(exception_v);
+		}
+
+		bool is_queue_empty() {
+			return queue_size_v.load() == 0;
 		}
 	};
 
@@ -895,12 +977,17 @@ namespace stamp::task {
 		
 		void return_void() {
 			bit_mask_t desired, expected = state.load();
-			do {
+			while (true) {
 				desired = expected;
-				desired.is_returned_v = true;
 				desired.is_ended_v = true;
-			} while (!state.compare_exchange_weak(expected, desired));
-			queue_v.pop_all();
+				desired.is_returned_v = true;
+				if (state.compare_exchange_weak(expected, desired)) break;
+			}
+			while (!is_queue_empty()) queue_v.pop_all_except_unsafe(exception_v);
+		}
+		std::suspend_never yield_value(nullptr_t) {
+			queue_v.pop_all_unsafe();
+			return {};
 		}
 		//auto await_transform(auto v) {
 		//	return v;
@@ -1034,6 +1121,7 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
+					p.queue_size_v.fetch_add(1);
 					basic_promise_type::bit_mask_t value = p.state.load();
 					if (value.is_returned_v) {
 						return false;
@@ -1042,15 +1130,18 @@ namespace stamp::task {
 					return queue_await_v.await_ready();
 				}
 				void await_suspend(std::coroutine_handle<> h) {
+					auto& p = self->handle_v.promise();
 					if (!use_queue_await) return;
 					queue_await_v.await_suspend(h);
+					basic_promise_type::bit_mask_t desired, expected = p.state.load();
 				}
 				return_type await_resume() {
+					auto& p = self->handle_v.promise();
+					p.queue_size_v.fetch_sub(1);
 					if (use_queue_await) {
 						queue_await_v.await_resume();
 					}
 					else {
-						auto& p = self->handle_v.promise();
 						if (p.exception_v) std::rethrow_exception(p.exception_v);
 					}
 					return; 
@@ -1089,7 +1180,13 @@ namespace stamp::task {
 		bool done() const {
 			auto& p = handle_v.promise();
 			basic_promise_type::bit_mask_t value = p.state.load();
-			return value.is_returned_v;
+			return value.is_ended_v;
+		}
+		// true if coroutine is good (exists, no errors)
+		bool good() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t value = p.state.load();
+			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
 		}
 
 		std::size_t use_count() const {
@@ -1127,13 +1224,20 @@ namespace stamp::task {
 
 		void return_value(return_type ret_value) {
 			return_v = ret_value;
-			bit_mask_t desired, expected = state.load();
-			do {
+			self_type::bit_mask_t desired, expected = state.load();
+			while (true) {
 				desired = expected;
-				desired.is_returned_v = true;
 				desired.is_ended_v = true;
-			} while (!state.compare_exchange_weak(expected, desired));
-			queue_v.pop_all();
+				desired.is_returned_v = true;
+				if (state.compare_exchange_weak(expected, desired)) break;
+			}
+			while(!is_queue_empty()) queue_v.pop_all_unsafe();
+		}
+
+		std::suspend_never yield_value(return_type ret_value) {
+			return_v = ret_value;
+			queue_v.pop_all_unsafe();
+			return {};
 		}
 		//auto await_transform(auto v) {
 		//	return v;
@@ -1233,6 +1337,7 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
+					p.queue_size_v.fetch_add(1);
 					typename promise_type::bit_mask_t value = p.state.load();
 					if (value.is_returned_v) {
 						return false;
@@ -1241,11 +1346,14 @@ namespace stamp::task {
 					return queue_await_v.await_ready();
 				}
 				void await_suspend(std::coroutine_handle<> h) {
+					auto& p = self->handle_v.promise();
 					if (!use_queue_await) return;
 					queue_await_v.await_suspend(h);
+					typename promise_type::bit_mask_t desired, expected = p.state.load();
 				}
 				return_type await_resume() {
 					auto& p = self->handle_v.promise();
+					p.queue_size_v.fetch_sub(1);
 					if (use_queue_await) {
 						queue_await_v.await_resume();
 					}
@@ -1285,9 +1393,16 @@ namespace stamp::task {
 		bool done() const {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
-			return value.is_returned_v;
+			return value.is_ended_v;
+		}
+		// true if coroutine is good (exists, no errors)
+		bool good() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t value = p.state.load();
+			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
 		}
 		const return_type& result() const {
+			if (exception()) std::rethrow_exception(exception());
 			return handle_v.promise().return_v;
 		}
 		std::exception_ptr exception() const {
@@ -1358,6 +1473,19 @@ namespace stamp::task {
 			}
 		};
 		return await_t{};
+	}
+
+	inline void wait_for_coroutine(const coroutine<void>& target) {
+		if (target.done()) return;
+		std::promise<void> promise{};
+		std::future future = promise.get_future();
+		auto co = [&target, &promise]() -> coroutine<void> {
+			auto t = target;
+			auto p = std::move(promise);
+			co_await t;
+			p.set_value();
+		}();
+		future.wait();
 	}
 }
 

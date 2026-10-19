@@ -15,14 +15,22 @@
 
 using namespace stamp::task;
 
-
+struct co_lock_state_t {
+	std::atomic_int access_count;
+	std::atomic_int max_access_count;
+	std::atomic_int shared_access_count;
+	std::atomic_int max_shared_access_count;
+};
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
+	auto& tp = thread_pool::current_threadpool();
 	for (int i = 0; i < 10; i++) {
 		auto l = co_await lock_v->lock();
 		for (int k = 0; k < 50; k++) {
 			benchmark::DoNotOptimize(k);
 		}
+		l.release();
+		co_await tp;
 	}
 
 	counter->fetch_add(1);
@@ -39,7 +47,7 @@ static void CoLockTest(benchmark::State& state) {
 		count.store(0);
 
 		for (int i = 0; i < loop_count; i++) {
-			pool.queue().emplace_detached(co_lock_test, &lock_v, &count);
+			pool.queue().emplace(co_lock_test, &lock_v, &count);
 		}
 
 		int tmp;
@@ -49,26 +57,19 @@ static void CoLockTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(CoLockTest)->Iterations(1000);
+BENCHMARK(CoLockTest)->Iterations(500);
 
 coroutine<void> mutex_test(std::shared_mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
+	auto& tp = thread_pool::current_threadpool();
 
 	for (int i = 0; i < 10; i++) {
-		if (i == 7) {
-			lock_v->lock_shared();
-			for (int k = 0; k < 50; k++) {
-				benchmark::DoNotOptimize(k);
-			}
-			lock_v->unlock_shared();
+		lock_v->lock();
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
 		}
-		else {
-			lock_v->lock_v();
-			for (int k = 0; k < 50; k++) {
-				benchmark::DoNotOptimize(k);
-			}
-			lock_v->unlock();
-		}
+		lock_v->unlock();
+		co_await tp;
 	}
 
 	counter->fetch_add(1);
@@ -87,7 +88,7 @@ static void MutexTest(benchmark::State& state) {
 		count.store(0);
 
 		for (int i = 0; i < loop_count; i++) {
-			pool.queue().emplace_detached(mutex_test, &lock_v, &count);
+			pool.queue().emplace(mutex_test, &lock_v, &count);
 		}
 
 		int tmp;
@@ -97,9 +98,10 @@ static void MutexTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(MutexTest)->Iterations(1000);
+BENCHMARK(MutexTest)->Iterations(500);
 
 BENCHMARK_MAIN();
+
 
 /*struct timed_t {
 	std::thread::id id;
