@@ -822,75 +822,91 @@ namespace stamp::task {
 	// if awaited, then only one thread can access this lock
 	// example:
 	// co_lock my_lock{};
-	// auto l = co_await my_lock;
+	// auto l = my_lock.instance();
+	// co_await l.lock();
 	// // my code here.
 	// l.release(); // or use deconstructor
 	// co_await /* something else */
 	class co_lock {
-		co_simple_queue queue;
-		std::atomic_int count = 0;
+		struct node_t {
+			node_t* next = nullptr;
+			node_t* prev = nullptr;
+			std::coroutine_handle<> handle{};
+		};
+		std::atomic<node_t*> back;
 	public:
-		auto lock() {
-			auto p = queue.push();
-			using push_type = decltype(p);
-			struct await_t {
+		auto instance() {
+			struct lock_guard_t {
 				co_lock* self = nullptr;
+				node_t node{};
 				bool is_primary = false;
-				push_type push_await{}; // cannot be moved nor copied while suspended
+				bool is_released = false;
+				bool is_locked = false;
 
-				await_t(co_lock* self, const push_type& push_await) : self(self), push_await(push_await) {}
-
-				bool await_ready() noexcept {
-					int i = self->count.fetch_add(1) + 1;
-					// pause if another thread is index 1 (primary).
-					if (i == 1) {
-						is_primary = true;
-						return true;
-					}
-					return false;
+				lock_guard_t(co_lock* self) : self(self) {}
+				~lock_guard_t() {
+					release();
 				}
-				void await_suspend(std::coroutine_handle<> h) {
-					push_await.await_suspend(h);
-				}
-				auto await_resume() noexcept {
-					push_await.await_resume();
-					struct release_t {
-						co_lock* self;
-						bool is_primary = false;
-						bool is_released = false;
 
-						~release_t() {
-							release();
+				auto lock() {
+					struct await_t {
+						lock_guard_t* self;
+						bool await_ready() noexcept {
+							return false;
 						}
-						void release() {
-							int tmp;
-							if (is_released) return;
-							is_released = true;
-
-							if (is_primary) {
-								// while queue has more than one item queued, pop. when queue is empty, atomically clear count.
-								while (true) {
-									tmp = 1;
-									self->queue.pop_all_unsafe();
-									if (self->count.compare_exchange_strong(tmp, 0))
-										break;
+						bool await_suspend(std::coroutine_handle<> h) {
+							self->is_locked = true;
+							self->is_released = false;
+							self->node.handle = h;
+							node_t* old_back = self->self->back.load();
+							while (true) {
+								self->node.next = old_back;
+								if (self->self->back.compare_exchange_weak(old_back, &self->node)) {
+									break;
 								}
 							}
-							else {
-								if (self->count.fetch_sub(1) - 1 < 1) {
-									STAMP_BREAKPOINT();
-								}
+							if (old_back == nullptr) {
+								self->is_primary = true;
+								self->node.handle = nullptr;
+								return false;
+							}
+							return true;
+						}
+						void await_resume() {
+							if (self->is_primary) return;
+							if (self->node.next != nullptr && self->node.next->handle) {
+								self->node.next->handle.resume();
 							}
 						}
 					};
-					return release_t{self, is_primary};
+					return await_t{this};
+				}
+
+				void release() {
+					if (!is_locked) return;
+					is_locked = false;
+					if (is_released) return;
+					is_released = true;
+					if (!is_primary) return;
+
+					node_t* n = self->back.load();
+					while (true) {
+						if (n == &node) {
+							if (self->back.compare_exchange_weak(n, nullptr)) break;
+						}
+						else {
+							if (!self->back.compare_exchange_weak(n, &node)) continue;
+
+
+						}
+					}
 				}
 			};
-			return await_t{this, p};
+			return lock_guard_t{this};
 		}
 
 		auto operator co_await() {
-			return lock();
+			return lock_guard();
 		}
 	};
 
