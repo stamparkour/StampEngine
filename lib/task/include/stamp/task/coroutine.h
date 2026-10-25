@@ -832,10 +832,12 @@ namespace stamp::task {
 			node_t* next = nullptr;
 			node_t* prev = nullptr;
 			std::coroutine_handle<> handle{};
+			std::coroutine_handle<> tmp_handle{};
 		};
 		std::atomic<node_t*> back;
+		static_assert(std::atomic<node_t*>::is_always_lock_free, "node_t* should be lock free");
 	public:
-		auto instance() {
+		auto lock_guard() {
 			struct lock_guard_t {
 				co_lock* self = nullptr;
 				node_t node{};
@@ -855,9 +857,11 @@ namespace stamp::task {
 							return false;
 						}
 						bool await_suspend(std::coroutine_handle<> h) {
+							// TODO: add code to prevent double locking/ unlocking
 							self->is_locked = true;
 							self->is_released = false;
-							self->node.handle = h;
+							self->node.handle = self->node.tmp_handle = h;
+							self->is_primary = false;
 							node_t* old_back = self->self->back.load();
 							while (true) {
 								self->node.next = old_back;
@@ -873,10 +877,11 @@ namespace stamp::task {
 							return true;
 						}
 						void await_resume() {
-							if (self->is_primary) return;
-							if (self->node.next != nullptr && self->node.next->handle) {
-								self->node.next->handle.resume();
-							}
+							stamp::core::s_assert(!self->is_released);
+							stamp::core::s_assert(self->is_locked);
+							stamp::core::s_assert(!self->is_primary || self->node.next == nullptr);
+							stamp::core::s_assert(self->is_primary || self->node.next != nullptr);
+							stamp::core::s_assert(self->node.prev == nullptr || self->node.prev->next == &self->node);
 						}
 					};
 					return await_t{this};
@@ -891,22 +896,41 @@ namespace stamp::task {
 
 					node_t* n = self->back.load();
 					while (true) {
+						// exit lock
 						if (n == &node) {
-							if (self->back.compare_exchange_weak(n, nullptr)) break;
+							if (self->back.compare_exchange_weak(n, nullptr)) 
+								break;
 						}
+						// swap out queue
 						else {
-							if (!self->back.compare_exchange_weak(n, &node)) continue;
-
-
+							if (!self->back.compare_exchange_weak(n, &node)) 
+								continue;
+							stamp::core::s_assert((bool)n->handle);
+							
+							// reverse order
+							node_t* t = n;
+							node_t* t_prev = nullptr;
+							while (t != nullptr) {
+								t->prev = t_prev;
+								t_prev = t;
+								t = t->next;
+							}
+							// t_prev should be &node
+							stamp::core::s_assert(t_prev == &node);
+							t = t_prev->prev;
+							while (t != nullptr) {
+								stamp::core::s_assert((bool)t->handle);
+								node_t* tmp = t->prev;
+								std::coroutine_handle<> h = t->handle;
+								t->handle = nullptr;
+								h.resume(); // *t can be destroyed after this point
+								t = tmp;
+							}
 						}
 					}
 				}
 			};
 			return lock_guard_t{this};
-		}
-
-		auto operator co_await() {
-			return lock_guard();
 		}
 	};
 
@@ -975,6 +999,7 @@ namespace stamp::task {
 				if (state.compare_exchange_weak(expected, desired)) break;
 			}
 			while(!is_queue_empty()) queue_v.pop_all_except_unsafe(exception_v);
+			STAMP_BREAKPOINT();
 		}
 
 		bool is_queue_empty() {
@@ -999,7 +1024,7 @@ namespace stamp::task {
 				desired.is_returned_v = true;
 				if (state.compare_exchange_weak(expected, desired)) break;
 			}
-			while (!is_queue_empty()) queue_v.pop_all_except_unsafe(exception_v);
+			while (!is_queue_empty()) queue_v.pop_all_unsafe();
 		}
 		std::suspend_never yield_value(nullptr_t) {
 			queue_v.pop_all_unsafe();

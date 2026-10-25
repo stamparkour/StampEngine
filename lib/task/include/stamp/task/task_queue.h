@@ -57,8 +57,7 @@ namespace stamp::task {
 		template<typename CoFunc, typename... Args>
 		auto emplace(CoFunc&& func, Args&&... args) {
 			auto ret = std::forward<CoFunc>(func)(std::forward<Args>(args)...);
-			coroutine<void> view = ret;
-			push(view);
+			push(ret);
 			return ret;
 		}
 		template<typename T>

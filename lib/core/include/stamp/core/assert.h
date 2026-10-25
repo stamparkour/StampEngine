@@ -20,6 +20,15 @@
 #define STAMP_BREAKPOINT() do { *(volatile int*)0 = 0; } while(0) // Fallback crash
 #endif
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#  include <immintrin.h> // For _mm_pause
+#  define STAMP_CPU_PAUSE() _mm_pause()
+#elif defined(__ARM_ARCH) || defined(__aarch64__)
+#  define STAMP_CPU_PAUSE() __asm__ __volatile__("yield" ::: "memory")
+#else
+#  define STAMP_CPU_PAUSE() ((void)0)
+#endif
+
 namespace stamp::core {
 #ifdef STAMP_CORE_DEBUG
 	static inline constexpr bool is_debug_v = true;
