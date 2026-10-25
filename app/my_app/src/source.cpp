@@ -23,14 +23,14 @@ struct co_lock_state_t {
 };
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
-	auto& tp = thread_pool::current_threadpool();
+	auto& tp = *thread_pool::current_threadpool();
 	for (int i = 0; i < 10; i++) {
 		auto l = lock_v->lock_guard();
 		co_await l.lock();
 		for (int k = 0; k < 50; k++) {
 			benchmark::DoNotOptimize(k);
 		}
-		l.release();
+		l.unlock();
 		co_await tp;
 	}
 
@@ -38,7 +38,7 @@ coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 }
 
 static void CoLockTest(benchmark::State& state) {
-	constexpr int loop_count = 1000;
+	int loop_count = state.range(0);
 
 	thread_pool pool{4};
 	std::atomic_int count{0};
@@ -60,11 +60,11 @@ static void CoLockTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(CoLockTest)->Iterations(5000);
+BENCHMARK(CoLockTest)->Range(8, 8192)->MinTime(3.0);
 
-coroutine<void> mutex_test(std::shared_mutex* lock_v, std::atomic_int* counter) {
+coroutine<void> mutex_test(std::mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
-	auto& tp = thread_pool::current_threadpool();
+	auto& tp = *thread_pool::current_threadpool();
 
 	for (int i = 0; i < 10; i++) {
 		lock_v->lock();
@@ -81,11 +81,11 @@ coroutine<void> mutex_test(std::shared_mutex* lock_v, std::atomic_int* counter) 
 }
 
 static void MutexTest(benchmark::State& state) {
-	constexpr int loop_count = 1000;
+	int loop_count = state.range(0);
 
 	thread_pool pool{4};
 	std::atomic_int count{0};
-	std::shared_mutex lock_v{};
+	std::mutex lock_v{};
 	for (auto _ : state) {
 		count.store(0);
 
@@ -103,7 +103,48 @@ static void MutexTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(MutexTest)->Iterations(5000);
+BENCHMARK(MutexTest)->Range(8, 8192)->MinTime(3.0);
+
+void mutex_thread_test(std::mutex* lock_v, std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+
+	for (int i = 0; i < 10; i++) {
+		lock_v->lock();
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
+		}
+		lock_v->unlock();
+	}
+
+	counter->fetch_add(1);
+
+	return;
+}
+static void MutexThreadTest(benchmark::State& state) {
+	int loop_count = state.range(0);
+
+	std::atomic_int count{0};
+	std::mutex lock_v{};
+	std::vector<std::thread> threads{};
+	for (auto _ : state) {
+		count.store(0);
+
+		threads.clear();
+		for (int i = 0; i < loop_count; i++) {
+			threads.emplace_back(mutex_thread_test, &lock_v, &count);
+		}
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			STAMP_CPU_PAUSE();
+		}
+
+		for (int i = 0; i < loop_count; i++) {
+			threads[i].join();
+		}
+	}
+}
+BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(3.0);
 
 BENCHMARK_MAIN();
 

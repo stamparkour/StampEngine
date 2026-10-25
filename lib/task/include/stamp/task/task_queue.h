@@ -53,6 +53,10 @@ namespace stamp::task {
 	public:
 		task_queue() : queue() {}
 		task_queue(int init_size) : queue(init_size) {}
+		task_queue(const task_queue&) = delete;
+		task_queue(task_queue&&) = delete;
+		task_queue& operator =(const task_queue&) = delete;
+		task_queue& operator =(task_queue&&) = delete;
 
 		template<typename CoFunc, typename... Args>
 		auto emplace(CoFunc&& func, Args&&... args) {
@@ -131,6 +135,10 @@ namespace stamp::task {
 		std::atomic_size_t size_v;
 	public:
 		timer_task_queue() : queue() {}
+		timer_task_queue(const timer_task_queue&) = delete;
+		timer_task_queue(timer_task_queue&&) = delete;
+		timer_task_queue& operator =(const timer_task_queue&) = delete;
+		timer_task_queue& operator =(timer_task_queue&&) = delete;
 
 		template<typename CoFunc, typename... Args>
 		auto emplace_until(const time_point& exec_time, CoFunc&& func, Args&&... args) {

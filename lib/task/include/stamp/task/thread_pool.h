@@ -108,10 +108,13 @@ namespace stamp::task {
 		~thread_pool() {
 			kill();
 		}
+		thread_pool(const thread_pool&) = delete;
+		thread_pool(thread_pool&&) = delete;
+		thread_pool& operator =(const thread_pool&) = delete;
+		thread_pool& operator =(thread_pool&&) = delete;
 
-		inline static thread_pool& current_threadpool() {
-			if (current_threadpool_v == nullptr) throw std::runtime_error("current_threadpool_v is nullptr. cannot query current_threadpool.");
-			return *current_threadpool_v;
+		inline static thread_pool* current_threadpool() {
+			return current_threadpool_v;
 		}
 
 		task_queue& queue() {

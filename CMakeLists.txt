@@ -30,6 +30,7 @@ target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::
 
 if(STAMP_BUILD_APP)
     add_subdirectory(app/my_app)
+    add_subdirectory(app/task_benchmark)
     add_subdirectory(test)
 
     #project warnings

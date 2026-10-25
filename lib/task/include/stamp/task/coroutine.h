@@ -825,7 +825,7 @@ namespace stamp::task {
 	// auto l = my_lock.instance();
 	// co_await l.lock();
 	// // my code here.
-	// l.release(); // or use deconstructor
+	// l.unlock(); // or use deconstructor
 	// co_await /* something else */
 	class co_lock {
 		struct node_t {
@@ -847,8 +847,12 @@ namespace stamp::task {
 
 				lock_guard_t(co_lock* self) : self(self) {}
 				~lock_guard_t() {
-					release();
+					unlock();
 				}
+				lock_guard_t(const lock_guard_t&) = delete;
+				lock_guard_t(lock_guard_t&&) = delete;
+				lock_guard_t& operator =(const lock_guard_t&) = delete;
+				lock_guard_t& operator =(lock_guard_t&&) = delete;
 
 				auto lock() {
 					struct await_t {
@@ -887,7 +891,7 @@ namespace stamp::task {
 					return await_t{this};
 				}
 
-				void release() {
+				void unlock() {
 					if (!is_locked) return;
 					is_locked = false;
 					if (is_released) return;
