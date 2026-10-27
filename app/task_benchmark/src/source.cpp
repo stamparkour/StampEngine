@@ -11,7 +11,11 @@
 #include <mutex>
 #include <shared_mutex>
 #include <chrono>
-#include <windows.h>
+#include <cppcoro/task.hpp>
+#include <cppcoro/shared_task.hpp>
+#include <cppcoro/async_mutex.hpp>
+#include <cppcoro/static_thread_pool.hpp>
+#include <cppcoro/async_scope.hpp>
 
 using namespace stamp::task;
 
@@ -54,7 +58,44 @@ static void LinearTest(benchmark::State& state) {
 		}
 	}
 }
-BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+// rBENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+
+cppcoro::task<void> cpp_coro_test(cppcoro::static_thread_pool& tp, cppcoro::async_mutex* lock_v, std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+	co_await tp.schedule();
+	for (int i = 0; i < 10; i++) {
+		auto l = co_await lock_v->scoped_lock_async();
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
+		}
+		co_await tp.schedule();
+	}
+
+	counter->fetch_add(1);
+}
+static void CppCoroTest(benchmark::State& state) {
+	int loop_count = state.range(0);
+
+	cppcoro::async_scope scope{};
+	cppcoro::static_thread_pool pool = cppcoro::static_thread_pool{4};
+	std::atomic_int count{0};
+	cppcoro::async_mutex lock_v{};
+	for (auto _ : state) {
+		count.store(0);
+
+		for (int i = 0; i < loop_count; i++) {
+			scope.spawn(cpp_coro_test(pool, &lock_v, &count));
+		}
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			STAMP_CPU_PAUSE();
+		}
+	}
+	scope.join();
+}
+// does not work? one task remains after joining.
+// BENCHMARK(CppCoroTest)->Range(8, 8192)->MinTime(3.0);
 
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -179,7 +220,7 @@ static void MutexThreadTest(benchmark::State& state) {
 		}
 	}
 }
-BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(3.0);
+// BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(3.0);
 
 
 BENCHMARK_MAIN();

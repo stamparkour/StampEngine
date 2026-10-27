@@ -8,7 +8,7 @@
 #include <bit>
 
 namespace stamp::serialize {
-
+	
 }
 
 #endif // STAMP_SERIALIZE_SERIALIZE_HELPERS_H

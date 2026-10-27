@@ -126,7 +126,10 @@ namespace stamp::reflect {
 		static constexpr auto FNV_prime = 1099511628211;
 		std::size_t hash_v = FNV_offset_basis;
 	public:
-		hash_fnv1a() = default;
+		constexpr hash_fnv1a() = default;
+		constexpr hash_fnv1a(std::size_t init_hash) {
+			hash_v = init_hash;
+		}
 		constexpr hash_fnv1a(const char* str) {
 			(*this) << str;
 		}
@@ -173,6 +176,9 @@ namespace stamp::reflect {
 
 		constexpr bool operator ==(const hash_fnv1a& other) const {
 			return hash_v == other.hash_v;
+		}
+		constexpr bool operator ==(std::size_t other) const {
+			return hash_v == other;
 		}
 	};
 }

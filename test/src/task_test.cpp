@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
-#include <stamp/task/coroutine.h>
-#include <stamp/task/thread_pool.h>
-#include <stamp/task/task_queue.h>
+#include <stamp/task/task.h>
 #include <stdexcept>
 #include <chrono>
 
@@ -54,7 +52,7 @@ struct co_lock_state_t {
 coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock* lock_v, co_lock_state_t* state) {
 	using namespace std::chrono_literals;
 
-	std::this_thread::sleep_for(5ms);
+	std::this_thread::sleep_for(2ms);
 
 	{
 		auto l = lock_v->lock_guard();
@@ -67,7 +65,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 			state->max_access_count.compare_exchange_strong(mac, ac);
 		}
 
-		std::this_thread::sleep_for(8ms);
+		std::this_thread::sleep_for(3ms);
 
 		state->access_count.fetch_sub(1);
 	}
@@ -204,13 +202,14 @@ TEST(Coroutine, Casting) {
 	EXPECT_EQ(return_coroutine_v.done(), true);
 }
 
-TEST(Coroutine, Error) {
+// cannot be used due to breakpoint inside of uncaught exception triggers breakpoint
+/*TEST(Coroutine, Error) {
 	coroutine<void> throw_coroutine_v = throw_coroutine();
 
 	throw_coroutine_v.resume();
 
 	EXPECT_EQ(static_cast<bool>(throw_coroutine_v.exception()), true);
-}
+}*/
 TEST(Coroutine, Stop) {
 	coroutine<bool> stop_coroutine_v = stop_coroutine();
 

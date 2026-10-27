@@ -15,4 +15,7 @@ target_compile_features(task_benchmark PUBLIC cxx_std_20)
 
 include(gtest)
 include(benchmark)
-target_link_libraries(task_benchmark PUBLIC  GTest::gtest_main benchmark::benchmark_main)
+target_link_libraries(task_benchmark PUBLIC GTest::gtest_main benchmark::benchmark_main)
+
+include(cppcoro)
+target_link_libraries(task_benchmark PUBLIC cppcoro)
