@@ -12,7 +12,7 @@
 #include <future>
 
 // TODO: add template overload for custom coroutine allocators
-// TODO: add new co_queue that can have custom states to atomically switch between
+// TODO: make co_await coroutine<T> more performant by removing 'count' atomic and use node states.
 
 namespace stamp::task {
 	template<typename T>
@@ -868,8 +868,8 @@ namespace stamp::task {
 							self->is_primary = false;
 							node_t* old_back = self->self->back.load();
 							while (true) {
-								self->node.next = old_back;
-								if (self->self->back.compare_exchange_weak(old_back, &self->node)) {
+								self->node.next = old_back; // line requires memory_order_release
+								if (self->self->back.compare_exchange_weak(old_back, &self->node, std::memory_order_release)) {
 									break;
 								}
 							}
@@ -890,6 +890,9 @@ namespace stamp::task {
 					};
 					return await_t{this};
 				}
+				auto operator co_await() {
+					return lock();
+				}
 
 				void unlock() {
 					if (!is_locked) return;
@@ -902,12 +905,13 @@ namespace stamp::task {
 					while (true) {
 						// exit lock
 						if (n == &node) {
-							if (self->back.compare_exchange_weak(n, nullptr)) 
+							// must be release to allow all mutex changes to be released for the next co_lock locking
+							if (self->back.compare_exchange_weak(n, nullptr, std::memory_order_release))
 								break;
 						}
 						// swap out queue
 						else {
-							if (!self->back.compare_exchange_weak(n, &node)) 
+							if (!self->back.compare_exchange_weak(n, &node, std::memory_order_acquire))
 								continue;
 							stamp::core::s_assert((bool)n->handle);
 							
@@ -958,9 +962,9 @@ namespace stamp::task {
 		static_assert(std::atomic<bit_mask_t>::is_always_lock_free, "coroutine_promise should be lock free");
 
 		std::atomic<bit_mask_t> state{};
+		std::atomic_bool request_stop_v = false;
 		std::atomic_int queue_size_v{0};
 		std::exception_ptr exception_v{};
-		std::stop_source stop_v{};
 		co_simple_queue queue_v{};
 
 		std::suspend_always initial_suspend() {
@@ -1213,10 +1217,9 @@ namespace stamp::task {
 			handle_v.destroy();
 			handle_v = nullptr;
 		}
-		// sends request to stop token
 		void stop() {
-			auto& p = handle_v.promise();
-			p.stop_v.request_stop();
+			stamp::core::s_assert((bool)handle_v);
+			handle_v.promise().request_stop_v.store(true, std::memory_order_relaxed);
 		}
 
 		std::exception_ptr exception() const {
@@ -1429,10 +1432,9 @@ namespace stamp::task {
 			handle_v.destroy();
 			handle_v = nullptr;
 		}
-		// sends request to stop token
 		void stop() {
-			auto& p = handle_v.promise();
-			p.stop_v.request_stop();
+			stamp::core::s_assert((bool)handle_v);
+			handle_v.promise().request_stop_v.store(true, std::memory_order_relaxed);
 		}
 
 		bool done() const {
@@ -1478,26 +1480,25 @@ namespace stamp::task {
 		return {this};
 	}
 
-	// TODO: add non-void variant
+	struct await_co_get_request_stop_t {
+		basic_coroutine_promise* promise_v = nullptr;
 
-	template<typename T>
-	inline auto co_get_stop_token() {
-		struct await_t {
-			coroutine_promise<T>* promise_v = nullptr;
+		bool await_ready() {
+			return false;
+		}
 
-			bool await_ready() {
-				return false;
-			}
-			
-			bool await_suspend(std::coroutine_handle<coroutine_promise<T>> h) {
-				promise_v = &h.promise();
-				return false;
-			}
-			std::stop_token await_resume() {
-				return promise_v.stop_v.get_token();
-			}
-		};
-		return await_t{};
+		template<typename T>
+		bool await_suspend(std::coroutine_handle<coroutine_promise<T>> h) {
+			promise_v = &h.promise();
+			return false;
+		}
+		bool await_resume() {
+			return promise_v->request_stop_v.load(std::memory_order_relaxed);
+		}
+	};
+	inline auto co_get_request_stop() {
+		
+		return await_co_get_request_stop_t{};
 	}
 
 	template<typename T>

@@ -16,17 +16,6 @@
 #include <cstdint>
 #include <memory_resource>
 
-// finished (untested):
-// ob in: shared_ptr, T*, reflected object, integers, floats
-// ob out: T*, reflected object, integers, floats
-
-// need to do:
-// ob out: shared_ptr
-// unique_ptr, weak_ptr
-// error code
-// config to prevent any memory leaks
-// iterator support. deliminate std::array (by detecting constexpr array.size(); )
-
 
 namespace stamp::serialize {
 	//using ordered_binary_error_code_t = std::uint32_t;

@@ -8,6 +8,7 @@ FetchContent_Declare(
 	FIND_PACKAGE_ARGS
 )
 
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(glfw)
 
 if(glfw_POPULATED)

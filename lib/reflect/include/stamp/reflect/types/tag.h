@@ -20,9 +20,11 @@ namespace stamp::reflect {
 		template<std::derived_from<named_generic_tag_t> T>
 		constexpr string_literal to_string_v<T> = T::name;
 	}
-	template<string_literal S>
-	constexpr tag::named_tag_t<S> operator ""_rf() {
-		return {};
+	namespace suffix {
+		template<string_literal S>
+		constexpr stamp::reflect::tag::named_tag_t<S> operator ""_rf() {
+			return {};
+		}
 	}
 
 	template<typename T>

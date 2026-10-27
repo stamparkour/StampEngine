@@ -10,7 +10,7 @@
 #include <string>
 #include <tuple>
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 	template<>
 	struct reflect_traits<void> {
 		using type = void;

@@ -7,6 +7,10 @@ FetchContent_Declare(
 	FIND_PACKAGE_ARGS
 )
 
+set(gtest_build_tests OFF)
+set(gtest_build_samples OFF)
+set(gtest_disable_pthreads OFF)
+
 set(BUILD_SHARED_LIBS OFF)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(GTest)

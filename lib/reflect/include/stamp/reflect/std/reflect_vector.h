@@ -7,7 +7,7 @@
 #include <stamp/reflect/reflect_types.h>
 #include <vector>
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 	template<typename T, typename Alloc>
 	struct reflect_traits<std::vector<T, Alloc>> {
 		using type = std::vector<T, Alloc>;

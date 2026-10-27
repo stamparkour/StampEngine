@@ -1,4 +1,4 @@
-
+ 
 
 @page reflect_page Reflect
 
@@ -25,14 +25,14 @@ Within the Stamp Engine project, reflections will be used for serialization, pyt
 
 ## Reflecting a Class
 
-In order to reflect a class, you must create a reflect_trait overload.
+In order to reflect a class, you must create a @ref stamp::reflect::reflect_trait "reflect_trait" overload.
 
-The simplest implemention of reflect_trait is:
+A simple implemention of reflect_trait is:
 
 ``` c++
 #include <stamp/reflect/reflect.h>
 
-struct stamp::reflect::reflect_traits<MyType> {
+struct stamp::reflect::desc::reflect_traits<MyType> {
 	static constexpr string_literal name = "MyType";
 	static constexpr auto properties = std::tuple{
 		reflect("val1"_rf,  &MyType::val1),
@@ -61,11 +61,10 @@ stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& pro
 ```
 **Note:** The lambda's parameter's type is stamp::reflect::member_property_t.
 
-[1]: https://en.wikipedia.org/wiki/Reflective_programming
 
 ## Tagging reflections
 
-Each reflection can be tagged with custom values. 
+Each reflection can be assigned custom tags. 
 Such as, min, max, setpoints, etc.
 
 Example:
@@ -100,7 +99,7 @@ stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& pro
 
 # Meta Tuple
 
-meta_tuple.h contains helper functions to iterate over and construct tuples.
+@ref meta_tuple.h contains helper functions to iterate over and construct tuples.
 
 example:
 ``` c++
@@ -113,3 +112,6 @@ stamp::reflect::for_each<std::tuple<int, float, double>>([]<typename T>(T) {
 # String Literal
 
 string_literal.h contains several functions to facilate compile-time string manipulation.
+
+
+[1]: https://en.wikipedia.org/wiki/Reflective_programming

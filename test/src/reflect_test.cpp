@@ -82,7 +82,7 @@ public:
 // Reflection Traits Definitions
 // ============================================================================
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 
 	// SimpleClass reflection
 	template<>

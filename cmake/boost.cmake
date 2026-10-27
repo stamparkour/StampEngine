@@ -1,5 +1,7 @@
 message("importing boost...")
 
+# set(BOOST_INCLUDE_LIBRARIES timer filesystem regex)
+
 find_package(Boost 1.90.0 CONFIG)
 if(NOT Boost_FOUND)
 	message("Boost not found")

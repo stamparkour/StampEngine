@@ -10,6 +10,7 @@ FetchContent_Declare(
 
 FetchContent_GetProperties(GLEW)
 if(NOT glew_POPULATED)
+	set(BUILD_UTILS OFF)
 	FetchContent_MakeAvailable(GLEW)
 	add_subdirectory(${glew_SOURCE_DIR}/build/cmake ${glew_BINARY_DIR})
 	target_include_directories(glew_s PUBLIC ${glew_SOURCE_DIR}/include) # fix to allow for fetchContent

@@ -8,7 +8,7 @@
 #include <array>
 #include <stamp/reflect/std/reflect_iterator.h>
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 	template<typename T, std::size_t N>
 	struct reflect_traits<std::array<T, N>> {
 		using type = std::array<T, N>;

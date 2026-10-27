@@ -3,38 +3,44 @@
 #define STAMP_REFLECT_REFLECT_TRAITS_H
 
 #include <type_traits>
+#include <stamp/reflect/types/tag.h>
 
 namespace stamp::reflect {
-	/**
-	* @brief Enables reflections for each overload
-	* 
-	* possible members:
-	* - `constexpr static string_literal space = "";`
-	* - `constexpr static string_literal name = "";`
-	* - `constexpr static string_literal full_name = "";`
-	* - `constexpr static string_literal basic_name = "";`
-	* - `constexpr static auto base = std::tuple{};`
-	* - `constexpr static auto properties = std::tuple{};`
-	* - `constexpr static auto functions = std::tuple{};`
-	* - `constexpr static auto constructors = std::tuple{};`
-	* - `constexpr static auto static_functions = std::tuple{};`
-	* - `constexpr static auto static_properties = std::tuple{};`
-	* 
-	* All reflect_trait members should be retrieved through the [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors in stamp::reflect::traits.
-	* 
-	* example:
-	* ``` c++
-	* struct stamp::reflect::reflect_traits<MyType> {
-	*	constexpr static string_literal name = "MyType";
-	*	constexpr static auto properties = std::tuple{
-	*		reflect("val1"_rf, &MyType::val1),
-	*		reflect("val2"_rf, &MyType::val2)
-	*	};
-	* };
-	* ```
-	*/
-	template<typename T>
-	struct reflect_traits;
+	namespace desc {
+		using namespace stamp::reflect;
+		using namespace stamp::reflect::suffix;
+		/**
+		* @brief Enables reflections for each overload
+		*
+		* possible members:
+		* - `constexpr static string_literal space = "";`
+		* - `constexpr static string_literal name = "";`
+		* - `constexpr static string_literal full_name = "";`
+		* - `constexpr static string_literal basic_name = "";`
+		* - `constexpr static auto base = std::tuple{};`
+		* - `constexpr static auto properties = std::tuple{};`
+		* - `constexpr static auto functions = std::tuple{};`
+		* - `constexpr static auto constructors = std::tuple{};`
+		* - `constexpr static auto static_functions = std::tuple{};`
+		* - `constexpr static auto static_properties = std::tuple{};`
+		*
+		* All reflect_trait members should be retrieved through the [SFINAE](https://en.cppreference.com/cpp/language/sfinae) accessors in stamp::reflect::traits.
+		*
+		* example:
+		* ``` c++
+		* struct stamp::reflect::impl::reflect_traits<MyType> {
+		*	constexpr static string_literal name = "MyType";
+		*	constexpr static auto properties = std::tuple{
+		*		reflect("val1"_rf, &MyType::val1),
+		*		reflect("val2"_rf, &MyType::val2)
+		*	};
+		* };
+		* ```
+		*/
+		template<typename T>
+		struct reflect_traits;
+	}
+	using desc::reflect_traits;
 
 	template<typename T>
 	concept reflect_traits_c =

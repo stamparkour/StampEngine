@@ -21,6 +21,41 @@ struct co_lock_state_t {
 	std::atomic_int shared_access_count;
 	std::atomic_int max_shared_access_count;
 };
+
+void linear_test(std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+
+	for (int i = 0; i < 10; i++) {
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
+			benchmark::DoNotOptimize(i);
+		}
+	}
+
+	counter->fetch_add(1);
+
+	return;
+}
+static void LinearTest(benchmark::State& state) {
+	int loop_count = state.range(0);
+
+	std::atomic_int count{0};
+	std::mutex lock_v{};
+	for (auto _ : state) {
+		count.store(0);
+
+		for (int i = 0; i < loop_count; i++) {
+			linear_test(&count);
+		}
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			STAMP_CPU_PAUSE();
+		}
+	}
+}
+BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 	auto& tp = *thread_pool::current_threadpool();
@@ -145,6 +180,7 @@ static void MutexThreadTest(benchmark::State& state) {
 	}
 }
 BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(3.0);
+
 
 BENCHMARK_MAIN();
 

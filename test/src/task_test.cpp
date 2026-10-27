@@ -33,6 +33,12 @@ coroutine<void> sleep_coroutine() {
 	std::this_thread::sleep_for(0.5s);
 	co_return;
 }
+coroutine<bool> stop_coroutine() {
+	if (co_await stamp::task::co_get_request_stop()) {
+		co_return true;
+	}
+	co_return false;
+}
 coroutine<void> increment_coroutine(std::atomic_int* target) {
 	target->fetch_add(1);
 	target->notify_all();
@@ -51,7 +57,8 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 	std::this_thread::sleep_for(5ms);
 
 	{
-		auto l = co_await *lock_v;
+		auto l = lock_v->lock_guard();
+		co_await l;
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();
@@ -64,7 +71,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 
 		state->access_count.fetch_sub(1);
 	}
-	co_await thread_pool::current_threadpool();
+	co_await *thread_pool::current_threadpool();
 
 	target->fetch_add(1);
 	target->notify_all();
@@ -203,6 +210,14 @@ TEST(Coroutine, Error) {
 	throw_coroutine_v.resume();
 
 	EXPECT_EQ(static_cast<bool>(throw_coroutine_v.exception()), true);
+}
+TEST(Coroutine, Stop) {
+	coroutine<bool> stop_coroutine_v = stop_coroutine();
+
+	stop_coroutine_v.stop();
+	stop_coroutine_v.resume();
+
+	EXPECT_EQ(stop_coroutine_v.result(), true);
 }
 
 

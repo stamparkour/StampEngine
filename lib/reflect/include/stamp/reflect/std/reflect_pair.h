@@ -7,7 +7,7 @@
 #include <stamp/reflect/reflect_types.h>
 #include <vector>
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 	template<typename T1, typename T2>
 	struct reflect_traits<std::pair<T1, T2>> {
 		using type = std::pair<T1, T2>;

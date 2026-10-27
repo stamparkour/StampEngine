@@ -7,7 +7,7 @@
 #include <stamp/reflect/reflect_types.h>
 #include <iterator>
 
-namespace stamp::reflect {
+namespace stamp::reflect::desc {
 	template<std::forward_iterator T>
 	struct reflect_traits<T> {
 		using type = T;
