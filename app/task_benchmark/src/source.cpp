@@ -58,15 +58,17 @@ static void LinearTest(benchmark::State& state) {
 		}
 	}
 }
-// rBENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+// BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
 
 cppcoro::task<void> cpp_coro_test(cppcoro::static_thread_pool& tp, cppcoro::async_mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 	co_await tp.schedule();
 	for (int i = 0; i < 10; i++) {
-		auto l = co_await lock_v->scoped_lock_async();
-		for (int k = 0; k < 50; k++) {
-			benchmark::DoNotOptimize(k);
+		{
+			auto l = co_await lock_v->scoped_lock_async();
+			for (int k = 0; k < 50; k++) {
+				benchmark::DoNotOptimize(k);
+			}
 		}
 		co_await tp.schedule();
 	}
@@ -95,7 +97,7 @@ static void CppCoroTest(benchmark::State& state) {
 	scope.join();
 }
 // does not work? one task remains after joining.
-// BENCHMARK(CppCoroTest)->Range(8, 8192)->MinTime(3.0);
+BENCHMARK(CppCoroTest)->Range(8, 8192)->MinTime(3.0);
 
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;

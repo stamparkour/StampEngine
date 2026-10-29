@@ -82,126 +82,127 @@ namespace stamp::task {
 		}
 	};
 
-	// if awaited, then only one thread can access this lock
-	// example:
-	// co_lock my_lock{};
-	// auto l = my_lock.instance();
-	// co_await l.lock();
-	// // my code here.
-	// l.unlock(); // or use deconstructor
-	// co_await /* something else */
+	/**
+	* if awaited, then only one thread can access this lock
+	* example:
+	* co_lock my_lock{};
+	* auto l = co_await my_lock.lock();
+	* // my code here.
+	* l.unlock(); // or use deconstructor
+	* co_await; // something else
+	*/
 	class co_lock {
 		struct node_t {
 			node_t* next = nullptr;
-			node_t* prev = nullptr;
 			std::coroutine_handle<> handle{};
-			std::coroutine_handle<> tmp_handle{};
 		};
+		struct unlock_t {
+			co_lock* self;
+			node_t* front;
+			node_t node{};
+			unlock_t(co_lock* self, node_t* node_old) {
+				if (node_old->next != nullptr) return;
+				this->self = self;
+				node_t* back_old = self->back.exchange(&node);
+				stamp::core::s_assert(back_old != nullptr);
+
+				// reverse order to allow for 'queue' behavior
+				node_t* i = back_old;
+				node_t* prev = nullptr;
+				node_t* next = back_old->next;
+
+				while (true) {
+					i->next = prev;
+
+					if (next == node_old) break;
+					prev = i;
+					i = next;
+					next = next->next;
+				}
+				front = prev;
+			}
+			~unlock_t() {
+				unlock();
+			}
+			void unlock() {
+				if (self == nullptr) return;
+
+				// deque all original data
+				if (front != nullptr) {
+					node_t* i = front;
+					node_t* next = front->next;
+					while (true) {
+						i->handle.resume();
+						if (next == nullptr) break;
+						i = next;
+						next = next->next;
+					}
+				}
+
+				node_t* back_old = self->back.load(std::memory_order_acquire);
+
+				while (true) {
+					if (back_old == &node) {
+						if (self->back.compare_exchange_weak(back_old, nullptr, std::memory_order_acquire)) break;
+					}
+					else {
+						if (!self->back.compare_exchange_weak(back_old, &node, std::memory_order_acquire)) continue;
+					}
+
+					//reverse order
+					node_t* i = back_old;
+					node_t* prev = nullptr;
+					node_t* next = back_old->next;
+
+					while (true) {
+						if (i == &node) break;
+
+						i->next = prev;
+
+						prev = i;
+						i = next;
+						next = next->next;
+					}
+
+					i = front;
+					next = front->next;
+					while (true) {
+						i->handle.resume();
+						if (next == nullptr) break;
+						i = next;
+						next = next->next;
+					}
+				}
+				// signals no more unlock
+				self = nullptr;
+			}
+		};
+		struct lock_t {
+			co_lock* self;
+			node_t node;
+			bool await_ready() noexcept {
+				return false;
+			}
+			bool await_suspend(std::coroutine_handle<> h) noexcept {
+				node.handle = h;
+				node_t* back_old = nullptr;
+				do {
+					node.next = back_old;
+				} while (self->back.compare_exchange_weak(back_old, &node, std::memory_order_release));
+
+				return node.next != nullptr;
+			}
+			auto await_resume() {
+				return unlock_t{self, &node};
+			}
+		};
+
+
 		std::atomic<node_t*> back;
 		static_assert(std::atomic<node_t*>::is_always_lock_free, "node_t* should be lock free");
 	public:
-		auto lock_guard() {
-			struct lock_guard_t {
-				co_lock* self = nullptr;
-				node_t node{};
-				bool is_primary = false;
-				bool is_released = false;
-				bool is_locked = false;
-
-				lock_guard_t(co_lock* self) : self(self) {}
-				~lock_guard_t() {
-					unlock();
-				}
-				lock_guard_t(const lock_guard_t&) = delete;
-				lock_guard_t(lock_guard_t&&) = delete;
-				lock_guard_t& operator =(const lock_guard_t&) = delete;
-				lock_guard_t& operator =(lock_guard_t&&) = delete;
-
-				auto lock() {
-					struct await_t {
-						lock_guard_t* self;
-						bool await_ready() noexcept {
-							return false;
-						}
-						bool await_suspend(std::coroutine_handle<> h) {
-							// TODO: add code to prevent double locking/ unlocking
-							self->is_locked = true;
-							self->is_released = false;
-							self->node.handle = self->node.tmp_handle = h;
-							self->is_primary = false;
-							node_t* old_back = self->self->back.load();
-							while (true) {
-								self->node.next = old_back; // line requires memory_order_release
-								if (self->self->back.compare_exchange_weak(old_back, &self->node, std::memory_order_release)) {
-									break;
-								}
-							}
-							if (old_back == nullptr) {
-								self->is_primary = true;
-								self->node.handle = nullptr;
-								return false;
-							}
-							return true;
-						}
-						void await_resume() {
-							stamp::core::s_assert(!self->is_released);
-							stamp::core::s_assert(self->is_locked);
-							stamp::core::s_assert(!self->is_primary || self->node.next == nullptr);
-							stamp::core::s_assert(self->is_primary || self->node.next != nullptr);
-							stamp::core::s_assert(self->node.prev == nullptr || self->node.prev->next == &self->node);
-						}
-					};
-					return await_t{this};
-				}
-				auto operator co_await() {
-					return lock();
-				}
-
-				void unlock() {
-					if (!is_locked) return;
-					is_locked = false;
-					if (is_released) return;
-					is_released = true;
-					if (!is_primary) return;
-
-					node_t* n = self->back.load();
-					while (true) {
-						// exit lock
-						if (n == &node) {
-							// must be release to allow all mutex changes to be released for the next co_lock locking
-							if (self->back.compare_exchange_weak(n, nullptr, std::memory_order_release))
-								break;
-						}
-						// swap out queue
-						else {
-							if (!self->back.compare_exchange_weak(n, &node, std::memory_order_acquire))
-								continue;
-							stamp::core::s_assert((bool)n->handle);
-							
-							// reverse order
-							node_t* t = n;
-							node_t* t_prev = nullptr;
-							while (t != nullptr) {
-								t->prev = t_prev;
-								t_prev = t;
-								t = t->next;
-							}
-							// t_prev should be &node
-							stamp::core::s_assert(t_prev == &node);
-							t = t_prev->prev;
-							while (t != nullptr) {
-								stamp::core::s_assert((bool)t->handle);
-								node_t* tmp = t->prev;
-								std::coroutine_handle<> h = t->handle;
-								t->handle = nullptr;
-								h.resume(); // *t can be destroyed after this point
-								t = tmp;
-							}
-						}
-					}
-				}
-			};
-			return lock_guard_t{this};
+		auto lock() {
+			return lock_t{this};
 		}
 	};
 
@@ -230,13 +231,22 @@ namespace stamp::task {
 		std::exception_ptr exception_v{};
 		co_simple_queue queue_v{};
 
-		std::suspend_always initial_suspend() {
-			bit_mask_t desired, expected = state.load();
-			do {
-				desired = expected;
-				desired.is_started_v = true;
-			} while (!state.compare_exchange_weak(expected, desired));
-			return {};
+		auto initial_suspend() {
+			struct await_t {
+				basic_coroutine_promise* self;
+				bool await_ready() noexcept {
+					return false;
+				}
+				void await_suspend(std::coroutine_handle<> h) noexcept {}
+				void await_resume() {
+					bit_mask_t desired, expected = self->state.load();
+					do {
+						desired = expected;
+						desired.is_started_v = true;
+					} while (!self->state.compare_exchange_weak(expected, desired));
+				}
+			};
+			return await_t{this};
 		}
 		auto final_suspend() noexcept {
 			struct await_t {
@@ -296,10 +306,6 @@ namespace stamp::task {
 				if (state.compare_exchange_weak(expected, desired)) break;
 			}
 			while (!is_queue_empty()) queue_v.pop_all_unsafe();
-		}
-		std::suspend_never yield_value(nullptr_t) {
-			queue_v.pop_all_unsafe();
-			return {};
 		}
 		//auto await_transform(auto v) {
 		//	return v;
@@ -543,12 +549,6 @@ namespace stamp::task {
 				if (state.compare_exchange_weak(expected, desired)) break;
 			}
 			while(!is_queue_empty()) queue_v.pop_all_unsafe();
-		}
-
-		std::suspend_never yield_value(return_type ret_value) {
-			return_v = ret_value;
-			queue_v.pop_all_unsafe();
-			return {};
 		}
 		//auto await_transform(auto v) {
 		//	return v;
