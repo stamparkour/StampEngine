@@ -55,8 +55,7 @@ coroutine<void> increment_and_co_lock_coroutine(std::atomic_int* target, co_lock
 	std::this_thread::sleep_for(2ms);
 
 	{
-		auto l = lock_v->lock_guard();
-		co_await l;
+		auto l = co_await lock_v->lock();
 
 		int ac = state->access_count.fetch_add(1) + 1;
 		int mac = state->max_access_count.load();

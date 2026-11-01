@@ -94,106 +94,79 @@ namespace stamp::task {
 	class co_lock {
 		struct node_t {
 			node_t* next = nullptr;
+			node_t* prev = nullptr;
 			std::coroutine_handle<> handle{};
 		};
 		struct unlock_t {
-			co_lock* self;
-			node_t* front;
+			co_lock* self = nullptr;
+			node_t* front_old = nullptr;
+			bool primary = false;
 			node_t node{};
-			unlock_t(co_lock* self, node_t* node_old) {
-				if (node_old->next != nullptr) return;
-				this->self = self;
-				node_t* back_old = self->back.exchange(&node);
-				stamp::core::s_assert(back_old != nullptr);
-
-				// reverse order to allow for 'queue' behavior
-				node_t* i = back_old;
-				node_t* prev = nullptr;
-				node_t* next = back_old->next;
-
-				while (true) {
-					i->next = prev;
-
-					if (next == node_old) break;
-					prev = i;
-					i = next;
-					next = next->next;
-				}
-				front = prev;
+			unlock_t(co_lock* self, node_t* node_old, bool primary) : primary(primary), self(self) {
+				if (!primary) return;
+				node_t* back_old = self->back.exchange(&node, std::memory_order_acquire);
+				front_old = reverse(back_old, node_old);
 			}
 			~unlock_t() {
 				unlock();
 			}
-			void unlock() {
-				if (self == nullptr) return;
-
-				// deque all original data
-				if (front != nullptr) {
-					node_t* i = front;
-					node_t* next = front->next;
-					while (true) {
-						i->handle.resume();
-						if (next == nullptr) break;
-						i = next;
-						next = next->next;
-					}
+			node_t* reverse(node_t* target, node_t* end_node) {
+				node_t* i = target;
+				node_t* prev = nullptr;
+				while (i != end_node) {
+					stamp::core::s_assert(i != nullptr);
+					i->prev = prev;
+					prev = i;
+					i = i->next;
 				}
+				return prev;
+			}
+			void run_chain(node_t* target) {
+				node_t* i = target;
+				while (i != nullptr) {
+					node_t* next = i->prev;
+					i->handle.resume();
+					i = next;
+				}
+			}
+			void unlock() {
+				if (!primary) return;
+				primary = false;
+				run_chain(front_old);
 
-				node_t* back_old = self->back.load(std::memory_order_acquire);
-
+				node_t* back_old = nullptr;
 				while (true) {
 					if (back_old == &node) {
-						if (self->back.compare_exchange_weak(back_old, nullptr, std::memory_order_acquire)) break;
+						if (self->back.compare_exchange_weak(back_old, nullptr, std::memory_order_acquire)) {
+							break;
+						}
 					}
-					else {
-						if (!self->back.compare_exchange_weak(back_old, &node, std::memory_order_acquire)) continue;
-					}
-
-					//reverse order
-					node_t* i = back_old;
-					node_t* prev = nullptr;
-					node_t* next = back_old->next;
-
-					while (true) {
-						if (i == &node) break;
-
-						i->next = prev;
-
-						prev = i;
-						i = next;
-						next = next->next;
-					}
-
-					i = front;
-					next = front->next;
-					while (true) {
-						i->handle.resume();
-						if (next == nullptr) break;
-						i = next;
-						next = next->next;
+					else if (self->back.compare_exchange_weak(back_old, &node, std::memory_order_acquire)) {
+						run_chain(reverse(back_old, &node));
 					}
 				}
-				// signals no more unlock
-				self = nullptr;
 			}
 		};
 		struct lock_t {
 			co_lock* self;
 			node_t node;
+			bool primary = false;
 			bool await_ready() noexcept {
 				return false;
 			}
 			bool await_suspend(std::coroutine_handle<> h) noexcept {
 				node.handle = h;
 				node_t* back_old = nullptr;
-				do {
+				while(true) {
 					node.next = back_old;
-				} while (self->back.compare_exchange_weak(back_old, &node, std::memory_order_release));
-
-				return node.next != nullptr;
+					primary = back_old == nullptr;
+					if (self->back.compare_exchange_weak(back_old, &node, std::memory_order_release)) break;
+				}
+				return back_old != nullptr;
 			}
 			auto await_resume() {
-				return unlock_t{self, &node};
+				stamp::core::s_assert(node.next != nullptr || primary);
+				return unlock_t{self, &node, primary};
 			}
 		};
 
@@ -204,6 +177,26 @@ namespace stamp::task {
 		auto lock() {
 			return lock_t{this};
 		}
+	};
+
+	class co_shared_lock {
+	public:
+	private:
+	public:
+		/*
+		three states:
+		- unlocked
+		- locked
+		- shared locked
+
+		6 actions:
+		- construct
+		- deconstruct
+		- add shared
+		- remove shared
+		- add locked
+		- remove locked
+		*/
 	};
 
 	template<typename T>

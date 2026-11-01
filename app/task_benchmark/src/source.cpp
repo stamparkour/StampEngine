@@ -58,7 +58,7 @@ static void LinearTest(benchmark::State& state) {
 		}
 	}
 }
-// BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+ BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
 
 cppcoro::task<void> cpp_coro_test(cppcoro::static_thread_pool& tp, cppcoro::async_mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -96,15 +96,14 @@ static void CppCoroTest(benchmark::State& state) {
 	}
 	scope.join();
 }
-// does not work? one task remains after joining.
-BENCHMARK(CppCoroTest)->Range(8, 8192)->MinTime(3.0);
+// has a stack overflow >4096
+BENCHMARK(CppCoroTest)->Range(8, 4096)->MinTime(2.0);
 
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
 	auto& tp = *thread_pool::current_threadpool();
 	for (int i = 0; i < 10; i++) {
-		auto l = lock_v->lock_guard();
-		co_await l.lock();
+		auto l = co_await lock_v->lock();
 		for (int k = 0; k < 50; k++) {
 			benchmark::DoNotOptimize(k);
 		}
@@ -138,7 +137,45 @@ static void CoLockTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(CoLockTest)->Range(8, 8192)->MinTime(3.0);
+BENCHMARK(CoLockTest)->Range(8, 8192)->MinTime(2.0);
+
+
+coroutine<void> one_thread_test(std::atomic_int* counter) {
+	using namespace std::chrono_literals;
+	auto& tp = *thread_pool::current_threadpool();
+	for (int i = 0; i < 10; i++) {
+		for (int k = 0; k < 50; k++) {
+			benchmark::DoNotOptimize(k);
+		}
+		co_await tp;
+	}
+
+	counter->fetch_add(1);
+}
+static void OneThreadTest(benchmark::State& state) {
+	int loop_count = state.range(0);
+
+	thread_pool pool{1};
+	std::atomic_int count{0};
+	co_lock lock_v{};
+	for (auto _ : state) {
+		count.store(0);
+
+		for (int i = 0; i < loop_count; i++) {
+			pool.queue().emplace(one_thread_test, &count);
+		}
+
+		int tmp;
+		while ((tmp = count.load()) != loop_count) {
+			STAMP_CPU_PAUSE();
+		}
+		if (pool.queue().size_aprox() > 0) {
+			STAMP_BREAKPOINT();
+		}
+	}
+	pool.kill();
+}
+BENCHMARK(OneThreadTest)->Range(8, 8192)->MinTime(2.0);
 
 coroutine<void> mutex_test(std::mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -181,7 +218,7 @@ static void MutexTest(benchmark::State& state) {
 	}
 	pool.kill();
 }
-BENCHMARK(MutexTest)->Range(8, 8192)->MinTime(3.0);
+BENCHMARK(MutexTest)->Range(8, 8192)->MinTime(2.0);
 
 void mutex_thread_test(std::mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -222,7 +259,7 @@ static void MutexThreadTest(benchmark::State& state) {
 		}
 	}
 }
-// BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(3.0);
+// BENCHMARK(MutexThreadTest)->RangeMultiplier(4)->Range(4, 64)->MinTime(2.0);
 
 
 BENCHMARK_MAIN();
