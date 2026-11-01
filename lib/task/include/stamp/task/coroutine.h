@@ -199,6 +199,10 @@ namespace stamp::task {
 		- remove shared
 		- add locked
 		- remove locked
+
+		two flow charts:
+		- data flow
+		- execution flow
 		*/
 	};
 
