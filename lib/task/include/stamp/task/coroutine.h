@@ -177,6 +177,9 @@ namespace stamp::task {
 		auto lock() {
 			return lock_t{this};
 		}
+		auto operator co_await() {
+			return lock();
+		}
 	};
 
 	class co_shared_lock {
