@@ -19,5 +19,5 @@ target_include_directories(stamp_math
 	PUBLIC "include" 
 )
 
-include(imgui)
-target_link_libraries(stamp_math PUBLIC imgui)
+# include(imgui)
+# target_link_libraries(stamp_math PUBLIC imgui)
