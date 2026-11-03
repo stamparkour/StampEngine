@@ -25,4 +25,4 @@ target_include_directories(stamp_diagnose
 include(glew)
 include(glfw)
 include(imgui)
-target_link_libraries(stamp_diagnose PUBLIC imgui)
+target_link_libraries(stamp_diagnose PUBLIC imgui_glfw_opengl3)

@@ -24,11 +24,11 @@ if(NOT imgui_POPULATED)
 		"${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
 		"${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
 	)
-	add_library(imgui STATIC ${IMGUI_BASE_SOURCES} ${IMGUI_BACKEND_SOURCES})
-	target_include_directories(imgui 
+	add_library(imgui_glfw_opengl3 STATIC ${IMGUI_BASE_SOURCES} ${IMGUI_BACKEND_SOURCES})
+	target_include_directories(imgui_glfw_opengl3 
 		PUBLIC "${imgui_SOURCE_DIR}"
 	)
-	target_link_libraries(imgui PUBLIC glfw glew_s)
+	target_link_libraries(imgui_glfw_opengl3 PUBLIC glfw glew_s)
 endif()
 
 if(imgui_POPULATED)
