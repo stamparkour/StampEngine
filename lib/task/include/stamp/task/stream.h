@@ -119,7 +119,7 @@ namespace stamp::task {
 	template<typename T>
 	concept is_co_iostream =
 		is_co_istream<T> ||
-		is_co_iostream<T> ||
+		is_co_ostream<T> ||
 		requires (T a) {
 			{ a.co_iostream_strand() } -> std::derived_from<co_stream_strand>;
 		};
