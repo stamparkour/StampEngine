@@ -783,16 +783,28 @@ namespace stamp::task {
 		return await_t{};
 	}
 
-	inline void wait_for_coroutine(const coroutine<void>& target) {
+	template<typename Awaiter>
+	inline void wait_for(Awaiter&& target) {
+		std::promise<void> promise{};
+		std::future future = promise.get_future();
+		auto co = [&target, &promise]() -> coroutine<void> {
+			auto p = std::move(promise);
+			co_await target;
+			p.set_value();
+		}();
+		future.wait();
+	}
+
+	inline void wait_for(const coroutine<void>& target) {
 		if (target.done()) return;
 		std::promise<void> promise{};
 		std::future future = promise.get_future();
 		auto co = [&target, &promise]() -> coroutine<void> {
-			auto t = target;
 			auto p = std::move(promise);
-			co_await t;
+			co_await target;
 			p.set_value();
 		}();
+		co.resume();
 		future.wait();
 	}
 }

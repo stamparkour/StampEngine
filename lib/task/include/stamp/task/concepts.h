@@ -10,16 +10,16 @@ namespace stamp::task {
 			{ a.await_ready() } -> std::convertible_to<bool>;
 			a.await_suspend;
 			a.await_resume();
-	};
+		};
 	template<typename T>
 	concept awaitable_c =
 		awaitor_c<T> ||
 		requires (T a) {
 			{ a.operator co_await() } -> awaitor_c;
-	} ||
+		} ||
 		requires (T && a) {
 			{ operator co_await(a) } -> awaitor_c;
-	};
+		};
 
 	template<typename F>
 	constexpr auto awaitable_function_v = awaitable_c<std::invoke_result_t<F>>;

@@ -11,6 +11,8 @@ set(STAMP_TASK_HEADERS
 	"include/stamp/task/atomic_lock_guard.h"
 	"include/stamp/task/concepts.h"
 	"include/stamp/task/task.h"
+	"include/stamp/task/stream.h"
+	"include/stamp/task/stringstream.h"
 )
 
 # add the library
