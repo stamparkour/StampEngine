@@ -72,31 +72,27 @@ namespace stamp::task {
 
 		// puts full span
 		// bool success = co_await put_span(...);
-		auto put_span(const char* span, std::size_t size) {
-			return [this, span, size]() mutable -> coroutine<bool> {
-				while (size > 0) {
-					std::size_t p = try_put_span(span, size);
-					size -= p;
-					span += p;
-					if (!(co_await *this)) co_return false;
-				}
-				co_return true;
-			}().resume();
+		coroutine<bool> put_span(const char* span, std::size_t size) {
+			while (size > 0) {
+				std::size_t p = try_put_span(span, size);
+				size -= p;
+				span += p;
+				if (!(co_await *this)) co_return false;
+			}
+			co_return true;
 		}
 		// gets full span
 		// std::size_t total_read_count = co_await get_span(...);
-		auto get_span(char* span, std::size_t size) {
-			return [this, span, size]() mutable -> coroutine<std::size_t> {
-				std::size_t total_read = 0;
-				while (size > 0) {
-					std::size_t p = try_put_span(span, size);
-					size -= p;
-					span += p;
-					total_read += p;
-					if (!(co_await *this)) break;
-				}
-				co_return total_read;
-			}().resume();
+		coroutine<std::size_t> get_span(char* span, std::size_t size) {
+			std::size_t total_read = 0;
+			while (size > 0) {
+				std::size_t p = try_put_span(span, size);
+				size -= p;
+				span += p;
+				total_read += p;
+				if (!(co_await *this)) break;
+			}
+			co_return total_read;
 		}
 
 		// syncing strand

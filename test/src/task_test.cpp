@@ -222,12 +222,9 @@ TEST(Coroutine, Stop) {
 TEST(Coroutine, CoAwaitChain) {
 	coroutine<void> noop_coroutine_v = noop_coroutine();
 
-	coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v);
-	co_await_coroutine_v.resume();
+	coroutine<void> co_await_coroutine_v = co_await_coroutine(noop_coroutine_v); 
 	coroutine<void> h = co_await_coroutine(co_await_coroutine_v);
-	h.resume();
-
-	noop_coroutine_v.resume();
+	h.resume();// executes noop: implicit co_await resume
 
 	EXPECT_EQ(h.done(), true);
 }

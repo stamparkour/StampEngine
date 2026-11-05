@@ -14,6 +14,9 @@
 // TODO: add template overload for custom coroutine allocators
 // TODO: make co_await coroutine<T> more performant by removing 'count' atomic and use node states.
 
+// if you co_await a coroutine that is not started (resume as least once), then the coroutine is imediately started
+// - 'implicit start on co_await'
+
 namespace stamp::task {
 	// multiple producer, single consumer, pop all
 	class co_simple_queue {
@@ -440,13 +443,19 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
-					p.queue_size_v.fetch_add(1);
+
 					basic_promise_type::bit_mask_t value = p.state.load();
+					if (!value.is_started_v) {
+						self->handle().resume();
+					}
+					p.queue_size_v.fetch_add(1);
+					value = p.state.load();
+
 					if (value.is_returned_v) {
-						return false;
+						return true;
 					}
 					use_queue_await = true;
-					return queue_await_v.await_ready();
+					return false;
 				}
 				void await_suspend(std::coroutine_handle<> h) {
 					auto& p = self->handle_v.promise();
@@ -470,6 +479,10 @@ namespace stamp::task {
 		}
 		auto operator co_await() const {
 			return await();
+		}
+
+		handle_type handle() const {
+			return handle_v;
 		}
 
 		// must be called at least once before deconstructor.
@@ -650,13 +663,18 @@ namespace stamp::task {
 
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
-					p.queue_size_v.fetch_add(1);
 					typename promise_type::bit_mask_t value = p.state.load();
+					if (!value.is_started_v) {
+						self->handle().resume();
+					}
+					p.queue_size_v.fetch_add(1);
+					value = p.state.load();
+
 					if (value.is_returned_v) {
-						return false;
+						return true;
 					}
 					use_queue_await = true;
-					return queue_await_v.await_ready();
+					return false;
 				}
 				void await_suspend(std::coroutine_handle<> h) {
 					auto& p = self->handle_v.promise();
@@ -680,6 +698,10 @@ namespace stamp::task {
 		}
 		auto operator co_await() const {
 			return await();
+		}
+
+		handle_type handle() const {
+			return handle_v;
 		}
 
 		// must be called at least once before deconstructor.
