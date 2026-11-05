@@ -321,6 +321,7 @@ namespace stamp::task {
 		using handle_type = std::coroutine_handle<basic_promise_type>;
 
 		friend promise_type;
+		friend class coroutine_guard;
 	private:
 		handle_type handle_v = nullptr;
 
@@ -482,10 +483,10 @@ namespace stamp::task {
 		}
 		// call this to inform the compiler that the coroutine will not exist after this call to optimize out heap allocating coroutine.
 		// calling destroy while other threads own the target coroutine or coroutine is running on another thread is undefined behavior.
-		void destroy() {
+		/*void destroy() {
 			handle_v.destroy();
 			handle_v = nullptr;
-		}
+		}*/
 		void stop() {
 			stamp::core::s_assert((bool)handle_v);
 			handle_v.promise().request_stop_v.store(true, std::memory_order_relaxed);
@@ -564,6 +565,7 @@ namespace stamp::task {
 
 		friend promise_type;
 		friend coroutine<void>;
+		friend class coroutine_guard;
 	private:
 		handle_type handle_v = nullptr;
 
@@ -691,10 +693,10 @@ namespace stamp::task {
 		}
 		// call this to inform the compiler that the coroutine will not exist after this call to optimize out heap allocating coroutine.
 		// calling destroy while other threads own the target coroutine or coroutine is running on another thread is undefined behavior.
-		void destroy() {
+		/*void destroy() {
 			handle_v.destroy();
 			handle_v = nullptr;
-		}
+		}*/
 		void stop() {
 			stamp::core::s_assert((bool)handle_v);
 			handle_v.promise().request_stop_v.store(true, std::memory_order_relaxed);
@@ -738,6 +740,16 @@ namespace stamp::task {
 			return handle_v.address() <=> other.handle_v.address();
 		}
 	};
+
+	class coroutine_guard {
+		coroutine<void> coroutine_v;
+	public:
+		coroutine_guard(const coroutine<void>& c) : coroutine_v(c) {}
+		~coroutine_guard() {
+			coroutine_v.handle_v.destroy();
+		}
+	};
+
 	template<typename T>
 	inline coroutine<T> coroutine_promise<T>::get_return_object() {
 		return {this};
