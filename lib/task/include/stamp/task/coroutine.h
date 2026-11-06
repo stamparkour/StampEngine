@@ -84,6 +84,66 @@ namespace stamp::task {
 			return true;
 		}
 	};
+	class co_simple_stack {
+		struct node_t {
+			node_t* next;
+			std::coroutine_handle<> handle;
+			std::exception_ptr exception;
+		};
+
+		std::atomic<node_t*> back{nullptr};
+	public:
+		co_simple_stack() = default;
+		~co_simple_stack() {
+			pop_all_except_unsafe(std::make_exception_ptr(std::runtime_error("cannot destroy queue that is not empty")));
+		}
+
+		auto push() {
+			struct await_t {
+				co_simple_stack* self;
+				node_t node{};
+
+				await_t() {}
+				await_t(co_simple_stack* self) : self(self) {}
+
+				bool await_ready() noexcept {
+					return false;
+				}
+				void await_suspend(std::coroutine_handle<> h) {
+					node.handle = h;
+					node_t* n = self->back.load();
+					do {
+						node.next = n;
+					} while (!self->back.compare_exchange_weak(n, &node));
+				}
+				void await_resume() noexcept {
+					if (node.exception) std::rethrow_exception(node.exception);
+				}
+			};
+
+			return await_t{this};
+		}
+		bool pop_all_unsafe() {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+			while (n != nullptr) {
+				node_t* t = n->next;
+				n->handle.resume();
+				n = t;
+			}
+			return true;
+		}
+		bool pop_all_except_unsafe(const std::exception_ptr& p) {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+			while (n != nullptr) {
+				node_t* t = n->next;
+				n->handle.resume();
+				n = t;
+			}
+			return true;
+		}
+	};
 
 	/**
 	* if awaited, then only one thread can access this lock
