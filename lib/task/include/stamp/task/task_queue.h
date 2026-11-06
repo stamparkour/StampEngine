@@ -66,10 +66,12 @@ namespace stamp::task {
 		}
 		template<typename T>
 		void push(const coroutine<T>& co) {
+			co.prevent_implicit_start();
 			queue.enqueue(co);
 		}
 		template<typename T>
 		void push(coroutine<T>&& co) {
+			co.prevent_implicit_start();
 			queue.enqueue(std::move(co));
 		}
 

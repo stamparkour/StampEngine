@@ -222,6 +222,7 @@ namespace stamp::task {
 			std::uint32_t shared_count_v = 0;
 			std::uint16_t unused_0 = 0;
 			std::uint16_t is_started_v : 1 = 0; // when first resume
+			std::uint16_t prevent_implicit_start_v : 1 = 0; // when first resume
 			std::uint16_t is_ended_v : 1 = 0; // when ended (returned or exception)
 			std::uint16_t is_returned_v : 1 = 0; // when returned (no exception) (can only be true if is_ended is true)
 			std::uint16_t is_finalized_v : 1 = 0; // when final suspended
@@ -445,7 +446,7 @@ namespace stamp::task {
 					auto& p = self->handle_v.promise();
 
 					basic_promise_type::bit_mask_t value = p.state.load();
-					if (!value.is_started_v) {
+					if (!value.is_started_v && !value.prevent_implicit_start_v) {
 						self->handle().resume();
 					}
 					p.queue_size_v.fetch_add(1);
@@ -518,6 +519,15 @@ namespace stamp::task {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
+		}
+
+		void prevent_implicit_start() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t desired, expected = p.state.load();
+			do {
+				desired = expected;
+				desired.prevent_implicit_start_v = 1;
+			} while (!p.state.compare_exchange_weak(expected, desired));
 		}
 
 		std::size_t use_count() const {
@@ -664,7 +674,7 @@ namespace stamp::task {
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
 					typename promise_type::bit_mask_t value = p.state.load();
-					if (!value.is_started_v) {
+					if (!value.is_started_v && !value.prevent_implicit_start_v) {
 						self->handle().resume();
 					}
 					p.queue_size_v.fetch_add(1);
@@ -734,6 +744,14 @@ namespace stamp::task {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
+		}
+		void prevent_implicit_start() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t desired, expected = p.state.load();
+			do {
+				desired = expected;
+				desired.prevent_implicit_start_v = 1;
+			} while (!p.state.compare_exchange_weak(expected, desired));
 		}
 		const return_type& result() const {
 			if (exception()) std::rethrow_exception(exception());
