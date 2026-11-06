@@ -86,7 +86,7 @@ namespace stamp::task {
 		coroutine<std::size_t> get_span(char* span, std::size_t size) {
 			std::size_t total_read = 0;
 			while (size > 0) {
-				std::size_t p = try_put_span(span, size);
+				std::size_t p = try_get_span(span, size);
 				size -= p;
 				span += p;
 				total_read += p;
