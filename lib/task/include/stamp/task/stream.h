@@ -44,7 +44,7 @@ namespace stamp::task {
 
 		virtual bool do_await_ready() = 0;
 		virtual bool do_await_suspend(std::coroutine_handle<> h) = 0;
-		virtual std::size_t do_await_resume() = 0;
+		virtual bool do_await_resume() = 0;
 
 	public:
 		co_stream_strand(const co_stream_strand&) = delete;
@@ -99,7 +99,7 @@ namespace stamp::task {
 		bool await_ready() { return do_await_ready(); }
 		bool await_suspend(std::coroutine_handle<> h) { return do_await_suspend(h); }
 		// returns equivalend to `good()`
-		std::size_t await_resume() { return do_await_resume(); }
+		bool await_resume() { return do_await_resume(); }
 	};
 
 	template<typename T>
