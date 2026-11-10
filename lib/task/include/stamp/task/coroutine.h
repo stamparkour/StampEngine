@@ -84,6 +84,66 @@ namespace stamp::task {
 			return true;
 		}
 	};
+	class co_simple_stack {
+		struct node_t {
+			node_t* next;
+			std::coroutine_handle<> handle;
+			std::exception_ptr exception;
+		};
+
+		std::atomic<node_t*> back{nullptr};
+	public:
+		co_simple_stack() = default;
+		~co_simple_stack() {
+			pop_all_except_unsafe(std::make_exception_ptr(std::runtime_error("cannot destroy queue that is not empty")));
+		}
+
+		auto push() {
+			struct await_t {
+				co_simple_stack* self;
+				node_t node{};
+
+				await_t() {}
+				await_t(co_simple_stack* self) : self(self) {}
+
+				bool await_ready() noexcept {
+					return false;
+				}
+				void await_suspend(std::coroutine_handle<> h) {
+					node.handle = h;
+					node_t* n = self->back.load();
+					do {
+						node.next = n;
+					} while (!self->back.compare_exchange_weak(n, &node));
+				}
+				void await_resume() noexcept {
+					if (node.exception) std::rethrow_exception(node.exception);
+				}
+			};
+
+			return await_t{this};
+		}
+		bool pop_all_unsafe() {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+			while (n != nullptr) {
+				node_t* t = n->next;
+				n->handle.resume();
+				n = t;
+			}
+			return true;
+		}
+		bool pop_all_except_unsafe(const std::exception_ptr& p) {
+			node_t* n = back.exchange(nullptr);
+			if (n == nullptr) return false;
+			while (n != nullptr) {
+				node_t* t = n->next;
+				n->handle.resume();
+				n = t;
+			}
+			return true;
+		}
+	};
 
 	/**
 	* if awaited, then only one thread can access this lock
@@ -222,6 +282,7 @@ namespace stamp::task {
 			std::uint32_t shared_count_v = 0;
 			std::uint16_t unused_0 = 0;
 			std::uint16_t is_started_v : 1 = 0; // when first resume
+			std::uint16_t prevent_implicit_start_v : 1 = 0; // when first resume
 			std::uint16_t is_ended_v : 1 = 0; // when ended (returned or exception)
 			std::uint16_t is_returned_v : 1 = 0; // when returned (no exception) (can only be true if is_ended is true)
 			std::uint16_t is_finalized_v : 1 = 0; // when final suspended
@@ -445,7 +506,7 @@ namespace stamp::task {
 					auto& p = self->handle_v.promise();
 
 					basic_promise_type::bit_mask_t value = p.state.load();
-					if (!value.is_started_v) {
+					if (!value.is_started_v && !value.prevent_implicit_start_v) {
 						self->handle().resume();
 					}
 					p.queue_size_v.fetch_add(1);
@@ -518,6 +579,15 @@ namespace stamp::task {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
+		}
+
+		void prevent_implicit_start() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t desired, expected = p.state.load();
+			do {
+				desired = expected;
+				desired.prevent_implicit_start_v = 1;
+			} while (!p.state.compare_exchange_weak(expected, desired));
 		}
 
 		std::size_t use_count() const {
@@ -664,7 +734,7 @@ namespace stamp::task {
 				bool await_ready() {
 					auto& p = self->handle_v.promise();
 					typename promise_type::bit_mask_t value = p.state.load();
-					if (!value.is_started_v) {
+					if (!value.is_started_v && !value.prevent_implicit_start_v) {
 						self->handle().resume();
 					}
 					p.queue_size_v.fetch_add(1);
@@ -734,6 +804,14 @@ namespace stamp::task {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
+		}
+		void prevent_implicit_start() {
+			auto& p = handle_v.promise();
+			typename promise_type::bit_mask_t desired, expected = p.state.load();
+			do {
+				desired = expected;
+				desired.prevent_implicit_start_v = 1;
+			} while (!p.state.compare_exchange_weak(expected, desired));
 		}
 		const return_type& result() const {
 			if (exception()) std::rethrow_exception(exception());
