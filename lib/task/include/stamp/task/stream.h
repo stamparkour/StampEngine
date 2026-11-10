@@ -30,9 +30,9 @@ namespace stamp::task {
 			end
 		};
 	protected:
-		virtual bool do_eof() = 0;
-		virtual bool do_fail() = 0;
-		virtual bool do_bad() = 0;
+		virtual bool do_eof() const = 0;
+		virtual bool do_fail() const = 0;
+		virtual bool do_bad() const = 0;
 
 		virtual std::size_t do_get_ppos() const = 0;
 		virtual void do_set_ppos(std::size_t pos, seekdir) = 0;
@@ -54,10 +54,10 @@ namespace stamp::task {
 
 		virtual ~co_stream_strand() = 0;
 
-		bool eof() { return do_eof(); }
-		bool fail() { return do_fail(); }
-		bool bad() { return do_bad(); }
-		bool good() { return !(eof() || fail() || bad()); }
+		bool eof() const { return do_eof(); }
+		bool fail() const { return do_fail(); }
+		bool bad() const { return do_bad(); }
+		bool good() const { return !(eof() || fail() || bad()); }
 		explicit operator bool() const { return good(); }
 
 		std::size_t get_ppos() const { return do_get_ppos(); }
