@@ -58,7 +58,7 @@ static void LinearTest(benchmark::State& state) {
 		}
 	}
 }
- BENCHMARK(LinearTest)->Range(8, 8192)->MinTime(1.0);
+ BENCHMARK(LinearTest)->Range(8, 8192);
 
 cppcoro::task<void> cpp_coro_test(cppcoro::static_thread_pool& tp, cppcoro::async_mutex* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -97,7 +97,7 @@ static void CppCoroTest(benchmark::State& state) {
 	scope.join();
 }
 // has a stack overflow >4096
-BENCHMARK(CppCoroTest)->Range(8, 4096)->MinTime(2.0);
+// BENCHMARK(CppCoroTest)->Range(8, 2048)->MinTime(2.0);
 
 coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 	using namespace std::chrono_literals;
@@ -108,6 +108,7 @@ coroutine<void> co_lock_test(co_lock* lock_v, std::atomic_int* counter) {
 			benchmark::DoNotOptimize(k);
 		}
 		l.unlock();
+		co_await l;
 		co_await tp;
 	}
 
