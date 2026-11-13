@@ -33,6 +33,7 @@ namespace stamp::task {
 		virtual bool do_eof() const = 0;
 		virtual bool do_fail() const = 0;
 		virtual bool do_bad() const = 0;
+		virtual void do_clear() = 0;
 
 		virtual std::size_t do_get_ppos() const = 0;
 		virtual void do_set_ppos(std::size_t pos, seekdir) = 0;
@@ -44,7 +45,7 @@ namespace stamp::task {
 
 		virtual bool do_await_ready() = 0;
 		virtual bool do_await_suspend(std::coroutine_handle<> h) = 0;
-		virtual std::size_t do_await_resume() = 0;
+		virtual bool do_await_resume() = 0;
 
 	public:
 		co_stream_strand(const co_stream_strand&) = delete;
@@ -58,6 +59,7 @@ namespace stamp::task {
 		bool fail() const { return do_fail(); }
 		bool bad() const { return do_bad(); }
 		bool good() const { return !(eof() || fail() || bad()); }
+		void clear() { do_clear(); }
 		explicit operator bool() const { return good(); }
 
 		std::size_t get_ppos() const { return do_get_ppos(); }
@@ -99,7 +101,7 @@ namespace stamp::task {
 		bool await_ready() { return do_await_ready(); }
 		bool await_suspend(std::coroutine_handle<> h) { return do_await_suspend(h); }
 		// returns equivalend to `good()`
-		std::size_t await_resume() { return do_await_resume(); }
+		bool await_resume() { return do_await_resume(); }
 	};
 
 	template<typename T>
