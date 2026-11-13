@@ -3,9 +3,7 @@
  * @brief Performance profiling of the StampEngine Coroutine System using Google Benchmark
  */
 
-#include <stamp/task/coroutine.h>
-#include <stamp/task/task_queue.h>
-#include <stamp/task/thread_pool.h>
+#include <stamp/task/task.h>
 #include <benchmark/benchmark.h>
 #include <unordered_map>
 #include <mutex>

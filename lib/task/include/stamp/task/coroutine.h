@@ -145,130 +145,6 @@ namespace stamp::task {
 		}
 	};
 
-	/**
-	* if awaited, then only one thread can access this lock
-	* example:
-	* co_lock my_lock{};
-	* auto l = co_await my_lock.lock();
-	* // my code here.
-	* l.unlock(); // or use deconstructor
-	* co_await; // something else
-	*/
-	class co_lock {
-		struct node_t {
-			node_t* next = nullptr;
-			node_t* prev = nullptr;
-			std::coroutine_handle<> handle{};
-		};
-		struct unlock_t {
-			co_lock* self = nullptr;
-			node_t* front_old = nullptr;
-			bool primary = false;
-			node_t node{};
-			unlock_t(co_lock* self, node_t* node_old, bool primary) : primary(primary), self(self) {
-				if (!primary) return;
-				node_t* back_old = self->back.exchange(&node, std::memory_order_acquire);
-				front_old = reverse(back_old, node_old);
-			}
-			~unlock_t() {
-				unlock();
-			}
-			node_t* reverse(node_t* target, node_t* end_node) {
-				node_t* i = target;
-				node_t* prev = nullptr;
-				while (i != end_node) {
-					stamp::core::s_assert(i != nullptr);
-					i->prev = prev;
-					prev = i;
-					i = i->next;
-				}
-				return prev;
-			}
-			void run_chain(node_t* target) {
-				node_t* i = target;
-				while (i != nullptr) {
-					node_t* next = i->prev;
-					i->handle.resume();
-					i = next;
-				}
-			}
-			void unlock() {
-				if (!primary) return;
-				primary = false;
-				run_chain(front_old);
-
-				node_t* back_old = nullptr;
-				while (true) {
-					if (back_old == &node) {
-						if (self->back.compare_exchange_weak(back_old, nullptr, std::memory_order_acquire)) {
-							break;
-						}
-					}
-					else if (self->back.compare_exchange_weak(back_old, &node, std::memory_order_acquire)) {
-						run_chain(reverse(back_old, &node));
-					}
-				}
-			}
-		};
-		struct lock_t {
-			co_lock* self;
-			node_t node;
-			bool primary = false;
-			bool await_ready() noexcept {
-				return false;
-			}
-			bool await_suspend(std::coroutine_handle<> h) noexcept {
-				node.handle = h;
-				node_t* back_old = nullptr;
-				while(true) {
-					node.next = back_old;
-					primary = back_old == nullptr;
-					if (self->back.compare_exchange_weak(back_old, &node, std::memory_order_release)) break;
-				}
-				return back_old != nullptr;
-			}
-			auto await_resume() {
-				stamp::core::s_assert(node.next != nullptr || primary);
-				return unlock_t{self, &node, primary};
-			}
-		};
-
-
-		std::atomic<node_t*> back;
-		static_assert(std::atomic<node_t*>::is_always_lock_free, "node_t* should be lock free");
-	public:
-		auto lock() {
-			return lock_t{this};
-		}
-		auto operator co_await() {
-			return lock();
-		}
-	};
-
-	class co_shared_lock {
-	public:
-	private:
-	public:
-		/*
-		three states:
-		- unlocked
-		- locked
-		- shared locked
-
-		6 actions:
-		- construct
-		- deconstruct
-		- add shared
-		- remove shared
-		- add locked
-		- remove locked
-
-		two flow charts:
-		- data flow
-		- execution flow
-		*/
-	};
-
 	template<typename T>
 	class coroutine;
 	class basic_coroutine_promise;
@@ -385,7 +261,7 @@ namespace stamp::task {
 		using handle_type = std::coroutine_handle<basic_promise_type>;
 
 		friend promise_type;
-		friend class coroutine_guard;
+		friend class co_guard;
 	private:
 		handle_type handle_v = nullptr;
 
@@ -575,13 +451,13 @@ namespace stamp::task {
 			return value.is_ended_v;
 		}
 		// true if coroutine is good (exists, no errors)
-		bool good() {
+		bool good() const {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
 		}
 
-		void prevent_implicit_start() {
+		void prevent_implicit_start() const {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t desired, expected = p.state.load();
 			do {
@@ -648,7 +524,7 @@ namespace stamp::task {
 
 		friend promise_type;
 		friend coroutine<void>;
-		friend class coroutine_guard;
+		friend class co_guard;
 	private:
 		handle_type handle_v = nullptr;
 
@@ -800,12 +676,12 @@ namespace stamp::task {
 			return value.is_ended_v;
 		}
 		// true if coroutine is good (exists, no errors)
-		bool good() {
+		bool good() const {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t value = p.state.load();
 			return (bool)handle_v && (!value.is_ended_v || value.is_returned_v);
 		}
-		void prevent_implicit_start() {
+		void prevent_implicit_start() const {
 			auto& p = handle_v.promise();
 			typename promise_type::bit_mask_t desired, expected = p.state.load();
 			do {
@@ -841,12 +717,16 @@ namespace stamp::task {
 		}
 	};
 
-	class coroutine_guard {
+	class co_guard {
 		coroutine<void> coroutine_v;
 	public:
-		coroutine_guard(const coroutine<void>& c) : coroutine_v(c) {}
-		~coroutine_guard() {
-			coroutine_v.handle_v.destroy();
+		co_guard(const coroutine<void>& c) : coroutine_v(c) {}
+		~co_guard() {
+			coroutine_v.handle().destroy();
+		}
+
+		auto operator co_await() {
+			return coroutine_v.operator co_await();
 		}
 	};
 

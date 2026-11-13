@@ -13,6 +13,7 @@ set(STAMP_TASK_HEADERS
 	"include/stamp/task/task.h"
 	"include/stamp/task/stream.h"
 	"include/stamp/task/stringstream.h"
+	"include/stamp/task/lock.h"
 )
 
 # add the library

@@ -8,5 +8,6 @@
 #include <stamp/task/task.h>
 #include <stamp/task/task_queue.h>
 #include <stamp/task/thread_pool.h>
+#include <stamp/task/lock.h>
 
 #endif // STAMP_TASK_TASK_H
