@@ -46,7 +46,6 @@ namespace stamp::task {
 		virtual bool do_await_ready() = 0;
 		virtual bool do_await_suspend(std::coroutine_handle<> h) = 0;
 		virtual bool do_await_resume() = 0;
-
 	public:
 		co_stream_strand(const co_stream_strand&) = delete;
 		co_stream_strand(co_stream_strand&&) = default;
@@ -97,11 +96,17 @@ namespace stamp::task {
 			co_return total_read;
 		}
 
-		// syncing strand
-		bool await_ready() { return do_await_ready(); }
-		bool await_suspend(std::coroutine_handle<> h) { return do_await_suspend(h); }
+		// flushes strand
 		// returns equivalend to `good()`
-		bool await_resume() { return do_await_resume(); }
+		auto operator co_await() {
+			struct await_t {
+				co_stream_strand* self;
+				bool await_ready() { return self->do_await_ready(); }
+				bool await_suspend(std::coroutine_handle<> h) { return self->do_await_suspend(h); }
+				bool await_resume() { return self->do_await_resume(); }
+			};
+			return await_t{this};
+		}
 	};
 
 	template<typename T>
