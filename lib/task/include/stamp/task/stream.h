@@ -47,6 +47,7 @@ namespace stamp::task {
 		virtual bool do_await_suspend(std::coroutine_handle<> h) = 0;
 		virtual bool do_await_resume() = 0;
 	public:
+		co_stream_strand() = default;
 		co_stream_strand(const co_stream_strand&) = delete;
 		co_stream_strand(co_stream_strand&&) = default;
 		co_stream_strand& operator =(const co_stream_strand&) = delete;
