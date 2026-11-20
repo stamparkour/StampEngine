@@ -520,8 +520,8 @@ namespace stamp::task {
 	class coroutine {
 	public:
 		using return_type = T;
-		using self_type = coroutine<typename return_type>;
-		using promise_type = coroutine_promise<typename return_type>;
+		using self_type = coroutine<return_type>;
+		using promise_type = coroutine_promise<return_type>;
 		using handle_type = std::coroutine_handle<promise_type>;
 
 		friend promise_type;
