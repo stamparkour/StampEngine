@@ -10,6 +10,7 @@
 #include <memory>
 #include <future>
 #include <stamp/task/atomic_lock_guard.h>
+#include <concepts>
 
 // TODO: add template overload for custom coroutine allocators
 // TODO: make co_await coroutine<T> more performant by removing 'count' atomic and use node states.
@@ -499,8 +500,9 @@ namespace stamp::task {
 
 		coroutine<return_type> get_return_object();
 
-		void return_value(return_type ret_value) {
-			return_v = ret_value;
+		template<typename T> requires { std::convertible_to<T, return_type> }
+		void return_value(T&& ret_value) {
+			return_v = std::forward<T>(ret_value);
 			self_type::bit_mask_t desired, expected = state.load();
 			while (true) {
 				desired = expected;

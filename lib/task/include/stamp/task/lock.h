@@ -51,7 +51,7 @@ namespace stamp::task {
 			unlock_t& operator =(const unlock_t&) = delete;
 			unlock_t& operator =(unlock_t&&) = delete;
 
-			node_t* reverse(node_t* target, node_t* end_node) {
+			node_t*  (node_t* target, node_t* end_node) {
 				node_t* i = target;
 				node_t* prev = nullptr;
 				while (i != end_node) {
