@@ -122,8 +122,8 @@ namespace stamp::reflect {
 
 
 	class hash_fnv1a {
-		static constexpr auto FNV_offset_basis = 14695981039346656037;
-		static constexpr auto FNV_prime = 1099511628211;
+		static constexpr unsigned long long FNV_offset_basis = 14695981039346656037;
+		static constexpr unsigned long long FNV_prime = 1099511628211;
 		std::size_t hash_v = FNV_offset_basis;
 	public:
 		constexpr hash_fnv1a() = default;

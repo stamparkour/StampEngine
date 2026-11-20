@@ -58,7 +58,7 @@ namespace stamp::reflect {
 	// runs the Func on all members of the tuple<Arg...> that match Pred
 	template<template<typename> typename Pred, typename Func, typename... Arg>
 	constexpr void for_each_of(const std::tuple<Arg...>& tuple, Func func) {
-		for_each(tuple, [&]<typename Arg>(Arg&& arg) {
+		for_each(tuple, [&]<typename T>(T&& arg) {
 			using type = std::decay_t<decltype(arg)>;
 			if constexpr (Pred<type>::value) {
 				func(std::forward<Arg>(arg));
