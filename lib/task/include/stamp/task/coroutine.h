@@ -500,7 +500,7 @@ namespace stamp::task {
 
 		coroutine<return_type> get_return_object();
 
-		template<typename T> requires { std::convertible_to<T, return_type> }
+		template<typename T> requires ( std::convertible_to<T, return_type> )
 		void return_value(T&& ret_value) {
 			return_v = std::forward<T>(ret_value);
 			self_type::bit_mask_t desired, expected = state.load();
@@ -691,7 +691,7 @@ namespace stamp::task {
 				desired.prevent_implicit_start_v = 1;
 			} while (!p.state.compare_exchange_weak(expected, desired));
 		}
-		const return_type& result() const {
+		return_type& result() const {
 			if (exception()) std::rethrow_exception(exception());
 			return handle_v.promise().return_v;
 		}

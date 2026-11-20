@@ -43,6 +43,17 @@ coroutine<void> increment_coroutine(std::atomic_int* target) {
 	co_return;
 }
 
+struct move_t {
+	move_t() = default;
+	move_t(const move_t&) = delete;
+	move_t(move_t&&) = default;
+	move_t& operator =(const move_t&) = delete;
+	move_t& operator =(move_t&&) = default;
+};
+coroutine<move_t> move_coroutine() {
+	co_return move_t{};
+}
+
 struct co_lock_state_t {
 	std::atomic_int access_count;
 	std::atomic_int max_access_count;
@@ -216,6 +227,13 @@ TEST(Coroutine, Stop) {
 	stop_coroutine_v.resume();
 
 	EXPECT_EQ(stop_coroutine_v.result(), true);
+}
+TEST(Coroutine, MoveOnly) {
+	coroutine<move_t> move_coroutine_v = move_coroutine();
+	move_coroutine_v.resume();
+
+	auto result = std::move(move_coroutine_v.result());
+	// result is now invalid
 }
 
 
