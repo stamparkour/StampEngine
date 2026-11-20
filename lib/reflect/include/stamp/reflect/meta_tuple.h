@@ -61,7 +61,7 @@ namespace stamp::reflect {
 		for_each(tuple, [&]<typename T>(T&& arg) {
 			using type = std::decay_t<decltype(arg)>;
 			if constexpr (Pred<type>::value) {
-				func(std::forward<Arg>(arg));
+				func(std::forward<T>(arg));
 			}
 		});
 	}
