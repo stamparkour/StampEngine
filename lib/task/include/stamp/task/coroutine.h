@@ -630,7 +630,7 @@ namespace stamp::task {
 					queue_await_v.await_suspend(h);
 					typename promise_type::bit_mask_t desired, expected = p.state.load();
 				}
-				return_type await_resume() {
+				return_type& await_resume() {
 					auto& p = self->handle_v.promise();
 					p.queue_size_v.fetch_sub(1);
 					if (use_queue_await) {
