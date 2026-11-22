@@ -53,7 +53,7 @@ namespace stamp::task {
 		co_stream_strand& operator =(const co_stream_strand&) = delete;
 		co_stream_strand& operator =(co_stream_strand&&) = default;
 
-		virtual ~co_stream_strand() = 0;
+		virtual ~co_stream_strand() = default;
 
 		bool eof() const { return do_eof(); }
 		bool fail() const { return do_fail(); }
