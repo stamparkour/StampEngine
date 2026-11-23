@@ -8,7 +8,7 @@ option(STAMP_BUILD_APP OFF)
 option(STAMP_BUILD_DOXYGEN OFF)
 
 #config
-list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin" CACHE STRING "")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin" CACHE STRING "")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" CACHE STRING "")
@@ -32,6 +32,7 @@ add_library(stamp::stamp ALIAS stamp_stamp)
 target_link_libraries(stamp_stamp INTERFACE stamp::core stamp::serialize stamp::reflect stamp::task)
 
 if(STAMP_BUILD_APP)
+    message("configuring apps")
     add_subdirectory(app/my_app)
     add_subdirectory(app/task_benchmark)
     add_subdirectory(test)

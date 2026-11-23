@@ -37,7 +37,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/attributes/attributes.h"
 
 	"include/stamp/reflect/generic_iterator.h"
-)
+ "include/stamp/reflect/print_type.h")
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})

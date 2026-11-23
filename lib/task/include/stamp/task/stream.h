@@ -55,6 +55,18 @@ namespace stamp::task {
 
 		virtual ~co_stream_strand() = default;
 
+		// flushes strand
+		// returns equivalend to `good()`
+		auto operator co_await() {
+			struct await_t {
+				co_stream_strand* self;
+				bool await_ready() { return self->do_await_ready(); }
+				bool await_suspend(std::coroutine_handle<> h) { return self->do_await_suspend(h); }
+				bool await_resume() { return self->do_await_resume(); }
+			};
+			return await_t{this};
+		}
+
 		bool eof() const { return do_eof(); }
 		bool fail() const { return do_fail(); }
 		bool bad() const { return do_bad(); }
@@ -95,18 +107,6 @@ namespace stamp::task {
 				if (!(co_await *this)) break;
 			}
 			co_return total_read;
-		}
-
-		// flushes strand
-		// returns equivalend to `good()`
-		auto operator co_await() {
-			struct await_t {
-				co_stream_strand* self;
-				bool await_ready() { return self->do_await_ready(); }
-				bool await_suspend(std::coroutine_handle<> h) { return self->do_await_suspend(h); }
-				bool await_resume() { return self->do_await_resume(); }
-			};
-			return await_t{this};
 		}
 	};
 

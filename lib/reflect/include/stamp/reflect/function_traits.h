@@ -9,7 +9,7 @@ namespace stamp::reflect {
 	struct function_traits;
 
 	template<typename T> requires is_member_function_c<T>
-	struct function_traits {
+	struct function_traits<T> {
 		using class_type = typename member_function_traits<T>::class_type;
 		using return_type = typename member_function_traits<T>::return_type;
 		using ptr_type = typename member_function_traits<T>::ptr_type;
@@ -38,20 +38,6 @@ namespace stamp::reflect {
 		using overload_tag_type = stamp::reflect::tag::none_overload_tag_t;
 	};
 	template<typename R, typename... Args>
-	struct function_traits<R(Args...) const> {
-		using class_type = void;
-		using return_type = R;
-		using ptr_type = R(*)(Args...) const;
-		using arg_type = std::tuple<Args...>;
-		using arg_ref_type = std::tuple<Args&...>;
-		static constexpr bool is_member_function = false;
-		static constexpr bool is_const = true;
-		static constexpr bool is_noexcept = false;
-		static constexpr bool is_ref_qual_lvalue = false;
-		static constexpr bool is_ref_qual_rvalue = false;
-		using overload_tag_type = stamp::reflect::tag::const_overload_tag_t;
-	};
-	template<typename R, typename... Args>
 	struct function_traits<R(Args...) noexcept> {
 		using class_type = void;
 		using return_type = R;
@@ -60,20 +46,6 @@ namespace stamp::reflect {
 		using arg_ref_type = std::tuple<Args&...>;
 		static constexpr bool is_member_function = false;
 		static constexpr bool is_const = false;
-		static constexpr bool is_noexcept = true;
-		static constexpr bool is_ref_qual_lvalue = false;
-		static constexpr bool is_ref_qual_rvalue = false;
-		using overload_tag_type = stamp::reflect::tag::noexcept_overload_tag_t;
-	};
-	template<typename R, typename... Args>
-	struct function_traits<R(Args...) const noexcept> {
-		using class_type = void;
-		using return_type = R;
-		using ptr_type = R(*)(Args...) const noexcept;
-		using arg_type = std::tuple<Args...>;
-		using arg_ref_type = std::tuple<Args&...>;
-		static constexpr bool is_member_function = false;
-		static constexpr bool is_const = true;
 		static constexpr bool is_noexcept = true;
 		static constexpr bool is_ref_qual_lvalue = false;
 		static constexpr bool is_ref_qual_rvalue = false;

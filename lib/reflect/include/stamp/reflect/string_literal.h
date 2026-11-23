@@ -113,7 +113,7 @@ namespace stamp::reflect {
 		}();
 
 	template<typename T>
-	constexpr std::size_t string_literal_length_v;
+	constexpr std::size_t string_literal_length_v = 0;
 	template<std::size_t N>
 	constexpr std::size_t string_literal_length_v < const char(&)[N]> = N;
 	template<std::size_t N>
@@ -122,8 +122,8 @@ namespace stamp::reflect {
 
 
 	class hash_fnv1a {
-		static constexpr unsigned long long FNV_offset_basis = 14695981039346656037;
-		static constexpr unsigned long long FNV_prime = 1099511628211;
+		static constexpr unsigned long long FNV_offset_basis = 14695981039346656037ull;
+		static constexpr unsigned long long FNV_prime = 1099511628211ull;
 		std::size_t hash_v = FNV_offset_basis;
 	public:
 		constexpr hash_fnv1a() = default;

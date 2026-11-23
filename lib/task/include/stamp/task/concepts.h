@@ -1,16 +1,20 @@
 #ifndef STAMP_TASK_CONCEPTS_H
 #define STAMP_TASK_CONCEPTS_H
 
+#include <coroutine>
 #include <concepts>
+#include <stamp/reflect/function_traits.h>
 
 namespace stamp::task {
 	template<typename T>
 	concept awaitor_c =
 		requires (T a) {
 			{ a.await_ready() } -> std::convertible_to<bool>;
-			a.await_suspend;
-			a.await_resume();
-		};
+				&T::await_suspend;
+				a.await_resume();
+			} && 
+			(std::tuple_size_v<typename stamp::reflect::function_traits<decltype(&T::await_suspend)>::arg_type> == 1) &&
+			std::convertible_to<std::tuple_element_t<0, typename stamp::reflect::function_traits<decltype(&T::await_suspend)>::arg_type>, typename std::coroutine_handle<>>;
 	template<typename T>
 	concept awaitable_c =
 		awaitor_c<T> ||

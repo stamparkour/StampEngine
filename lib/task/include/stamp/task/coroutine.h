@@ -256,10 +256,10 @@ namespace stamp::task {
 	class coroutine<void> {
 	public:
 		using return_type = void;
-		using self_type = coroutine<void>;
-		using promise_type = coroutine_promise<void>;
-		using basic_promise_type = basic_coroutine_promise;
-		using handle_type = std::coroutine_handle<basic_promise_type>;
+		using self_type = struct stamp::task::coroutine<void>;
+		using promise_type = struct stamp::task::coroutine_promise<void>;
+		using basic_promise_type = struct stamp::task::basic_coroutine_promise;
+		using handle_type = struct std::coroutine_handle<basic_promise_type>;
 
 		friend promise_type;
 		friend class co_guard;
@@ -331,9 +331,9 @@ namespace stamp::task {
 		template<typename T>
 		coroutine<void>& operator =(const coroutine<T>& other) {
 			deinitialize();
-			auto& p = other.handle_v.promise();
-			basic_promise_type* my_promise = &p;
-			handle_v = handle_type::from_promise(my_promise);
+			coroutine_promise<T>* p = &other.handle().promise();
+			basic_promise_type* my_promise = static_cast<basic_promise_type*>(p);
+			handle_v = handle_type::from_promise(*my_promise);
 			initialize();
 			return *this;
 		}
@@ -500,9 +500,9 @@ namespace stamp::task {
 
 		coroutine<return_type> get_return_object();
 
-		template<typename T> requires ( std::convertible_to<T, return_type> )
-		void return_value(T&& ret_value) {
-			return_v = std::forward<T>(ret_value);
+		template<typename U> requires ( std::convertible_to<U, return_type> )
+		void return_value(U&& ret_value) {
+			return_v = std::forward<U>(ret_value);
 			self_type::bit_mask_t desired, expected = state.load();
 			while (true) {
 				desired = expected;
