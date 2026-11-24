@@ -53,7 +53,7 @@ C and C++ tests shall be written in Google Test framework.
 
 Branches should be created for development, archiving older stable releases, and experimental features.
 
-- Main Branch should be named "main" or "master"
+- Main Branch should be named "main" or "master" - this branch shall be the most up-to-date stable version of the project.
 - Development Branches should be named "dev/username"
 - Stable release branches should be named "rel/major.minor"
 - Experimental branches should be named "*exp-feature*" or "*exp-feature*/major.minor" when derived from an archived version.
