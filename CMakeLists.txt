@@ -59,6 +59,7 @@ if(STAMP_BUILD_DOXYGEN)
             ${PROJECT_SOURCE_DIR}/docs/
             ${PROJECT_SOURCE_DIR}/README.md
             ${PROJECT_SOURCE_DIR}/LICENSE.txt
+            ${PROJECT_SOURCE_DIR}/.github/contributing.md
         )
 
         set(DOXYGEN_USE_MDFILE_AS_MAINPAGE ${PROJECT_SOURCE_DIR}/README.md)
@@ -71,6 +72,8 @@ if(STAMP_BUILD_DOXYGEN)
         set(DOXYGEN_CALL_GRAPH YES)
         set(DOXYGEN_RECURSIVE YES)
         set(DOXYGEN_SOURCE_BROWSER YES)
+
+        set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 
         doxygen_add_docs(stamp_docs ${MY_DOXYGEN_SOURCES} ALL)
     endif()
