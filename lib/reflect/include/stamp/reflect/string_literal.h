@@ -31,12 +31,12 @@ namespace stamp::reflect {
 		constexpr const char* begin() const { return chars; }
 		constexpr const char* end() const { return chars + N - 1; }
 
-		consteval std::size_t length() const { return N - 1; }
-		consteval std::size_t size() const { return N - 1; }
+		consteval static std::size_t length() const { return N - 1; }
+		consteval static std::size_t size() const { return N - 1; }
 		constexpr const char* data() const { return chars; }
 		constexpr char* data() { return chars; }
 		constexpr const char* c_str() const { return chars; }
-		explicit constexpr operator const char* () const { return chars; }
+		constexpr explicit operator const char* () const { return chars; }
 		constexpr operator std::string_view() const { return { chars }; }
 		constexpr operator std::string() const { return { chars }; }
 
@@ -112,14 +112,13 @@ namespace stamp::reflect {
 		return string_literal<N>{o};
 		}();
 
+
 	template<typename T>
 	constexpr std::size_t string_literal_length_v = 0;
 	template<std::size_t N>
 	constexpr std::size_t string_literal_length_v < const char(&)[N]> = N;
 	template<std::size_t N>
 	constexpr std::size_t string_literal_length_v <string_literal<N>> = N;
-
-
 
 	class hash_fnv1a {
 		static constexpr unsigned long long FNV_offset_basis = 14695981039346656037ull;

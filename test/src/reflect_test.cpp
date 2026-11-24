@@ -151,7 +151,11 @@ namespace stamp::reflect::desc {
 
 // ============================================================================
 // String Literal Tests
-// ============================================================================
+// ============
+// ================================================================
+
+static_assert(stamp::reflect::string_literal_length_v<decltype("hello")> == 6);
+static_assert(stamp::reflect::string_literal_length_v<decltype(stamp::reflect::string_literal("hello"))> == 6);
 
 TEST(StringLiteralTest, Construction) {
 	constexpr stamp::reflect::string_literal sl = "hello";

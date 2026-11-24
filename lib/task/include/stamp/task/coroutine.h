@@ -256,10 +256,11 @@ namespace stamp::task {
 	class coroutine<void> {
 	public:
 		using return_type = void;
-		using self_type = struct stamp::task::coroutine<void>;
-		using promise_type = struct stamp::task::coroutine_promise<void>;
-		using basic_promise_type = struct stamp::task::basic_coroutine_promise;
-		using handle_type = struct std::coroutine_handle<basic_promise_type>;
+
+		using self_type = stamp::task::coroutine<void>;
+		using promise_type = stamp::task::coroutine_promise<void>;
+		using basic_promise_type = stamp::task::basic_coroutine_promise;
+		using handle_type = std::coroutine_handle<basic_promise_type>;
 
 		friend promise_type;
 		friend class co_guard;

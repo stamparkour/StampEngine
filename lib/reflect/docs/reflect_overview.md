@@ -1,6 +1,9 @@
- 
 
 @page reflect_page Reflect
+
+# Contents
+
+- @subpage reflect_todo
 
 # Overview
 
@@ -75,7 +78,8 @@ struct MyTag {
 	int score;
 };
 
-struct stamp::reflect::reflect_traits<MyType> {
+// applying tags
+struct stamp::reflect::desc::reflect_traits<MyType> {
 	static constexpr string_literal name = "MyType";
 	static constexpr auto properties = std::tuple{
 		reflect("val1"_rf,  &MyType::val1, MyTag{12}),
@@ -83,6 +87,7 @@ struct stamp::reflect::reflect_traits<MyType> {
 	};
 };
 
+// accessing tags
 stamp::reflect::for_each_reflect_member_properties<MyType>([]<typename P>(P& property) {
 	using value_type = typename P::value_type;
 	string_literal name = property.name();

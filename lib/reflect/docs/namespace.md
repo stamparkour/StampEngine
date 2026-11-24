@@ -4,3 +4,6 @@
 See [Reflect](@ref reflect_page) for a usage guide on how to construct reflections.
 
 [1]: https://en.wikipedia.org/wiki/Reflective_programming
+
+@namespace stamp::reflect::desc
+@brief contains the @ref stamp::reflect:desc::reflect_traits "reflect traits" to be specialized.

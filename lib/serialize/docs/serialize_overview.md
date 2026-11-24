@@ -1,5 +1,8 @@
 @page serialize_page Serialize
 
+# Contents
+- @subpage serialize_todo
+
 # Overview
 
 stamp::serialize is a C++20 library that provides several ways to serialize objects. 
@@ -16,3 +19,4 @@ Design
 - use reflect lib and serialize
 - awaitables and coroutines varients
 - data chunking (memory lib)
+

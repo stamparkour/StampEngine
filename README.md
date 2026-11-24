@@ -18,7 +18,7 @@ Make sure you have installed:
 run 
 ``` sh
 cmake -B build -DSTAMP_BUILD_APP=YES 
-cmake --build build <name>
+cmake --build build -t <name>
 ```
 
 where `<name>` is:
@@ -38,5 +38,5 @@ Make sure you have installed:
 run 
 ``` sh
 cmake -B build -DSTAMP_BUILD_DOXYGEN=YES 
-cmake --build build stamp_docs
+cmake --build build -t stamp_docs
 ```
