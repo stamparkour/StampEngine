@@ -7,26 +7,6 @@
 
 namespace stamp::serialize {
 	template<typename T>
-	concept awaitor_c =
-		requires (T a, std::coroutine_handle<> h) {
-			{ a.await_ready() } -> std::convertible_to<bool>;
-			a.await_suspend(h);
-			a.await_resume();
-		};
-	template<typename T>
-	concept awaitable_c = 
-		awaitor_c<T> ||
-		requires (T a) {
-			{ a.operator co_await() } -> awaitor_c;
-		} ||
-		requires (T&& a) {
-			{ operator co_await(a) } -> awaitor_c;
-		};
-
-	template<typename F>
-	constexpr auto awaitable_function_v = awaitable_c<std::invoke_result_t<F>>;
-
-	template<typename T>
 	concept istream_c =
 		requires {
 			typename T::char_type;
@@ -40,14 +20,14 @@ namespace stamp::serialize {
 			{ !v } -> std::same_as<bool>;
 		};
 
-	template<typename T>
-	concept awaitable_istream_c =
-		istream_c<T> &&
-		requires(T & v, T::char_type * buffer, std::streamsize size) {
-			{ v.read(buffer, size) } -> awaitable_c;
-			{ v.peek() } -> awaitable_c;
-			{ v.get() } -> awaitable_c;
-		};
+	//template<typename T>
+	//concept awaitable_istream_c =
+	//	istream_c<T> &&
+	//	requires(T & v, T::char_type * buffer, std::streamsize size) {
+	//		{ v.read(buffer, size) } -> awaitable_c;
+	//		{ v.peek() } -> awaitable_c;
+	//		{ v.get() } -> awaitable_c;
+	//	};
 
 	template<typename T>
 	concept ostream_c =
@@ -61,13 +41,13 @@ namespace stamp::serialize {
 			{ !v } -> std::same_as<bool>;
 		};
 
-	template<typename T>
-	concept awaitable_ostream_c =
-		ostream_c<T> &&
-		requires(T& v, typename T::char_type * buffer, std::streamsize size, typename T::char_type next_char) {
-			{ v.write(buffer, size) } -> awaitable_c;
-			{ v.put(next_char) } -> awaitable_c;
-		};
+	//template<typename T>
+	//concept awaitable_ostream_c =
+	//	ostream_c<T> &&
+	//	requires(T& v, typename T::char_type * buffer, std::streamsize size, typename T::char_type next_char) {
+	//		{ v.write(buffer, size) } -> awaitable_c;
+	//		{ v.put(next_char) } -> awaitable_c;
+	//	};
 
 	template<typename T>
 	concept json_key_c = std::convertible_to<std::string, T>;
