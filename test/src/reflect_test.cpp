@@ -4,13 +4,13 @@
 #include <stamp/reflect/member_function_traits.h>
 #include <stamp/reflect/types/property.h>
 #include <stamp/reflect/types/tag.h>
-#include <stamp/reflect/std/reflect_vector.h>
-#include <stamp/reflect/std/reflect_array.h>
-#include <stamp/reflect/std/reflect_pair.h>
+#include <stamp/reflect/std/reflect_std.h>
 #include <string>
 #include <vector>
 #include <array>
 #include <memory>
+
+static_assert(stamp::reflect::traits::full_name_v<std::tuple<float, int>> == "std::tuple<float, int>");
 
 // ============================================================================
 // Test Classes and Structs

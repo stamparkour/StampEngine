@@ -18,9 +18,10 @@ namespace stamp::reflect::desc {
 		static constexpr string_literal full_name = concat_cstring_v<"std::array<",traits::full_name_v<T>,",", integral_to_string_literal_v<std::size_t, N>,">">;
 		static constexpr auto functions = std::tuple{
 			// Element Access
-			reflect(tag::none_rf, "at"_rf, &type::at),
-			reflect(tag::const_rf, "at"_rf, &type::at),
+			reflect("at"_rf, &[](type* self, typename type::size_type pos) -> typename type::reference { return self->at(pos); }),
+			reflect("at"_rf, &[](const type* self, typename type::size_type pos) -> typename type::const_reference { return self->at(pos); }),
 
+			// TODO: convert to lambda pointers
 			reflect(tag::none_rf,tag::subscript_rf, &type::operator[]),
 			reflect(tag::const_rf,tag::subscript_rf, &type::operator[]),
 

@@ -12,5 +12,6 @@
 #include "reflect_vector.h"
 #include "reflect_iterator.h"
 #include "reflect_pair.h"
+#include "reflect_tuple.h"
 
 #endif // STAMP_REFLECT_REFLECT_STD_H

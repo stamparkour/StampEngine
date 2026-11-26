@@ -10,22 +10,43 @@
 #include <stamp/reflect/types/tag.h>
 
 namespace stamp::reflect {
-	template<typename T>
-	struct function_iterator_attrib;
 	namespace tag {
-		struct iterator_generic_tag_t : member_function_generic_tag_t {
-			template<typename T>
-			using attrib_type = function_iterator_attrib<T>;
-		};
+		struct generic_iterator_attrib_t : generic_function_attrib_t {};
+		struct iterator_generic_tag_t : member_function_tag_t {};
 
-		inline struct begin_iterator_tag_t : iterator_generic_tag_t {} begin_rf;
-		inline struct end_iterator_tag_t : iterator_generic_tag_t {} end_rf;
-		inline struct cbegin_iterator_tag_t : iterator_generic_tag_t {} cbegin_rf;
-		inline struct cend_iterator_tag_t : iterator_generic_tag_t {} cend_rf;
-		inline struct rbegin_iterator_tag_t : iterator_generic_tag_t {} rbegin_rf;
-		inline struct rend_iterator_tag_t : iterator_generic_tag_t {} rend_rf;
-		inline struct crbegin_iterator_tag_t : iterator_generic_tag_t {} crbegin_rf;
-		inline struct crend_iterator_tag_t : iterator_generic_tag_t {} crend_rf;
+		struct begin_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct end_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct cbegin_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct cend_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct rbegin_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct rend_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct crbegin_iterator_attrib_t : generic_iterator_attrib_t {};
+		struct crend_iterator_attrib_t : generic_iterator_attrib_t {};
+
+		inline struct begin_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = begin_iterator_attrib_t;
+		} begin_rf;
+		inline struct end_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = end_iterator_attrib_t;
+		} end_rf;
+		inline struct cbegin_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = cbegin_iterator_attrib_t;
+		} cbegin_rf;
+		inline struct cend_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = cend_iterator_attrib_t;
+		} cend_rf;
+		inline struct rbegin_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = rbegin_iterator_attrib_t;
+		} rbegin_rf;
+		inline struct rend_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = rend_iterator_attrib_t;
+		} rend_rf;
+		inline struct crbegin_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = crbegin_iterator_attrib_t;
+		} crbegin_rf;
+		inline struct crend_iterator_tag_t : iterator_generic_tag_t {
+			using attrib_type = crend_iterator_attrib_t;
+		} crend_rf;
 
 		template<> constexpr string_literal to_string_v<begin_iterator_tag_t> = "begin";
 		template<> constexpr string_literal to_string_v<end_iterator_tag_t> = "end";
@@ -38,25 +59,24 @@ namespace stamp::reflect {
 	}
 
 	template<typename T>
-	struct function_iterator_attrib {
-		using iterator_type = T;
-		static constexpr string_literal name = tag::to_string_v<T>;
-
-	};
+	concept iterator_attrib_c = std::derived_from<T, tag::generic_iterator_attrib_t>;
 
 	template<typename T>
-	constexpr bool is_function_iterator_attrib_v = false;
-	template<typename O>
-	constexpr bool is_function_iterator_attrib_v<function_iterator_attrib<O>> = true;
-
-
+	concept begin_iterator_attrib_c = std::derived_from<T, tag::begin_iterator_attrib_t>;
 	template<typename T>
-	struct is_function_iterator_attrib : std::bool_constant<is_function_iterator_attrib_v<T>> {};
-
-	namespace concepts {
-		template<typename T>
-		concept function_iterator_attrib_c = is_function_iterator_attrib_v<T>;
-	}
+	concept end_iterator_attrib_c = std::derived_from<T, tag::end_iterator_attrib_t>;
+	template<typename T>
+	concept cbegin_iterator_attrib_c = std::derived_from<T, tag::cbegin_iterator_attrib_t>;
+	template<typename T>
+	concept cend_iterator_attrib_c = std::derived_from<T, tag::cend_iterator_attrib_t>;
+	template<typename T>
+	concept rbegin_iterator_attrib_c = std::derived_from<T, tag::rbegin_iterator_attrib_t>;
+	template<typename T>
+	concept rend_iterator_attrib_c = std::derived_from<T, tag::rend_iterator_attrib_t>;
+	template<typename T>
+	concept crbegin_iterator_attrib_c = std::derived_from<T, tag::crbegin_iterator_attrib_t>;
+	template<typename T>
+	concept crend_iterator_attrib_c = std::derived_from<T, tag::crend_iterator_attrib_t>;
 }
 
 #endif // STAMP_REFLECT_TYPES_ITERATOR_H

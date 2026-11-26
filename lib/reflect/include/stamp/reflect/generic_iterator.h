@@ -2,6 +2,8 @@
 #ifndef STAMP_REFLECT_GENERIC_ITERATOR_H
 #define STAMP_REFLECT_GENERIC_ITERATOR_H
 
+// TODO: finish this
+
 namespace stamp::reflect {
 	template<typename T>
 	class generic_forward_iterator {

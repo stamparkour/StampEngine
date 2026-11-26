@@ -31,8 +31,8 @@ namespace stamp::reflect {
 		constexpr const char* begin() const { return chars; }
 		constexpr const char* end() const { return chars + N - 1; }
 
-		consteval static std::size_t length() const { return N - 1; }
-		consteval static std::size_t size() const { return N - 1; }
+		consteval static std::size_t length() { return N - 1; }
+		consteval static std::size_t size() { return N - 1; }
 		constexpr const char* data() const { return chars; }
 		constexpr char* data() { return chars; }
 		constexpr const char* c_str() const { return chars; }

@@ -19,6 +19,7 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/std/reflect_array.h"
 	"include/stamp/reflect/std/reflect_iterator.h"
 	"include/stamp/reflect/std/reflect_pair.h"
+	"include/stamp/reflect/std/reflect_tuple.h"
 
 	"include/stamp/reflect/reflect_types.h"
 	"include/stamp/reflect/types/property.h"
@@ -37,7 +38,8 @@ set(STAMP_REFLECT_HEADERS
 	"include/stamp/reflect/attributes/attributes.h"
 
 	"include/stamp/reflect/generic_iterator.h"
- "include/stamp/reflect/print_type.h")
+	"include/stamp/reflect/print_type.h" 
+)
 
 # add the library
 add_library(stamp_reflect INTERFACE ${STAMP_REFLECT_SOURCES} ${STAMP_REFLECT_HEADERS})

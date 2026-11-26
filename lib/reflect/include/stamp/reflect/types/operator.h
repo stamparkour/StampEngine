@@ -10,15 +10,13 @@
 #include<stamp/reflect/string_literal.h>
 #include <stamp/reflect/types/function.h>
 #include <stamp/reflect/reflect_helpers.h>
+#include <stamp/reflect/types/tag.h>
+
+// TODO: redo this to match iterator.h tagging and attributes
 
 namespace stamp::reflect {
-	template<typename T>
-	struct function_operator_attrib;
 	namespace tag {
-		struct operator_generic_tag_t : member_function_generic_tag_t {
-			template<typename T>
-			using attrib_type = function_operator_attrib<T>;
-		};
+		struct operator_generic_tag_t : generic_tag_t {};
 
 		inline struct assign_operator_tag_t : operator_generic_tag_t {} assign_rf;
 		inline struct addition_operator_tag_t : operator_generic_tag_t {} addition_rf;
@@ -77,26 +75,8 @@ namespace stamp::reflect {
 		//constexpr auto to_member_ptr_v<T,addition_operator_tag_t> = T::operator+;
 	}
 
-	template<typename O>
-	struct function_operator_attrib {
-		using operator_type = O;
-		static constexpr string_literal name = tag::to_string_v<O>;
-	};
 
 
-	template<typename T>
-	constexpr bool is_function_operator_attrib_v = false;
-	template<typename O>
-	constexpr bool is_function_operator_attrib_v<function_operator_attrib<O>> = true;
-
-
-	template<typename T>
-	struct is_function_operator_attrib : std::bool_constant<is_function_operator_attrib_v<T>> {};
-
-	namespace concepts {
-		template<typename T>
-		concept function_operator_attrib_c = is_function_operator_attrib_v<T>;
-	}
 }
 
 #endif // STAMP_REFLECT_OPERATOR_H

@@ -58,6 +58,7 @@ namespace stamp::reflect {
 			using attrib = typename O::attrib_type;
 			return reflect_property<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);
 		}
+		// TODO: evaluate if this is required
 		else if constexpr (requires { typename O::template attrib_type<O>; }) {
 			using attrib = typename O::template attrib_type<O>;
 			return reflect_property<tag::to_string_v<O>>(member_ptr, attrib{}, attr...);

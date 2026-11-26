@@ -7,6 +7,7 @@
 #include "types/operator.h"
 #include "types/constructor.h"
 #include "types/iterator.h"
+#include "types/tag.h"
 
 namespace stamp::reflect::type {
 	template<typename T, std::size_t N = T::name_size>

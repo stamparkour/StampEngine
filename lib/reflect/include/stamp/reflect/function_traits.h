@@ -51,6 +51,18 @@ namespace stamp::reflect {
 		static constexpr bool is_ref_qual_rvalue = false;
 		using overload_tag_type = stamp::reflect::tag::noexcept_overload_tag_t;
 	};
+
+	template<typename T>
+	concept is_function_c = requires {
+		function_traits<T>{};
+	};
+	template<typename T>
+	concept is_free_function_c = is_function_c<T> && !is_member_function_c<T>;
+
+	template<typename T>
+	constexpr bool is_function_v = is_function_c<T>;
+	template<typename T>
+	constexpr bool is_free_function_v = is_free_function_c<T>;
 }
 
 #endif // STAMP_REFLECT_FUNCTION_TRAITS_H

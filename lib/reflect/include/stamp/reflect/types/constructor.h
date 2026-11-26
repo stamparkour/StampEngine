@@ -14,10 +14,12 @@ namespace stamp::reflect {
 		consteval R constructor_ptr_f(Arg&&... arg) {
 			return R{std::forward<Arg>(arg)...};
 		}
+		// used to return the pointer of the function
 		template<typename R, typename... Arg>
 		consteval auto expand_tuple_to_constructor_ptr_f(std::tuple<Arg...>) -> R(*)(Arg...) {
 			return constructor_ptr_f<R,Arg...>;
 		}
+		// used to get the type of the pointer to the 'constructor_ptr_f' function
 		template<typename R, typename Tuple>
 		using expand_tuple_to_constructor_ptr_type_v = decltype(expand_tuple_to_constructor_ptr_f<R>(Tuple{}));
 	}

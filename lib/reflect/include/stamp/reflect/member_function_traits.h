@@ -17,7 +17,6 @@ namespace stamp::reflect {
 #ifdef STAMP_REFLECT_MEMBER_FUNCTION_TRAITS_TAG
 	namespace tag {
 		struct overload_generic_tag_t : generic_tag_t {};
-		struct member_function_generic_tag_t : generic_tag_t {};
 
 		inline struct none_overload_tag_t : overload_generic_tag_t {} none_rf;
 		inline struct const_overload_tag_t : overload_generic_tag_t {} const_rf;
@@ -27,16 +26,11 @@ namespace stamp::reflect {
 		inline struct const_rvalue_overload_tag_t : overload_generic_tag_t {} const_rvalue_rf;
 		inline struct noexcept_overload_tag_t : overload_generic_tag_t {} noexcept_rf;
 	}
-	namespace concepts {
-		template<typename T>
-		concept is_overload_tag_c = std::derived_from<T, stamp::reflect::tag::overload_generic_tag_t>;
-		template<typename T>
-		concept is_member_function_generic_tag_c = std::derived_from<T, stamp::reflect::tag::member_function_generic_tag_t>;
-	}
+	template<typename T>
+	concept is_overload_tag_c = std::derived_from<T, stamp::reflect::tag::overload_generic_tag_t>;
 #else
 	namespace tag {
 		struct overload_generic_tag_t {}; // removed generic_tag_t
-		struct member_function_generic_tag_t {}; // removed generic_tag_t
 
 		inline struct none_overload_tag_t : overload_generic_tag_t {} none_rf;
 		inline struct const_overload_tag_t : overload_generic_tag_t {} const_rf;
@@ -46,12 +40,8 @@ namespace stamp::reflect {
 		inline struct const_rvalue_overload_tag_t : overload_generic_tag_t {} const_rvalue_rf;
 		inline struct noexcept_overload_tag_t : overload_generic_tag_t {} noexcept_rf;
 	}
-	namespace concepts {
-		template<typename T>
-		concept is_overload_tag_c = std::derived_from<T, stamp::reflect::tag::overload_generic_tag_t>;
-		template<typename T>
-		concept is_member_function_generic_tag_c = std::derived_from<T, stamp::reflect::tag::member_function_generic_tag_t>;
-	}
+	template<typename T>
+	concept is_overload_tag_c = std::derived_from<T, stamp::reflect::tag::overload_generic_tag_t>;
 #endif
 
 	template<typename T>
